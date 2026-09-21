@@ -11,6 +11,11 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+      <activity android:name=".modules.pdf.PdfSelectorActivity" android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+      <activity android:name="com.kitayar.modules.collage.CollageActivity"
+          android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
+          <activity android:name="com.kitayar.modules.imagecrop.ImageCropActivity"
+          android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
@@ -18,10 +23,53 @@
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
         android:exported="true">
+ 
+<intent-filter android:label="@string/app_name">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:mimeType="application/pdf" />
+</intent-filter>
+<intent-filter>
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <category android:name="android.intent.category.BROWSABLE" />
+    <data android:scheme="file" />
+    <data android:scheme="content" />
+    <data android:mimeType="application/pdf" />
+</intent-filter>
+
+<!-- ۲) برخی اپ‌ها (مثل فایل‌منیجرها) فایل را با scheme=file یا content می‌فرستند
+     بدون اینکه mimeType درست ست شده باشد؛ این filter آن حالت را هم می‌گیرد -->
+<intent-filter android:label="@string/app_name">
+    <action android:name="android.intent.action.VIEW" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <data android:scheme="content" />
+    <data android:scheme="file" />
+    <data android:mimeType="application/pdf" />
+</intent-filter>
+
+<!-- ۳) گزینه "Share" از تلگرام/واتساپ/جیمیل روی فایل PDF -->
+<intent-filter android:label="@string/app_name">
+    <action android:name="android.intent.action.SEND" />
+    <category android:name="android.intent.category.DEFAULT" />
+    <data android:mimeType="application/pdf" />
+</intent-filter>
+
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
       </activity>
+      <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="${applicationId}.fileprovider"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data
+          android:name="android.support.FILE_PROVIDER_PATHS"
+          android:resource="@xml/file_paths" />
+          
+      </provider>
     </application>
 </manifest>

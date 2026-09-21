@@ -85,6 +85,12 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/x86/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -111,6 +117,8 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+    implementation 'com.github.mhiew:android-pdf-viewer:3.2.0-beta.3'
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
