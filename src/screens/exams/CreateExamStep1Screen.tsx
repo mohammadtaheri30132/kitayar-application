@@ -11,10 +11,15 @@ import {
   Platform,
   ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import * as jalaali from 'jalaali-js';
+import { PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
+import { CustomDropdown } from '../../components/common/CustomDropdown';
 
 const CreateExamStep1Screen = ({ navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const [classes, setClasses] = useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
 
@@ -23,10 +28,19 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
   const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
   const [totalScore, setTotalScore] = useState('20');
   
-  // استیت‌های ساده برای دریافت زمان (برای جلوگیری از نصب پکیج‌های سنگین در نسخه اولیه)
-  const [startDate, setStartDate] = useState('2026-10-01');
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const currentJalali = jalaali.toJalaali(new Date());
+  const [startDay, setStartDay] = useState<number>(currentJalali.jd);
+  const [startMonth, setStartMonth] = useState<number>(currentJalali.jm);
+
+  const [startHour, setStartHour] = useState('08');
+  const [startMinute, setStartMinute] = useState('00');
+  const [endHour, setEndHour] = useState('10');
+  const [endMinute, setEndMinute] = useState('00');
+
+  const daysList = Array.from({ length: 31 }, (_, i) => ({ id: `d${i + 1}`, label: `${i + 1}`, value: i + 1 }));
+  const monthsList = PERSIAN_MONTHS.map((m, i) => ({ id: `m${i + 1}`, label: m, value: i + 1 }));
+  const hoursList = Array.from({ length: 24 }, (_, i) => ({ id: `h${i}`, label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }));
+  const minutesList = Array.from({ length: 60 }, (_, i) => ({ id: `min${i}`, label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }));
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -55,17 +69,28 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
 
     setIsSubmitting(true);
     try {
-      // ترکیب تاریخ و ساعت برای ارسال به بک‌اند
-      const startDateTime = new Date(`${startDate}T${startTime}:00`);
-      const endDateTime = new Date(`${startDate}T${endTime}:00`);
+      const gregorianDate = jalaali.toGregorian(currentJalali.jy, startMonth, startDay);
+      
+      const startDateTime = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd, parseInt(startHour), parseInt(startMinute));
+      const endDateTime = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd, parseInt(endHour), parseInt(endMinute));
+
+      if (startDateTime < new Date()) {
+        Alert.alert('توجه', 'تاریخ و ساعت شروع آزمون نمی‌تواند در گذشته باشد.');
+        setIsSubmitting(false);
+        return;
+      }
 
       const response = await api.post('/teacher/exams', {
         title,
+        description: '',
         classroomId: selectedClassroomId,
         totalScore: Number(totalScore),
+        questions: [],
+        allowedParticipants: [],
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
         randomizeQuestions: true, // پیش‌فرض
+        isUntimed: false
       });
 
       if (response.data.success) {
@@ -77,6 +102,7 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
         });
       }
     } catch (error: any) {
+      console.log('Error creating exam:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.message || 'خطا در ایجاد آزمون';
       Alert.alert('خطا', errorMessage);
     } finally {
@@ -158,44 +184,84 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
 
           {/* بخش زمان‌بندی (ساده‌شده برای نسخه سبک) */}
           <View style={styles.timeSection}>
-            <Text style={styles.sectionLabel}>زمان‌بندی برگزاری</Text>
+            <Text style={styles.sectionLabel}>تاریخ و زمان برگزاری</Text>
             
-            <View style={styles.timeRow}>
-              <View style={styles.halfInput}>
-                <Text style={styles.smallLabel}>ساعت پایان</Text>
-                <TextInput
-                  style={[styles.input, { textAlign: 'center' }]}
-                  value={endTime}
-                  onChangeText={setEndTime}
-                  placeholder="10:00"
-                />
-              </View>
-              <View style={styles.halfInput}>
-                <Text style={styles.smallLabel}>ساعت شروع</Text>
-                <TextInput
-                  style={[styles.input, { textAlign: 'center' }]}
-                  value={startTime}
-                  onChangeText={setStartTime}
-                  placeholder="08:00"
-                />
+            <View style={{ marginBottom: 16 }}>
+              <Text style={styles.smallLabel}>تاریخ آزمون</Text>
+              <View style={[styles.timeRow, { marginTop: 4 }]}>
+                <View style={styles.halfInput}>
+                  <CustomDropdown
+                    items={monthsList}
+                    selectedValue={startMonth}
+                    onSelect={(item) => setStartMonth(item.value)}
+                    placeholder="ماه"
+                  />
+                </View>
+                <View style={styles.halfInput}>
+                  <CustomDropdown
+                    items={daysList}
+                    selectedValue={startDay}
+                    onSelect={(item) => setStartDay(item.value)}
+                    placeholder="روز"
+                  />
+                </View>
               </View>
             </View>
 
-            <View style={{ marginTop: 12 }}>
-              <Text style={styles.smallLabel}>تاریخ (میلادی)</Text>
-              <TextInput
-                style={[styles.input, { textAlign: 'center', letterSpacing: 2 }]}
-                value={startDate}
-                onChangeText={setStartDate}
-                placeholder="YYYY-MM-DD"
-              />
+            <View style={styles.timeRow}>
+              <View style={styles.halfInput}>
+                <Text style={styles.smallLabel}>ساعت پایان</Text>
+                <View style={[styles.timeRow, { marginTop: 4 }]}>
+                  <View style={{ flex: 0.48 }}>
+                    <CustomDropdown
+                      items={minutesList}
+                      selectedValue={endMinute}
+                      onSelect={(item) => setEndMinute(item.value)}
+                      placeholder="دقیقه"
+                    />
+                  </View>
+                  <Text style={{ alignSelf: 'center' }}>:</Text>
+                  <View style={{ flex: 0.48 }}>
+                    <CustomDropdown
+                      items={hoursList}
+                      selectedValue={endHour}
+                      onSelect={(item) => setEndHour(item.value)}
+                      placeholder="ساعت"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.halfInput}>
+                <Text style={styles.smallLabel}>ساعت شروع</Text>
+                <View style={[styles.timeRow, { marginTop: 4 }]}>
+                  <View style={{ flex: 0.48 }}>
+                    <CustomDropdown
+                      items={minutesList}
+                      selectedValue={startMinute}
+                      onSelect={(item) => setStartMinute(item.value)}
+                      placeholder="دقیقه"
+                    />
+                  </View>
+                  <Text style={{ alignSelf: 'center' }}>:</Text>
+                  <View style={{ flex: 0.48 }}>
+                    <CustomDropdown
+                      items={hoursList}
+                      selectedValue={startHour}
+                      onSelect={(item) => setStartHour(item.value)}
+                      placeholder="ساعت"
+                    />
+                  </View>
+                </View>
+              </View>
             </View>
+
           </View>
 
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <TouchableOpacity 
           style={[styles.button, isSubmitting && styles.buttonDisabled]} 
           onPress={handleNextStep}
@@ -214,7 +280,7 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -245,7 +311,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: COLORS.error, textAlign: 'right', fontSize: 14 },
   
-  chipContainer: { flexDirection: 'row-reverse', paddingVertical: 4 },
+  chipContainer: { flexDirection: 'row', paddingVertical: 4 },
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 10,

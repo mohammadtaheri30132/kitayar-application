@@ -1,172 +1,214 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowUpDown, Columns, Crop, Droplet, FileArchive, FileMinus, FileOutput, FileSpreadsheet, FileText, Grid, Image as ImageIcon, Layers, ListOrdered, Lock, Maximize, Maximize2, Mic, Minimize, Minimize2, Music, Presentation, RotateCw, ScanText, Scissors, Wrench } from 'lucide-react-native';
+import { 
+  ArrowUpDown, Crop, Droplet, FileArchive, FileMinus, FileOutput, 
+  FileSpreadsheet, FileText, Grid, Image as ImageIcon, Layers, 
+  Lock, Maximize, Mic, Minimize, Minimize2, Music, Presentation, 
+  RotateCw, Scissors, ChevronLeft 
+} from 'lucide-react-native';
 import { COLORS } from '../../theme/colors';
+
+// دسته‌بندی و ترتیب‌بندی ابزارها
+const TOOLS_CATEGORIES = [
+  {
+    title: 'ابزارهای پرکاربرد تصویر',
+    data: [
+      { route: 'ImageResizeScreen', title: 'تغییر ابعاد عکس', Icon: Maximize, color: '#3498db' },
+      { route: 'ImageCompressorScreen', title: 'کاهش حجم تصویر', Icon: Minimize, color: '#9b59b6' },
+      { route: 'ImageCropScreen', title: 'برش تصویر (Crop)', Icon: Crop, color: '#e74c3c' },
+      { route: 'CollageScreen', title: 'ترکیب عکس‌ها باهم', Icon: Grid, color: COLORS.primary },
+      { route: 'ImageConverterScreen', title: 'تبدیل فرمت تصویر', Icon: ImageIcon, color: '#f39c12' },
+    ]
+  },
+  {
+    title: 'تبدیل اسناد و PDF',
+    data: [
+      { route: 'ConverterScreen', params: { toolType: 'IMAGE_TO_PDF', title: 'تبدیل عکس به PDF' }, title: 'تبدیل عکس به PDF', Icon: FileText, color: '#2ecc71' },
+      { route: 'ConverterScreen', params: { toolType: 'PDF_TO_IMAGE', title: 'تبدیل PDF به عکس' }, title: 'تبدیل PDF به عکس', Icon: ImageIcon, color: '#e67e22' },
+      { route: 'DocumentToPdfScreen', params: { type: 'WORD' }, title: 'تبدیل ورد به PDF', Icon: FileArchive, color: '#2980b9' },
+      { route: 'DocumentToPdfScreen', params: { type: 'TEXT' }, title: 'تبدیل متن به PDF', Icon: FileText, color: '#34495E' },
+      { route: 'DocumentToPdfScreen', params: { type: 'EXCEL' }, title: 'تبدیل اکسل به PDF', Icon: FileSpreadsheet, color: '#27ae60' },
+      { route: 'DocumentToPdfScreen', params: { type: 'POWERPOINT' }, title: 'تبدیل پاورپوینت به PDF', Icon: Presentation, color: '#d35400' },
+    ]
+  },
+  {
+    title: 'مدیریت و ویرایش حرفه‌ای PDF',
+    data: [
+      { route: 'AdvancedPdfScreen', params: { toolId: 'MERGE_PDF' }, title: 'ترکیب فایل‌های PDF', Icon: Layers, color: '#3498db' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'COMPRESS_PDF' }, title: 'فشرده‌سازی PDF', Icon: Minimize2, color: '#2ecc71' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'SPLIT_PDF' }, title: 'تقسیم‌بندی فایل PDF', Icon: Scissors, color: '#e74c3c' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'EXTRACT_PAGES' }, title: 'جداسازی صفحات PDF', Icon: FileOutput, color: '#9b59b6' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'DELETE_PAGES' }, title: 'حذف صفحات PDF', Icon: FileMinus, color: '#e67e22' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'REORDER_PAGES' }, title: 'جابه‌جایی صفحات PDF', Icon: ArrowUpDown, color: '#1abc9c' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'ROTATE_PAGES' }, title: 'چرخش صفحات PDF', Icon: RotateCw, color: '#f1c40f' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'WATERMARK_PDF' }, title: 'افزودن واترمارک به PDF', Icon: Droplet, color: '#34495e' },
+      { route: 'AdvancedPdfScreen', params: { toolId: 'ENCRYPT_PDF' }, title: 'رمزگذاری PDF', Icon: Lock, color: '#c0392b' },
+    ]
+  },
+  {
+    title: 'ابزارهای ویدیو و صدا',
+    data: [
+      { route: 'VideoTrimScreen', title: 'برش حرفه‌ای ویدیو', Icon: Scissors, color: '#e74c3c' },
+      { route: 'VideoToAudioScreen', title: 'تبدیل ویدیو به صوت', Icon: Music, color: '#9b59b6' },
+      { route: 'AudioToTextScreen', title: 'تایپ صوتی (صوت به متن)', Icon: Mic, color: '#f39c12' },
+    ]
+  }
+];
 
 const ToolsListScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.headerTitle}>ابزارهای کیتایار</Text>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ابزارهای کیتایار</Text>
+        <Text style={styles.headerSubtitle}>مجموعه امکانات و ابزارهای کاربردی</Text>
+      </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* گزینه اول */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('CollageScreen')}>
-          <View style={styles.iconBox}><FileText color={COLORS.primary} size={30} /></View>
-          <Text style={styles.cardText}>ترکیب عکس ها باهم</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ImageResizeScreen')}>
-  <View style={styles.iconBox}><Maximize color="#3498db" size={30} /></View>
-  <Text style={styles.cardText}>تغییر ابعاد عکس</Text>
-</TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {TOOLS_CATEGORIES.map((category, catIndex) => (
+          <View key={catIndex} style={styles.categoryContainer}>
+            <Text style={styles.categoryTitle}>{category.title}</Text>
+            
+            <View style={styles.listWrapper}>
+              {category.data.map((item, index) => {
+                const isEven = index % 2 === 0;
+                const backgroundColor = isEven ? '#FFFFFF' : '#F9FAFB';
+                const isFirst = index === 0;
+                const isLast = index === category.data.length - 1;
 
-<TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ImageCropScreen')}>
-  <View style={styles.iconBox}><Crop color="#e74c3c" size={30} /></View>
-  <Text style={styles.cardText}>برش تصویر (Crop)</Text>
-</TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ConverterScreen', { toolType: 'IMAGE_TO_PDF', title: 'تبدیل عکس به PDF' })}>
-          <View style={styles.iconBox}><FileText color={COLORS.primary} size={30} /></View>
-          <Text style={styles.cardText}>تبدیل عکس به PDF</Text>
-        </TouchableOpacity>
-
-        {/* گزینه دوم */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ConverterScreen', { toolType: 'PDF_TO_IMAGE', title: 'تبدیل PDF به عکس' })}>
-          <View style={styles.iconBox}><ImageIcon color="#e67e22" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل PDF به عکس</Text>
-        </TouchableOpacity>
-
-        {/* گزینه سوم (جدید) */}
-{/* در فایل ToolsListScreen.js: جایگزین کردن دکمه کاهش حجم با کد زیر */}
-<TouchableOpacity 
-  style={styles.card} 
-  onPress={() => navigation.navigate('ImageCompressorScreen')}> {/* 👈 تغییر مهم */}
-  <View style={styles.iconBox}><Minimize color="#9b59b6" size={30} /></View>
-  <Text style={styles.cardText}>کاهش حجم تصویر</Text>
-</TouchableOpacity>
-<TouchableOpacity 
-  style={styles.card} 
-  onPress={() => navigation.navigate('ImageConverterScreen')}> {/* 👈 تغییر مهم */}
-  <View style={styles.iconBox}><Minimize color="#9b59b6" size={30} /></View>
-  <Text style={styles.cardText}>تبدیل  تصویر</Text>
-</TouchableOpacity>
-
-<TouchableOpacity 
-  style={styles.card} 
-  onPress={() => navigation.navigate('ImageConverterScreen')}> {/* 👈 تغییر مهم */}
-  <View style={styles.iconBox}><Minimize color="#9b59b6" size={30} /></View>
-  <Text style={styles.cardText}>تبدیل  تصویر</Text>
-</TouchableOpacity>
-<TouchableOpacity 
-  style={styles.card} 
-  onPress={() => navigation.navigate('VideoToAudioScreen')}> {/* 👈 تغییر مهم */}
-  <View style={styles.iconBox}><Minimize color="#9b59b6" size={30} /></View>
-  <Text style={styles.cardText}>ویدیو به صورت</Text>
-</TouchableOpacity>
-<TouchableOpacity 
-  style={styles.card} 
-  onPress={() => navigation.navigate('VideoTrimScreen')}> {/* 👈 تغییر مهم */}
-  <View style={styles.iconBox}><Minimize color="#9b59b6" size={30} /></View>
-  <Text style={styles.cardText}>برش ویدیو</Text>
-</TouchableOpacity>
-{/* --- بخش ویدیو و صدا --- */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('VideoTrimScreen')}>
-          <View style={styles.iconBox}><Scissors color="#e74c3c" size={30} /></View>
-          <Text style={styles.cardText}>برش حرفه‌ای ویدیو</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('VideoToAudioScreen')}>
-          <View style={styles.iconBox}><Music color="#9b59b6" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل ویدیو به صوت</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AudioToTextScreen')}>
-          <View style={styles.iconBox}><Mic color="#f39c12" size={30} /></View>
-          <Text style={styles.cardText}>تایپ صوتی (صوت به متن)</Text>
-        </TouchableOpacity>
-
-        {/* --- بخش تبدیل اسناد به PDF --- */}
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('DocumentToPdfScreen', { type: 'TEXT' })}>
-          <View style={styles.iconBox}><FileText color="#34495E" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل متن به PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('DocumentToPdfScreen', { type: 'WORD' })}>
-          <View style={styles.iconBox}><FileArchive color="#2980b9" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل ورد به PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('DocumentToPdfScreen', { type: 'EXCEL' })}>
-          <View style={styles.iconBox}><FileSpreadsheet color="#27ae60" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل اکسل به PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('DocumentToPdfScreen', { type: 'POWERPOINT' })}>
-          <View style={styles.iconBox}><Presentation color="#d35400" size={30} /></View>
-          <Text style={styles.cardText}>تبدیل پاورپوینت به PDF</Text>
-        </TouchableOpacity>
-        <View style={{ marginTop: 20, marginBottom: 10 }}>
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2c3e50', textAlign: 'right', marginBottom: 15 }}>
-            مدیریت و ویرایش حرفه‌ای PDF
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'MERGE_PDF' })}>
-          <View style={styles.iconBox}><Layers color="#3498db" size={30} /></View>
-          <Text style={styles.cardText}>ترکیب فایل‌های PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'SPLIT_PDF' })}>
-          <View style={styles.iconBox}><Scissors color="#e74c3c" size={30} /></View>
-          <Text style={styles.cardText}>تقسیم‌بندی فایل PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'COMPRESS_PDF' })}>
-          <View style={styles.iconBox}><Minimize2 color="#2ecc71" size={30} /></View>
-          <Text style={styles.cardText}>فشرده‌سازی PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'DELETE_PAGES' })}>
-          <View style={styles.iconBox}><FileMinus color="#e67e22" size={30} /></View>
-          <Text style={styles.cardText}>حذف صفحات PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'EXTRACT_PAGES' })}>
-          <View style={styles.iconBox}><FileOutput color="#9b59b6" size={30} /></View>
-          <Text style={styles.cardText}>جداسازی صفحات PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'REORDER_PAGES' })}>
-          <View style={styles.iconBox}><ArrowUpDown color="#1abc9c" size={30} /></View>
-          <Text style={styles.cardText}>جابه‌جایی صفحات PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'ROTATE_PAGES' })}>
-          <View style={styles.iconBox}><RotateCw color="#f1c40f" size={30} /></View>
-          <Text style={styles.cardText}>چرخش صفحات PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'WATERMARK_PDF' })}>
-          <View style={styles.iconBox}><Droplet color="#34495e" size={30} /></View>
-          <Text style={styles.cardText}>افزودن واترمارک به PDF</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('AdvancedPdfScreen', { toolId: 'ENCRYPT_PDF' })}>
-          <View style={styles.iconBox}><Lock color="#c0392b" size={30} /></View>
-          <Text style={styles.cardText}>رمزگذاری PDF</Text>
-        </TouchableOpacity>
-
-
+                return (
+                  <TouchableOpacity 
+                    key={index} 
+                    style={[
+                      styles.card, 
+                      { backgroundColor },
+                      isFirst && styles.firstCard,
+                      isLast && styles.lastCard,
+                    ]} 
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate(item.route, item.params)}
+                  >
+                    <View style={styles.cardContent}>
+                      <View style={[styles.iconBox, { backgroundColor: item.color + '15' }]}>
+                        <item.Icon color={item.color} size={24} />
+                      </View>
+                      <Text style={styles.cardText}>{item.title}</Text>
+                    </View>
+                    <ChevronLeft color="#BDC3C7" size={20} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        ))}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, padding: 16 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#333' },
-  card: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 15, elevation: 2 },
-  iconBox: { marginLeft: 15, padding: 10, backgroundColor: '#f5f6fa', borderRadius: 10 },
-  cardText: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50' }
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F3F4F6' 
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 25,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  headerTitle: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#1F2937',
+    marginBottom: 4
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6B7280'
+  },
+  scrollContent: { 
+    padding: 16,
+    paddingBottom: 40 
+  },
+  categoryContainer: {
+    marginBottom: 25
+  },
+  categoryTitle: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: '#4B5563', 
+    textAlign: 'right', 
+    marginBottom: 10,
+    marginRight: 5
+  },
+  listWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+    }),
+  },
+  card: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingVertical: 14, 
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6'
+  },
+  firstCard: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  lastCard: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconBox: { 
+    marginLeft: 15, 
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12 
+  },
+  cardText: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#374151' 
+  }
 });
 
 export default ToolsListScreen;

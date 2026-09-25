@@ -1,41 +1,33 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  ActivityIndicator, 
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, 
+  Alert, ScrollView, Image
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
-import { COLORS } from '../../theme/colors';
 import { AuthContext } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { Settings, Phone, MessageCircle, Info, LogOut, ChevronLeft } from 'lucide-react-native';
 
 const ProfileScreen = ({ navigation }: any) => {
   const { logout } = useContext(AuthContext);
+  const { colors, isDark } = useTheme();
 
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
 
-  // دریافت اطلاعات پروفایل از سرور
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // فرض می‌کنیم روت /teacher/profile در بک‌اند ساخته شده است
         const response = await api.get('/teacher/profile');
         if (response.data.success) {
-          setFullName(response.data.data.fullName || '');
-          setPhoneNumber(response.data.data.username || ''); // شماره موبایل
+          setFullName(response.data.data.fullName || 'محمد طاهری'); // Mock fallback
+          setPhoneNumber(response.data.data.username || '09123456789');
         }
       } catch (error) {
-        console.log('خطا در دریافت پروفایل، در حال نمایش دیتای پیش‌فرض...');
-        // در صورتی که API هنوز در بک‌اند ساخته نشده باشد، اپ کرش نکند
+        setFullName('محمد طاهری'); // Fallback if no backend
+        setPhoneNumber('09123456789');
       } finally {
         setIsLoading(false);
       }
@@ -43,30 +35,6 @@ const ProfileScreen = ({ navigation }: any) => {
     fetchProfile();
   }, []);
 
-  // ذخیره نام جدید
-  const handleUpdateProfile = async () => {
-    if (!fullName.trim()) {
-      Alert.alert('توجه', 'نام و نام خانوادگی نمی‌تواند خالی باشد.');
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const response = await api.put('/teacher/profile', {
-        fullName: fullName
-      });
-
-      if (response.data.success) {
-        Alert.alert('موفقیت', 'اطلاعات شما با موفقیت بروزرسانی شد.');
-      }
-    } catch (error: any) {
-      Alert.alert('خطا', 'مشکلی در بروزرسانی اطلاعات رخ داد.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // خروج از حساب کاربری
   const handleLogout = () => {
     Alert.alert(
       'خروج از حساب',
@@ -77,8 +45,6 @@ const ProfileScreen = ({ navigation }: any) => {
           text: 'خروج', 
           style: 'destructive',
           onPress: async () => {
-            // تابع logout از AuthContext صدا زده می‌شود
-            // این کار توکن را پاک کرده و کاربر را خودکار به صفحه PhoneCheckScreen می‌برد
             await logout(); 
           }
         }
@@ -86,153 +52,158 @@ const ProfileScreen = ({ navigation }: any) => {
     );
   };
 
+  const menuItems = [
+    { title: 'تنظیمات', icon: Settings, route: 'SettingsScreen', color: colors.primary },
+    { title: 'تماس با ما', icon: Phone, route: 'PlaceholderScreen', params: { title: 'تماس با ما' }, color: '#10b981' },
+    { title: 'ارتباط با ما', icon: MessageCircle, route: 'PlaceholderScreen', params: { title: 'ارتباط با ما' }, color: '#8b5cf6' },
+    { title: 'درباره ما', icon: Info, route: 'PlaceholderScreen', params: { title: 'درباره ما' }, color: '#f59e0b' },
+  ];
+
   if (isLoading) {
     return (
-      <View style={styles.centerBox}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={[styles.centerBox, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      
-      {/* هدر */}
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>🔙 داشبورد</Text>
+          <ChevronLeft color={colors.textLight} size={24} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>حساب کاربری</Text>
-        <View style={{ width: 60 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>حساب کاربری</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         
-        {/* آواتار کاربر */}
+        {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarIcon}>👨‍🏫</Text>
-          </View>
-          <Text style={styles.avatarName}>{fullName || 'معلم عزیز'}</Text>
-          <Text style={styles.avatarPhone}>{phoneNumber}</Text>
-        </View>
-
-        {/* فرم ویرایش اطلاعات */}
-        <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>اطلاعات شخصی</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>نام و نام خانوادگی</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="مثال: علی احمدی"
-              placeholderTextColor={COLORS.textLight}
-              value={fullName}
-              onChangeText={setFullName}
-              textAlign="right"
+          <View style={[styles.avatarWrapper, { borderColor: colors.primary, shadowColor: colors.primary }]}>
+            <Image 
+              source={{ uri: 'https://i.pravatar.cc/150?u=fake@pravatar.com' }} 
+              style={styles.avatarImage} 
             />
           </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>شماره موبایل (غیرقابل تغییر)</Text>
-            <View style={styles.disabledInput}>
-              <Text style={styles.disabledText}>{phoneNumber}</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.saveButton, isSaving && styles.buttonDisabled]} 
-            onPress={handleUpdateProfile}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <ActivityIndicator color={COLORS.surface} size="small" />
-            ) : (
-              <Text style={styles.saveButtonText}>ذخیره تغییرات</Text>
-            )}
-          </TouchableOpacity>
+          <Text style={[styles.avatarName, { color: colors.text }]}>{fullName}</Text>
+          <Text style={[styles.avatarPhone, { color: colors.textLight }]}>{phoneNumber}</Text>
+          <Text style={[styles.bio, { color: colors.textLight }]}>
+            معلم پایه ششم ابتدایی | علاقه‌مند به تکنولوژی در آموزش
+          </Text>
         </View>
 
-        {/* بخش خروج از حساب */}
-        <View style={styles.dangerZone}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>🚪 خروج از حساب کاربری</Text>
-          </TouchableOpacity>
+        {/* Menu Section */}
+        <View style={[styles.menuContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {menuItems.map((item, index) => {
+            const Icon = item.icon;
+            const isLast = index === menuItems.length - 1;
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.menuItem,
+                  !isLast && { borderBottomWidth: 1, borderBottomColor: colors.border }
+                ]}
+                onPress={() => navigation.navigate(item.route, item.params)}
+              >
+                <View style={[styles.iconBox, { backgroundColor: `${item.color}20` }]}>
+                  <Icon size={20} color={item.color} />
+                </View>
+                <Text style={[styles.menuItemText, { color: colors.text }]}>{item.title}</Text>
+                <ChevronLeft size={20} color={colors.textLight} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        {/* Logout */}
+        <TouchableOpacity 
+          style={[styles.logoutButton, { borderColor: colors.error, backgroundColor: isDark ? 'rgba(248, 113, 113, 0.1)' : '#fee2e2' }]} 
+          onPress={handleLogout}
+        >
+          <LogOut size={20} color={colors.error} style={{ marginLeft: 8 }} />
+          <Text style={[styles.logoutButtonText, { color: colors.error }]}>خروج از حساب کاربری</Text>
+        </TouchableOpacity>
 
       </ScrollView>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
-  
+  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: COLORS.surface,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    elevation: 2,
-    zIndex: 10,
   },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
+  headerTitle: { fontSize: 18, fontWeight: 'bold' },
   backButton: { padding: 8 },
-  backButtonText: { color: COLORS.textLight, fontSize: 14 },
-
-  scrollContainer: { flexGrow: 1, backgroundColor: COLORS.background, padding: 20 },
+  
+  scrollContainer: { padding: 20, paddingBottom: 40 },
   
   avatarSection: { alignItems: 'center', marginBottom: 32, marginTop: 16 },
-  avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#eff6ff',
+  avatarWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    padding: 2,
+    marginBottom: 16,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+  },
+  avatarName: { fontSize: 22, fontWeight: 'bold', marginBottom: 6 },
+  avatarPhone: { fontSize: 14, letterSpacing: 1, marginBottom: 12 },
+  bio: { fontSize: 14, textAlign: 'center', paddingHorizontal: 20, lineHeight: 22 },
+
+  menuContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 32,
+  },
+  menuItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    padding: 16,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
+    marginLeft: 16,
   },
-  avatarIcon: { fontSize: 40 },
-  avatarName: { fontSize: 20, fontWeight: 'bold', color: COLORS.text, marginBottom: 4 },
-  avatarPhone: { fontSize: 14, color: COLORS.textLight, letterSpacing: 1 },
-
-  formContainer: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 20, elevation: 1, marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.primary, marginBottom: 16, textAlign: 'right' },
-  
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: 14, color: COLORS.text, marginBottom: 8, textAlign: 'right', fontWeight: 'bold' },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 14,
+  menuItemText: {
+    flex: 1,
     fontSize: 16,
-    color: COLORS.text,
-    backgroundColor: '#f8fafc',
+    fontWeight: '600',
+    textAlign: 'right',
   },
-  disabledInput: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 14,
-    backgroundColor: '#e2e8f0', // رنگ خاکستری برای نشان دادن غیرفعال بودن
-    alignItems: 'flex-end',
+
+  logoutButton: { 
+    flexDirection: 'row-reverse',
+    padding: 16, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    borderWidth: 1, 
   },
-  disabledText: { fontSize: 16, color: COLORS.textLight, letterSpacing: 1 },
-
-  saveButton: { backgroundColor: COLORS.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 8 },
-  buttonDisabled: { backgroundColor: COLORS.secondary, opacity: 0.7 },
-  saveButtonText: { color: COLORS.surface, fontSize: 16, fontWeight: 'bold' },
-
-  dangerZone: { marginTop: 'auto', marginBottom: 20 },
-  logoutButton: { backgroundColor: '#fee2e2', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#f87171' },
-  logoutButtonText: { color: COLORS.error, fontWeight: 'bold', fontSize: 16 },
+  logoutButtonText: { fontWeight: 'bold', fontSize: 16 },
 });
 
 export default ProfileScreen;

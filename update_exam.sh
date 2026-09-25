@@ -1,0 +1,1 @@
+sed -i '' -e 's/import { COLORS } from '\''..\/..\/theme\/colors'\'';/import { COLORS } from '\''..\/..\/theme\/colors'\'';\nimport * as jalaali from '\''jalaali-js'\'';\nimport { PERSIAN_MONTHS } from '\''..\/..\/utils\/date\/jalaliHelper'\'';\nimport { CustomDropdown } from '\''..\/..\/components\/common\/CustomDropdown'\'';/' src/screens/exams/CreateExamStep1Screen.tsx

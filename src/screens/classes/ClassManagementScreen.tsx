@@ -8,9 +8,11 @@ import {
   ActivityIndicator,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import GlobalHeader from '../../components/common/GlobalHeader';
 
 const ClassManagementScreen = ({ navigation }: any) => {
   // استیت‌های داده
@@ -97,11 +99,10 @@ const ClassManagementScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>کلاس‌های من</Text>
-        <Text style={styles.headerSubtitle}>مدیریت لیست کلاس‌ها و دانش‌آموزان</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <GlobalHeader 
+        onProfilePress={() => navigation.navigate('ProfileScreen')} 
+      />
 
       {isLoading ? (
         <View style={styles.centerBox}>
@@ -134,19 +135,16 @@ const ClassManagementScreen = ({ navigation }: any) => {
       <TouchableOpacity style={styles.fab} activeOpacity={0.8} onPress={() => navigation.navigate('CreateClassScreen')}>
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 };
 
 // ... کدهای StyleSheet دقیقاً مشابه قبل است (بدون تغییر) ...
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { padding: 24, paddingTop: 40, backgroundColor: COLORS.surface, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, elevation: 3, zIndex: 10 },
-  headerTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.text, textAlign: 'right' },
-  headerSubtitle: { fontSize: 14, color: COLORS.textLight, textAlign: 'right', marginTop: 4 },
   listContainer: { padding: 20, paddingBottom: 100 },
   classCard: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border },
-  cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   className: { fontSize: 18, fontWeight: 'bold', color: COLORS.primary },
   badge: { backgroundColor: '#eff6ff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { color: COLORS.secondary, fontSize: 12, fontWeight: 'bold' },

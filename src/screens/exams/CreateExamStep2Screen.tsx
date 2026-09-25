@@ -8,10 +8,12 @@ import {
   Alert,
   FlatList
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
 const CreateExamStep2Screen = ({ route, navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const { examId, examTitle } = route.params;
 
   // استیت‌های داده
@@ -21,12 +23,13 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
   // استیت‌های پیجینیشن (اسکرول بی‌نهایت)
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoading, setIsLoading] = useState(true); // لودینگ اولیه
-  const [isFetchingMore, setIsFetchingMore] = useState(false); // لودینگ اسکرول به پایین
-  const [isSubmitting, setIsSubmitting] = useState(false); // لودینگ دکمه نهایی‌سازی
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [origin, setOrigin] = useState<'mine' | 'admin'>('mine');
 
-  // تابع دریافت سوالات با شماره صفحه
-  const fetchQuestions = async (pageNumber = 1) => {
+  // تابع دریافت سوالات با شماره صفحه و منبع
+  const fetchQuestions = async (pageNumber = 1, currentOrigin = origin) => {
     if (pageNumber === 1) {
       setIsLoading(true);
     } else {
@@ -34,8 +37,7 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
     }
 
     try {
-      // ارسال page و limit به بک‌اند
-      const response = await api.get(`/teacher/questions?page=${pageNumber}&limit=10`);
+      const response = await api.get(`/teacher/questions?page=${pageNumber}&limit=10&origin=${currentOrigin}`);
       
       if (response.data.success) {
         const newQuestions = response.data.data;
@@ -61,16 +63,13 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
     }
   };
 
-  // لود شدن صفحه اول در ابتدای ورود
   useEffect(() => {
-    fetchQuestions(1);
-  }, []);
+    fetchQuestions(1, origin);
+  }, [origin]);
 
-  // هندل کردن رسیدن به انتهای لیست (اسکرول)
   const loadMoreData = () => {
-    // اگر دیتای بیشتری هست و در حال حاضر مشغول لود کردن نیست، صفحه بعد را بگیر
     if (hasMore && !isFetchingMore && !isLoading) {
-      fetchQuestions(page + 1);
+      fetchQuestions(page + 1, origin);
     }
   };
 
@@ -79,6 +78,32 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
       if (prev.includes(questionId)) return prev.filter((id) => id !== questionId);
       return [...prev, questionId];
     });
+  };
+
+  const handleDeleteQuestion = (questionId: string) => {
+    Alert.alert(
+      'حذف سوال',
+      'آیا مطمئن هستید که می‌خواهید این سوال را برای همیشه حذف کنید؟',
+      [
+        { text: 'انصراف', style: 'cancel' },
+        { 
+          text: 'حذف', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await api.delete(`/teacher/questions/${questionId}`);
+              if (res.data.success) {
+                // Remove from state
+                setQuestions(prev => prev.filter(q => q._id !== questionId));
+                setSelectedQuestions(prev => prev.filter(id => id !== questionId));
+              }
+            } catch (error) {
+              Alert.alert('خطا', 'مشکلی در حذف سوال رخ داد');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleFinalizeExam = async () => {
@@ -93,7 +118,7 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
       });
       if (response.data.success) {
         Alert.alert('موفقیت', 'آزمون ساخته شد!', [
-          { text: 'بازگشت', onPress: () => navigation.navigate('DashboardScreen') }
+          { text: 'بازگشت', onPress: () => navigation.navigate('ExamListScreen') }
         ]);
       }
     } catch (error: any) {
@@ -114,6 +139,25 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
         <View style={styles.cardHeader}>
           <View style={styles.badgesRow}>
             <Text style={styles.badgeText}>{item.type === 'تشریحی' ? '📝 تشریحی' : '☑️ تستی'}</Text>
+            {origin === 'mine' && (
+              <>
+                <TouchableOpacity 
+                  style={[styles.badgeText, { marginLeft: 8, backgroundColor: '#fef3c7' }]}
+                  onPress={() => navigation.navigate('CreateCustomQuestionScreen', { 
+                    examId, 
+                    editQuestion: item 
+                  })}
+                >
+                  <Text style={{ color: '#d97706', fontSize: 12 }}>ویرایش</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.badgeText, { marginLeft: 4, backgroundColor: '#fee2e2' }]}
+                  onPress={() => handleDeleteQuestion(item._id)}
+                >
+                  <Text style={{ color: '#dc2626', fontSize: 12 }}>حذف</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
           <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
             {isSelected && <Text style={styles.checkmark}>✓</Text>}
@@ -149,10 +193,31 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
         <View style={{ width: 60 }} />
       </View>
 
+      <View style={styles.tabsRow}>
+        <TouchableOpacity 
+          style={[styles.tabBtn, origin === 'mine' && styles.tabBtnActive]}
+          onPress={() => setOrigin('mine')}
+        >
+          <Text style={[styles.tabText, origin === 'mine' && styles.tabTextActive]}>سوالات من</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabBtn, origin === 'admin' && styles.tabBtnActive]}
+          onPress={() => setOrigin('admin')}
+        >
+          <Text style={[styles.tabText, origin === 'admin' && styles.tabTextActive]}>بانک جامع</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.selectionInfoRow}>
         <Text style={styles.selectionInfoText}>
           سوالات انتخاب شده: <Text style={{ fontWeight: 'bold', color: COLORS.primary }}>{selectedQuestions.length}</Text>
         </Text>
+        <TouchableOpacity 
+          style={styles.addCustomBtn}
+          onPress={() => navigation.navigate('CreateCustomQuestionScreen', { examId })}
+        >
+          <Text style={styles.addCustomBtnText}>+ سوال جدید</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -182,7 +247,7 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
         />
       )}
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <TouchableOpacity 
           style={[styles.button, (isSubmitting || selectedQuestions.length === 0) && styles.buttonDisabled]} 
           onPress={handleFinalizeExam}
@@ -202,7 +267,7 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -218,8 +283,10 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 13, color: COLORS.primary, marginTop: 2 },
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
-  selectionInfoRow: { backgroundColor: '#eff6ff', padding: 12, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#bfdbfe' },
+  selectionInfoRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#eff6ff', padding: 12, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#bfdbfe' },
   selectionInfoText: { fontSize: 14, color: COLORS.text },
+  addCustomBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  addCustomBtnText: { color: COLORS.surface, fontSize: 12, fontWeight: 'bold' },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: COLORS.textLight, fontSize: 15 },
   listContainer: { padding: 20 },
@@ -232,8 +299,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   questionCardSelected: { borderColor: COLORS.primary, backgroundColor: '#f8fafc' },
-  cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  badgesRow: { flexDirection: 'row-reverse' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  badgesRow: { flexDirection: 'row' },
   badgeText: { fontSize: 12, color: COLORS.secondary, backgroundColor: '#eff6ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface },
   checkboxSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
@@ -243,6 +310,32 @@ const styles = StyleSheet.create({
   button: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center' },
   buttonDisabled: { backgroundColor: COLORS.secondary, opacity: 0.7 },
   buttonText: { color: COLORS.surface, fontSize: 16, fontWeight: 'bold' },
+  tabsRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surface,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    justifyContent: 'center',
+    gap: 12
+  },
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9'
+  },
+  tabBtnActive: {
+    backgroundColor: COLORS.primary
+  },
+  tabText: {
+    color: COLORS.textLight,
+    fontWeight: 'bold',
+    fontSize: 14
+  },
+  tabTextActive: {
+    color: COLORS.surface
+  }
 });
 
 export default CreateExamStep2Screen;

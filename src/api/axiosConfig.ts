@@ -2,6 +2,7 @@ import axios from 'axios';
 import { getToken } from '../utils/storage';
 import { generateHMACSignature } from '../utils/security';
 
+// const BASE_URL = 'http://10.62.166.125:5001/api';
 const BASE_URL = 'http://192.168.1.128:5001/api';
 
 // 👈 لیست مسیرهایی که باید با HMAC امضا بشن

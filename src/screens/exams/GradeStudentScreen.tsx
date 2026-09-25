@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 12, color: COLORS.textLight, fontSize: 14 },
   
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  questionHeader: { flexDirection: 'row-reverse', marginBottom: 12 },
+  questionHeader: { flexDirection: 'row', marginBottom: 12 },
   questionNumber: {
     width: 24,
     height: 24,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
     elevation: 10, // سایه بالای فوتر
   },
-  scoreInputContainer: { flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  scoreInputContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
   scoreLabel: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
   scoreInput: {
     borderWidth: 1,

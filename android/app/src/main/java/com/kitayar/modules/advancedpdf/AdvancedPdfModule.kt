@@ -135,4 +135,32 @@ class AdvancedPdfModule(reactContext: ReactApplicationContext) : ReactContextBas
             }
         }.start()
     }
+
+    @ReactMethod
+    fun editPdfPages(pdfUri: String, promise: Promise) {
+        try {
+            PdfPageEditorActivity.currentPromise = promise
+            val intent = android.content.Intent(reactApplicationContext, PdfPageEditorActivity::class.java)
+            intent.putExtra("pdfUri", pdfUri)
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactApplicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            promise.reject("START_ACTIVITY_ERROR", e.message)
+            PdfPageEditorActivity.currentPromise = null
+        }
+    }
+
+    @ReactMethod
+    fun rotatePdfPagesVisual(pdfUri: String, promise: Promise) {
+        try {
+            PdfRotateActivity.currentPromise = promise
+            val intent = android.content.Intent(reactApplicationContext, PdfRotateActivity::class.java)
+            intent.putExtra("pdfUri", pdfUri)
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            reactApplicationContext.startActivity(intent)
+        } catch (e: Exception) {
+            promise.reject("START_ACTIVITY_ERROR", e.message)
+            PdfRotateActivity.currentPromise = null
+        }
+    }
 }

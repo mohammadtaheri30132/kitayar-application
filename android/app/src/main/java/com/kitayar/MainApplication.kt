@@ -22,6 +22,7 @@ import com.kitayar.modules.videoplayer.KitayarVideoPackage
 import com.kitayar.modules.texttopdf.TextToPdfPackage
 import com.kitayar.modules.advancedpdf.AdvancedPdfPackage
 import com.kitayar.modules.pdfcore.PdfCorePackage
+import com.kitayar.audiorecorder.AudioRecorderPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -48,6 +49,7 @@ class MainApplication : Application(), ReactApplication {
           add(TextToPdfPackage())
           add(AdvancedPdfPackage())
           add(PdfCorePackage())
+          add(AudioRecorderPackage())
         },
     )
   }

@@ -7,7 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { 
   Share2, Trash2, Download, Eye, FileText, 
-  Layers, FileMinus, Droplet, RotateCw, Lock, Scissors
+  Layers, FileMinus, Droplet, RotateCw, Lock, Scissors,
+  Minimize2, FileOutput, ArrowUpDown
 } from 'lucide-react-native';
 
 import FilePickerModule from '../../native/FilePicker';
@@ -19,10 +20,13 @@ const { FileShareModule, FileSaverModule, AdvancedPdfModule } = NativeModules;
 const ADVANCED_TOOLS_CONFIG = {
   'MERGE_PDF': { title: 'ترکیب فایل‌های PDF', desc: 'چند فایل PDF انتخاب کنید تا با هم ادغام شوند.', Icon: Layers, color: '#3498db', requiresParam: false },
   'SPLIT_PDF': { title: 'استخراج صفحه', desc: 'شماره صفحه‌ای که می‌خواهید جدا شود را وارد کنید.', Icon: Scissors, color: '#e74c3c', requiresParam: true, paramPlaceholder: 'مثال: 1' },
-  'DELETE_PAGES': { title: 'حذف صفحات PDF', desc: 'شماره صفحاتی که نمی‌خواهید را وارد کنید.', Icon: FileMinus, color: '#e67e22', requiresParam: true, paramPlaceholder: 'مثال: 1,3,5' },
-  'ROTATE_PAGES': { title: 'چرخش صفحات PDF', desc: 'زاویه چرخش را وارد کنید.', Icon: RotateCw, color: '#f1c40f', requiresParam: true, paramPlaceholder: 'مثال: 90 یا 180' },
+  'DELETE_PAGES': { title: 'حذف و ویرایش صفحات', desc: 'فایل را انتخاب کنید تا وارد محیط ویرایش و جابه‌جایی شوید.', Icon: FileMinus, color: '#e67e22', requiresParam: false },
+  'ROTATE_PAGES': { title: 'چرخش صفحات PDF', desc: 'فایل را انتخاب کنید تا وارد محیط چرخش بصری شوید.', Icon: RotateCw, color: '#f1c40f', requiresParam: false },
   'WATERMARK_PDF': { title: 'افزودن واترمارک', desc: 'متن واترمارک خود را بنویسید (فقط انگلیسی).', Icon: Droplet, color: '#34495e', requiresParam: true, paramPlaceholder: 'مثال: KITAYAR' },
   'ENCRYPT_PDF': { title: 'رمزگذاری PDF', desc: 'رمز عبوری که می‌خواهید روی فایل بگذارید را بنویسید.', Icon: Lock, color: '#c0392b', requiresParam: true, paramPlaceholder: 'رمز عبور' },
+  'COMPRESS_PDF': { title: 'فشرده‌سازی PDF', desc: 'فایل PDF را انتخاب کنید تا حجم آن کاهش یابد.', Icon: Minimize2, color: '#2ecc71', requiresParam: false },
+  'EXTRACT_PAGES': { title: 'جداسازی صفحات PDF', desc: 'صفحاتی که می‌خواهید جدا شوند را وارد کنید.', Icon: FileOutput, color: '#9b59b6', requiresParam: true, paramPlaceholder: 'مثال: 1,2,3' },
+  'REORDER_PAGES': { title: 'جابه‌جایی صفحات PDF', desc: 'فایل را انتخاب کنید تا وارد محیط ویرایش و جابه‌جایی شوید.', Icon: ArrowUpDown, color: '#1abc9c', requiresParam: false },
 };
 
 const AdvancedPdfScreen = ({ route, navigation }) => {
@@ -70,12 +74,19 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
 
       setIsLoading(true);
 
-      const resultPath = await AdvancedPdfModule.executeTool(
-        toolId, 
-        mainUri, 
-        extraUris.length > 0 ? extraUris : null, 
-        toolParam.trim()
-      );
+      let resultPath;
+      if (toolId === 'DELETE_PAGES' || toolId === 'REORDER_PAGES') {
+        resultPath = await AdvancedPdfModule.editPdfPages(mainUri);
+      } else if (toolId === 'ROTATE_PAGES') {
+        resultPath = await AdvancedPdfModule.rotatePdfPagesVisual(mainUri);
+      } else {
+        resultPath = await AdvancedPdfModule.executeTool(
+          toolId, 
+          mainUri, 
+          extraUris.length > 0 ? extraUris : null, 
+          toolParam.trim()
+        );
+      }
 
       const stat = await ReactNativeBlobUtil.fs.stat(resultPath);
       const sizeStr = (stat.size / 1024).toFixed(1) + " KB";

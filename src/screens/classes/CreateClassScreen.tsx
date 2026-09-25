@@ -152,7 +152,7 @@ const CreateClassScreen = ({ navigation }: any) => {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   
   chipContainer: {
-    flexDirection: 'row-reverse', // راست‌چین شدن آیتم‌های اسکرول افقی
+    flexDirection: 'row', // راست‌چین شدن آیتم‌های اسکرول افقی
     paddingVertical: 4,
   },
   chip: {

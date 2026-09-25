@@ -9,8 +9,11 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.modules.core.DeviceEventManagerModule
+import com.facebook.react.modules.i18nmanager.I18nUtil
 
 class MainActivity : ReactActivity() {
+
+
 
   /**
    * Returns the name of the main component registered from JavaScript. This is used to schedule
@@ -26,7 +29,11 @@ class MainActivity : ReactActivity() {
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
+    setTheme(R.style.AppTheme)
+    super.onCreate(null) // null for react-navigation usually
+    val sharedI18nUtilInstance = I18nUtil.getInstance()
+    sharedI18nUtilInstance.allowRTL(this, true)
+    sharedI18nUtilInstance.forceRTL(this, true)
     handleIncomingIntent(intent)
   }
 

@@ -176,7 +176,7 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
 // ... استایل‌های قبلی را اینجا قرار دهید و این موارد را اضافه کنید:
 const styles = StyleSheet.create({
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40, backgroundColor: COLORS.surface, elevation: 2 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40, backgroundColor: COLORS.surface, elevation: 2 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'right' },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12, marginBottom: 16, backgroundColor: '#f8fafc', color: COLORS.text, fontSize: 16 },
   
-  switchRow: { flexDirection: 'row-reverse', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  switchRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   switchLabel: { fontSize: 15, color: COLORS.text, fontWeight: 'bold', marginRight: 12 },
   
   dateTimeContainer: { marginBottom: 24, backgroundColor: '#f8fafc', padding: 15, borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0' },

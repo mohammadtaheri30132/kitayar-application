@@ -186,7 +186,7 @@ const EditExamScreen = ({ route, navigation }: any) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, elevation: 2, zIndex: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40, backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, elevation: 2, zIndex: 10 },
   headerCenter: { alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   headerSubtitle: { fontSize: 13, color: COLORS.primary, marginTop: 2 },
@@ -198,8 +198,8 @@ const styles = StyleSheet.create({
   listContainer: { padding: 20 },
   questionCard: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1.5, borderColor: COLORS.border },
   questionCardSelected: { borderColor: COLORS.primary, backgroundColor: '#f8fafc' },
-  cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  badgesRow: { flexDirection: 'row-reverse' },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  badgesRow: { flexDirection: 'row' },
   badgeText: { fontSize: 12, color: COLORS.secondary, backgroundColor: '#eff6ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface },
   checkboxSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },

@@ -1,34 +1,51 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
-  View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Modal, TextInput 
+  View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Share, TextInput, Switch, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { Users, FileText, Settings, Share2, ChevronRight, PenSquare, Edit3 } from 'lucide-react-native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
 const ExamDashboardScreen = ({ route, navigation }: any) => {
+  const insets = useSafeAreaInsets();
   const { examId, examTitle } = route.params;
 
   const [participants, setParticipants] = useState<any[]>([]);
   const [examQuestions, setExamQuestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'participants' | 'questions'>('participants');
+  const [activeTab, setActiveTab] = useState<'participants' | 'questions' | 'settings'>('participants');
 
-  // استیت‌های مربوط به مودال افزودن دانش‌آموز
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
-  const [newPhoneNumber, setNewPhoneNumber] = useState('');
-  const [isAddingStudent, setIsAddingStudent] = useState(false);
+  // استیت‌های تب تنظیمات
+  const [title, setTitle] = useState(examTitle || '');
+  const [totalScore, setTotalScore] = useState('');
+  const [isUntimed, setIsUntimed] = useState(false);
+  const [startTime, setStartTime] = useState(new Date());
+  const [endTime, setEndTime] = useState(new Date());
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const fetchDashboardData = async () => {
-    setIsLoading(true);
     try {
-      const dashResponse = await api.get(`/teacher/exams/${examId}/dashboard`);
-      if (dashResponse.data.success) setParticipants(dashResponse.data.data.participantsStatus || []);
-      
-      const examResponse = await api.get(`/teacher/exams/${examId}`);
-      if (examResponse.data.success) setExamQuestions(examResponse.data.data.questions || []);
-    } catch (error) {
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات رخ داد.');
+      const response = await api.get(`/teacher/exams/${examId}/dashboard`);
+      if (response.data.success) {
+        setParticipants(response.data.data.participantsStatus);
+        
+        const questionsRes = await api.get(`/teacher/exams/${examId}`);
+        if (questionsRes.data.success) {
+          setExamQuestions(questionsRes.data.data.questions);
+          // مقداردهی اولیه تنظیمات
+          const examData = questionsRes.data.data;
+          setTitle(examData.title || examTitle);
+          setTotalScore(String(examData.totalScore || 20));
+          setIsUntimed(examData.isUntimed || false);
+          if (examData.startTime) setStartTime(new Date(examData.startTime));
+          if (examData.endTime) setEndTime(new Date(examData.endTime));
+        }
+      }
+    } catch (error: any) {
+      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات داشبورد رخ داد.');
     } finally {
       setIsLoading(false);
     }
@@ -36,43 +53,21 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
 
   useFocusEffect(useCallback(() => { fetchDashboardData(); }, []));
 
-  // تابع افزودن دستی دانش‌آموز به آزمون
-  const handleAddCustomStudent = async () => {
-    if (!newPhoneNumber || newPhoneNumber.length !== 11) {
-      Alert.alert('توجه', 'شماره موبایل باید ۱۱ رقمی باشد');
-      return;
-    }
-    setIsAddingStudent(true);
-    try {
-      // فراخوانی روت جدیدی که در بک‌اند ساختیم
-      const response = await api.post(`/teacher/exams/${examId}/participants`, {
-        phoneNumbers: [newPhoneNumber]
-      });
-      if (response.data.success) {
-        Alert.alert('موفقیت', 'دانش‌آموز به لیست مجاز اضافه شد');
-        setIsAddModalVisible(false);
-        setNewPhoneNumber('');
-        fetchDashboardData(); // رفرش کردن لیست
-      }
-    } catch (error) {
-      Alert.alert('خطا', 'مشکلی در افزودن دانش‌آموز رخ داد');
-    } finally {
-      setIsAddingStudent(false);
-    }
-  };
-
   const getStatusDisplay = (status: string, gradingStatus: string) => {
     if (status === 'تمام کرده') {
       if (gradingStatus === 'graded') return { text: 'تصحیح شده', bg: '#dcfce7', color: '#166534' };
       return { text: 'در انتظار تصحیح', bg: '#eff6ff', color: '#1e40af' };
     }
     if (status === 'در حال آزمون') return { text: 'در حال آزمون', bg: '#fef3c7', color: '#92400e' };
-    return { text: 'شروع نکرده', bg: '#f1f5f9', color: '#475569' }; // افراد مجاز که هنوز وارد نشده‌اند
+    return { text: 'شروع نکرده', bg: '#f1f5f9', color: '#475569' };
   };
 
   const renderStudentItem = ({ item, index }: { item: any, index: number }) => {
     const statusDisplay = getStatusDisplay(item.status, item.gradingStatus);
     const isClickable = item.status === 'تمام کرده';
+    const fullName = item.firstNameSnapshot || item.lastNameSnapshot 
+      ? `${item.firstNameSnapshot || ''} ${item.lastNameSnapshot || ''}`.trim()
+      : 'بدون نام';
 
     return (
       <TouchableOpacity 
@@ -87,7 +82,8 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
         <View style={styles.cardLeft}>
           <View style={styles.avatar}><Text style={styles.avatarText}>{index + 1}</Text></View>
           <View>
-            <Text style={styles.studentPhone}>{item.identifier}</Text>
+            <Text style={[styles.studentPhone, { fontSize: 14, fontWeight: 'bold', color: COLORS.text }]}>{fullName}</Text>
+            <Text style={[styles.studentPhone, { marginTop: 2, fontSize: 12, color: COLORS.textLight }]}>شماره: {item.identifier}</Text>
             {item.gradingStatus === 'graded' && <Text style={styles.scoreText}>نمره: {item.score}</Text>}
           </View>
         </View>
@@ -98,142 +94,245 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
     );
   };
 
+  const showDateTimePicker = (target: 'start' | 'end') => {
+    const currentValue = target === 'start' ? startTime : endTime;
+    DateTimePickerAndroid.open({
+      value: currentValue,
+      mode: 'date',
+      onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
+        if (event.type === 'dismissed' || !selectedDate) return;
+        DateTimePickerAndroid.open({
+          value: selectedDate,
+          mode: 'time',
+          is24Hour: true,
+          onChange: (timeEvent: DateTimePickerEvent, finalDate?: Date) => {
+            if (timeEvent.type === 'dismissed' || !finalDate) return;
+            if (target === 'start') setStartTime(finalDate);
+            else setEndTime(finalDate);
+          },
+        });
+      },
+    });
+  };
+
+  const handleSaveSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      const response = await api.put(`/teacher/exams/${examId}`, {
+        title,
+        totalScore: Number(totalScore),
+        isUntimed,
+        startTime: isUntimed ? null : startTime.toISOString(),
+        endTime: isUntimed ? null : endTime.toISOString(),
+      });
+      if (response.data.success) {
+        Alert.alert('موفقیت', 'تنظیمات آزمون ذخیره شد');
+        fetchDashboardData();
+      }
+    } catch (error) {
+      Alert.alert('خطا', 'ویرایش تنظیمات امکان‌پذیر نیست.');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} - ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const WEB_BASE_URL = 'http://localhost:5001'; 
+  const examLink = `${WEB_BASE_URL}/exam/join/${examId}`;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>🔙 بازگشت</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>داشبورد آزمون</Text>
-          <Text style={styles.headerSubtitle}>{examTitle}</Text>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ChevronRight size={24} color={COLORS.textLight} />
+            <Text style={styles.backButtonText}>بازگشت</Text>
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle} numberOfLines={1}>{examTitle}</Text>
+          </View>
+          <View style={{ width: 60 }} />
         </View>
-        {/* دکمه تنظیمات در هدر */}
-        <TouchableOpacity style={styles.settingsButton} onPress={() => navigation.navigate('ExamSettingsScreen', { examId })}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.tabsContainer}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'participants' && styles.activeTab]} onPress={() => setActiveTab('participants')}>
-          <Text style={[styles.tabText, activeTab === 'participants' && styles.activeTabText]}>👥 لیست مجاز ({participants.length})</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'questions' && styles.activeTab]} onPress={() => setActiveTab('questions')}>
-          <Text style={[styles.tabText, activeTab === 'questions' && styles.activeTabText]}>📝 سوالات</Text>
-        </TouchableOpacity>
-      </View>
-
-      {isLoading ? (
-        <View style={styles.centerBox}><ActivityIndicator size="large" color={COLORS.primary} /></View>
-      ) : activeTab === 'participants' ? (
-        <View style={{ flex: 1 }}>
-          <FlatList
-            data={participants}
-            keyExtractor={(item) => item.identifier}
-            renderItem={renderStudentItem}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
-          {/* دکمه افزودن دانش‌آموز چسبیده به پایین صفحه */}
-          <TouchableOpacity style={styles.addParticipantBtn} onPress={() => setIsAddModalVisible(true)}>
-            <Text style={styles.addParticipantText}>➕ افزودن دانش‌آموز جدید</Text>
+        {/* نمایش لینک آزمون */}
+        <View style={styles.linkContainer}>
+          <Text style={styles.linkText} numberOfLines={1}>{examLink}</Text>
+          <TouchableOpacity 
+            style={styles.shareButton} 
+            onPress={() => Share.share({ message: `لینک شرکت در آزمون ${examTitle}:\n${examLink}` })}
+          >
+            <Share2 size={16} color="#fff" />
+            <Text style={styles.shareButtonText}>اشتراک</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={examQuestions}
-          keyExtractor={(item, index) => item._id || index.toString()}
-          renderItem={({ item, index }) => (
-            <View style={styles.questionCard}>
-              <Text style={styles.questionNumber}>سوال {index + 1}</Text>
-              <Text style={styles.questionText}>{item.question}</Text>
-            </View>
-          )}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
 
-      {/* مودال افزودن دستی دانش‌آموز */}
-      <Modal visible={isAddModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>افزودن به لیست مجاز</Text>
-            <Text style={styles.modalDesc}>شماره موبایل دانش‌آموز را برای صدور مجوز ورود به این آزمون وارد کنید.</Text>
-            
-            <TextInput
-              style={styles.modalInput}
-              placeholder="0912..."
-              keyboardType="numeric"
-              maxLength={11}
-              value={newPhoneNumber}
-              onChangeText={setNewPhoneNumber}
-              textAlign="center"
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity style={[styles.tab, activeTab === 'participants' && styles.activeTab]} onPress={() => setActiveTab('participants')}>
+            <Users size={18} color={activeTab === 'participants' ? COLORS.primary : COLORS.textLight} />
+            <Text style={[styles.tabText, activeTab === 'participants' && styles.activeTabText]}>شرکت‌کنندگان</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === 'questions' && styles.activeTab]} onPress={() => setActiveTab('questions')}>
+            <FileText size={18} color={activeTab === 'questions' ? COLORS.primary : COLORS.textLight} />
+            <Text style={[styles.tabText, activeTab === 'questions' && styles.activeTabText]}>سوالات</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.tab, activeTab === 'settings' && styles.activeTab]} onPress={() => setActiveTab('settings')}>
+            <Settings size={18} color={activeTab === 'settings' ? COLORS.primary : COLORS.textLight} />
+            <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>تنظیمات</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.centerBox}><ActivityIndicator size="large" color={COLORS.primary} /></View>
+        ) : activeTab === 'participants' ? (
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={participants}
+              keyExtractor={(item) => item.identifier}
+              renderItem={renderStudentItem}
+              contentContainerStyle={styles.listContainer}
+              showsVerticalScrollIndicator={false}
             />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setIsAddModalVisible(false)}>
-                <Text style={styles.modalCancelText}>انصراف</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalAddBtn} onPress={handleAddCustomStudent} disabled={isAddingStudent}>
-                {isAddingStudent ? <ActivityIndicator color={COLORS.surface} /> : <Text style={styles.modalAddText}>افزودن</Text>}
+            <View style={[styles.footerButtons, { bottom: Math.max(insets.bottom, 10) }]}>
+              <TouchableOpacity 
+                style={styles.finalizeBtn} 
+                onPress={() => navigation.navigate('FinalizeGradesScreen', { examId, examTitle })}
+              >
+                <Text style={styles.finalizeBtnText}>📋 ثبت نهایی در دفتر کلاسی</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        ) : activeTab === 'questions' ? (
+          <View style={{ flex: 1 }}>
+            <View style={styles.questionsHeader}>
+              <Text style={styles.questionsCountText}>تعداد سوالات: {examQuestions.length}</Text>
+              <TouchableOpacity 
+                style={styles.editQuestionsBtn}
+                onPress={() => navigation.navigate('EditExamScreen', { examId, examTitle })}
+              >
+                <Edit3 size={14} color={COLORS.primary} style={{ marginRight: 4 }} />
+                <Text style={styles.editQuestionsBtnText}>ویرایش سوالات</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={examQuestions}
+              keyExtractor={(item, index) => item._id || index.toString()}
+              renderItem={({ item, index }) => (
+                <View style={styles.questionCard}>
+                  <Text style={styles.questionNumber}>سوال {index + 1}</Text>
+                  <Text style={styles.questionText}>{item.question}</Text>
+                </View>
+              )}
+              contentContainerStyle={[styles.listContainer, { paddingTop: 8 }]}
+            />
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={[styles.listContainer, { paddingBottom: Math.max(insets.bottom, 40) }]}>
+            <View style={styles.formCard}>
+              <Text style={styles.label}>عنوان آزمون</Text>
+              <TextInput style={styles.input} value={title} onChangeText={setTitle} textAlign="right" />
 
-    </View>
+              <Text style={styles.label}>نمره کل</Text>
+              <TextInput style={styles.input} value={totalScore} onChangeText={setTotalScore} keyboardType="numeric" textAlign="center" />
+
+              <View style={styles.switchRow}>
+                <Switch
+                  value={isUntimed}
+                  onValueChange={setIsUntimed}
+                  trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
+                  thumbColor={isUntimed ? '#16a34a' : '#f8fafc'}
+                />
+                <Text style={styles.switchLabel}>آزمون آزاد (بدون زمان)</Text>
+              </View>
+
+              {!isUntimed && (
+                <>
+                  <Text style={styles.label}>زمان شروع آزمون</Text>
+                  <TouchableOpacity style={styles.datePickerBtn} onPress={() => showDateTimePicker('start')}>
+                    <Text style={styles.datePickerText}>{formatDate(startTime)}</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.label}>زمان پایان آزمون</Text>
+                  <TouchableOpacity style={styles.datePickerBtn} onPress={() => showDateTimePicker('end')}>
+                    <Text style={styles.datePickerText}>{formatDate(endTime)}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              <TouchableOpacity 
+                style={styles.saveBtn} 
+                onPress={handleSaveSettings} 
+                disabled={isSavingSettings}
+              >
+                {isSavingSettings ? <ActivityIndicator color={COLORS.surface} /> : <Text style={styles.saveBtnText}>ذخیره تنظیمات</Text>}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
-// ... استایل‌های قبلی را نگه دارید و این موارد را به آن اضافه کنید:
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 40, backgroundColor: COLORS.surface, elevation: 2 },
-  headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
-  headerSubtitle: { fontSize: 13, color: COLORS.primary, marginTop: 2 },
-  backButton: { padding: 8, width: 60 },
-  backButtonText: { color: COLORS.textLight, fontSize: 14 },
-  settingsButton: { padding: 8, width: 60, alignItems: 'flex-start' },
-  settingsIcon: { fontSize: 24 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 40, paddingBottom: 16, backgroundColor: COLORS.surface, elevation: 2 },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  headerTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, textAlign: 'center' },
+  backButton: { flexDirection: 'row', alignItems: 'center', width: 60 },
+  backButtonText: { color: COLORS.textLight, fontSize: 13, marginRight: 4 },
   
-  tabsContainer: { flexDirection: 'row-reverse', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  tab: { flex: 1, paddingVertical: 16, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  linkContainer: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#eff6ff', margin: 12, marginBottom: 0, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#bfdbfe' 
+  },
+  linkText: { flex: 1, textAlign: 'left', fontSize: 11, color: '#1e40af', marginRight: 8 },
+  shareButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3b82f6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
+  shareButtonText: { color: '#fff', fontSize: 11, fontWeight: 'bold', marginRight: 4 },
+  
+  tabsContainer: { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, marginTop: 12 },
+  tab: { flex: 1, flexDirection: 'row', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', gap: 6 },
   activeTab: { borderBottomColor: COLORS.primary },
-  tabText: { fontSize: 15, color: COLORS.textLight, fontWeight: 'bold' },
+  tabText: { fontSize: 13, color: COLORS.textLight, fontWeight: 'bold' },
   activeTabText: { color: COLORS.primary },
   
-  listContainer: { padding: 20, paddingBottom: 100 },
-  card: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
+  listContainer: { padding: 12, paddingBottom: 80 },
+  card: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 12, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
   cardDisabled: { backgroundColor: '#fafafa' },
-  cardLeft: { flexDirection: 'row-reverse', alignItems: 'center' },
-  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-  avatarText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 14 },
-  studentPhone: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
-  scoreText: { fontSize: 13, color: '#166534', fontWeight: 'bold', marginTop: 4, textAlign: 'right' },
-  badge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
-  badgeText: { fontSize: 12, fontWeight: 'bold' },
+  cardLeft: { flexDirection: 'row', alignItems: 'center' },
+  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
+  avatarText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 12 },
+  studentPhone: { fontSize: 14, fontWeight: 'bold', color: COLORS.text },
+  scoreText: { fontSize: 11, color: '#166534', fontWeight: 'bold', marginTop: 2, textAlign: 'right' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: 10, fontWeight: 'bold' },
   
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  addParticipantBtn: { backgroundColor: COLORS.primary, margin: 20, padding: 16, borderRadius: 12, alignItems: 'center', position: 'absolute', bottom: 10, left: 0, right: 0, elevation: 5 },
-  addParticipantText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 16 },
+  finalizeBtn: { backgroundColor: '#16a34a', padding: 14, borderRadius: 10, alignItems: 'center', flex: 1 },
+  finalizeBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 13 },
+  footerButtons: { position: 'absolute', left: 16, right: 16 },
 
-  questionCard: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border },
-  questionNumber: { fontSize: 14, fontWeight: 'bold', color: COLORS.primary, marginBottom: 8, textAlign: 'right' },
-  questionText: { fontSize: 15, color: COLORS.text, textAlign: 'right' },
+  questionsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
+  questionsCountText: { fontSize: 13, color: COLORS.textLight, fontWeight: 'bold' },
+  editQuestionsBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  editQuestionsBtnText: { fontSize: 12, color: COLORS.primary, fontWeight: 'bold' },
+  
+  questionCard: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
+  questionNumber: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, marginBottom: 6, textAlign: 'right' },
+  questionText: { fontSize: 14, color: COLORS.text, textAlign: 'right', lineHeight: 22 },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalContent: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 24, elevation: 5 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'right' },
-  modalDesc: { fontSize: 14, color: COLORS.textLight, marginBottom: 20, textAlign: 'right', lineHeight: 22 },
-  modalInput: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 14, fontSize: 18, letterSpacing: 2, backgroundColor: '#f8fafc', marginBottom: 24 },
-  modalActions: { flexDirection: 'row', justifyContent: 'space-between' },
-  modalCancelBtn: { flex: 1, padding: 14, alignItems: 'center', marginRight: 10 },
-  modalCancelText: { color: COLORS.textLight, fontWeight: 'bold', fontSize: 16 },
-  modalAddBtn: { flex: 1, backgroundColor: COLORS.primary, padding: 14, borderRadius: 10, alignItems: 'center' },
-  modalAddText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 16 },
+  formCard: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
+  label: { fontSize: 13, fontWeight: 'bold', color: COLORS.text, marginBottom: 6, textAlign: 'right' },
+  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, fontSize: 14, backgroundColor: '#f8fafc', marginBottom: 16 },
+  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  switchLabel: { fontSize: 13, color: COLORS.text, fontWeight: '500' },
+  datePickerBtn: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: COLORS.border, padding: 12, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
+  datePickerText: { fontSize: 14, color: COLORS.text, letterSpacing: 1 },
+  saveBtn: { backgroundColor: COLORS.primary, padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 10 },
+  saveBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 14 },
 });
 
 export default ExamDashboardScreen;
