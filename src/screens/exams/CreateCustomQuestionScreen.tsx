@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
   ScrollView, ActivityIndicator, Alert, Image, NativeModules, Platform, PermissionsAndroid 
@@ -15,9 +15,7 @@ const { AudioRecorderModule } = NativeModules;
 
 const QUESTION_TYPES = [
   { id: '1', label: 'تستی', value: 'تستی' },
-  { id: '2', label: 'صحیح-غلط', value: 'صحیح-غلط' },
-  { id: '3', label: 'کوتاه-پاسخ', value: 'کوتاه-پاسخ' },
-  { id: '4', label: 'گسترده-پاسخ', value: 'گسترده-پاسخ' },
+  { id: '2', label: 'ساده', value: 'گسترده-پاسخ' }
 ];
 
 const DIFFICULTIES = [
@@ -39,6 +37,28 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
   const [audioPath, setAudioPath] = useState<string | null>(editQuestion?.audioUrl || null);
   const [isRecording, setIsRecording] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  
+  const [recordDuration, setRecordDuration] = useState(0);
+  const [playbackPos, setPlaybackPos] = useState(0);
+  const [playbackDur, setPlaybackDur] = useState(0);
+
+  const recordInterval = useRef<any>(null);
+  const playInterval = useRef<any>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordInterval.current) clearInterval(recordInterval.current);
+      if (playInterval.current) clearInterval(playInterval.current);
+    };
+  }, []);
+
+  const formatTime = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -100,6 +120,8 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
         const path = await AudioRecorderModule.stopRecording();
         setAudioPath(path);
         setIsRecording(false);
+        setIsPaused(false);
+        if (recordInterval.current) clearInterval(recordInterval.current);
       } catch (e) {
         Alert.alert('خطا', 'مشکلی در توقف ضبط پیش آمد.');
         setIsRecording(false);
@@ -108,49 +130,107 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
       try {
         await AudioRecorderModule.startRecording();
         setIsRecording(true);
+        setIsPaused(false);
+        setRecordDuration(0);
+        recordInterval.current = setInterval(() => {
+          setRecordDuration(prev => prev + 1000);
+        }, 1000);
       } catch (e) {
         Alert.alert('خطا', 'مشکلی در شروع ضبط پیش آمد. لطفاً دسترسی میکروفون را تایید کنید.');
       }
     }
   };
 
-  const togglePlayback = async () => {
-    if (!audioPath) return;
+  const handlePauseResumeRecord = async () => {
+    if (!isRecording) return;
     try {
-      if (isPlaying) {
-        await AudioRecorderModule.stopPlaying();
-        setIsPlaying(false);
+      if (isPaused) {
+        await AudioRecorderModule.resumeRecording();
+        setIsPaused(false);
+        recordInterval.current = setInterval(() => {
+          setRecordDuration(prev => prev + 1000);
+        }, 1000);
       } else {
-        setIsPlaying(true);
-        await AudioRecorderModule.play(audioPath);
-        // We set to false roughly when it finishes, or user can click stop
-        setIsPlaying(false);
+        await AudioRecorderModule.pauseRecording();
+        setIsPaused(true);
+        if (recordInterval.current) clearInterval(recordInterval.current);
       }
     } catch (e) {
-      console.log(e);
+      console.warn(e);
+    }
+  };
+
+  const togglePlayback = async () => {
+    if (!audioPath) return;
+    console.log(`[DEBUG] togglePlayback called. audioPath=${audioPath}, isPlaying=${isPlaying}`);
+    try {
+      if (isPlaying) {
+        console.log(`[DEBUG] Stopping playback...`);
+        await AudioRecorderModule.stopPlaying();
+        setIsPlaying(false);
+        if (playInterval.current) clearInterval(playInterval.current);
+        setPlaybackPos(0);
+        console.log(`[DEBUG] Stopped playback successfully.`);
+      } else {
+        console.log(`[DEBUG] Starting playback...`);
+        setIsPlaying(true);
+        const playUrl = audioPath.startsWith('/uploads/') ? `${api.defaults.baseURL?.replace('/api', '')}${audioPath}` : audioPath;
+        console.log(`[DEBUG] Calling AudioRecorderModule.play with URL=${playUrl}`);
+        await AudioRecorderModule.play(playUrl);
+        console.log(`[DEBUG] AudioRecorderModule.play resolved.`);
+        
+        // Polling loop
+        playInterval.current = setInterval(async () => {
+          try {
+            const pos = await AudioRecorderModule.getPlaybackPosition();
+            const dur = await AudioRecorderModule.getPlaybackDuration();
+            setPlaybackPos(pos);
+            setPlaybackDur(dur);
+            if (pos >= dur && dur > 0) {
+              clearInterval(playInterval.current);
+              setIsPlaying(false);
+              setPlaybackPos(0);
+            }
+          } catch (e) {
+            console.log(`[DEBUG] Polling error:`, e);
+          }
+        }, 500);
+      }
+    } catch (e) {
+      console.log('[DEBUG] Error in togglePlayback:', e);
       setIsPlaying(false);
     }
   };
 
   const uploadFile = async (filePath: string, type: 'image' | 'audio') => {
-    // If the path is a remote URL (already uploaded), don't upload again
-    if (filePath.startsWith('http')) return filePath;
+    console.log(`[DEBUG] uploadFile called for type=${type}, filePath=${filePath}`);
+    // If the path is a remote URL or an already uploaded relative URL, don't upload again
+    if (filePath.startsWith('http') || filePath.startsWith('/uploads/')) {
+      console.log(`[DEBUG] filePath is already remote, returning as is`);
+      return filePath;
+    }
 
     try {
       const fileName = filePath.split('/').pop() || 'file';
       const fileData = {
         name: fileName,
         type: type === 'image' ? 'image/jpeg' : 'audio/mp4',
-        uri: Platform.OS === 'ios' ? filePath.replace('file://', '') : filePath,
+        uri: Platform.OS === 'ios' ? filePath.replace('file://', '') : (filePath.startsWith('file://') ? filePath : `file://${filePath}`),
       };
+      
+      console.log(`[DEBUG] Form data file details:`, fileData);
 
       const formData = new FormData();
       formData.append('file', fileData as any);
 
-      const res = await api.post('/teacher/upload-media', formData);
+      console.log(`[DEBUG] Requesting /teacher/builder/upload-media...`);
+      const res = await api.post('/teacher/builder/upload-media', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log(`[DEBUG] Upload SUCCESS. Res link: ${res.data.link}`);
       return res.data.link;
-    } catch (error) {
-      console.log('Upload error', error);
+    } catch (error: any) {
+      console.log('[DEBUG] Upload error details:', error.response?.data || error.message);
       return '';
     }
   };
@@ -159,6 +239,14 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
     if (!question.trim()) {
       Alert.alert('توجه', 'متن سوال الزامی است.');
       return;
+    }
+
+    if (type === 'تستی') {
+      const validOptions = options.filter(o => o.trim());
+      if (validOptions.length < 2) {
+        Alert.alert('توجه', 'برای سوال تستی حداقل دو گزینه وارد کنید.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -170,6 +258,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
         uploadedImage = await uploadFile(imagePath, 'image');
       }
       if (audioPath) {
+        console.log(`[DEBUG] Will try to upload audioPath:`, audioPath);
         uploadedAudio = await uploadFile(audioPath, 'audio');
       }
 
@@ -286,20 +375,34 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.mediaBtn, isRecording && { backgroundColor: '#fee2e2', borderColor: COLORS.error }]} 
-            onPress={toggleRecording}
-          >
-            {isRecording ? <StopCircle color={COLORS.error} size={24} /> : <Mic color={audioPath ? COLORS.primary : COLORS.textLight} size={24} />}
-            <Text style={[styles.mediaBtnText, audioPath && { color: COLORS.primary }, isRecording && { color: COLORS.error }]}>
-              {isRecording ? 'در حال ضبط... (توقف)' : audioPath ? 'صدا ضبط شد' : 'ضبط صدا'}
-            </Text>
-          </TouchableOpacity>
+          <View style={[styles.mediaBtn, isRecording && { backgroundColor: '#fee2e2', borderColor: COLORS.error }]}>
+            {isRecording ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                <TouchableOpacity onPress={toggleRecording} style={{ padding: 4 }}>
+                  <StopCircle color={COLORS.error} size={24} />
+                </TouchableOpacity>
+                <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>{formatTime(recordDuration)}</Text>
+                <TouchableOpacity onPress={handlePauseResumeRecord} style={{ padding: 4 }}>
+                  {isPaused ? <Play color={COLORS.error} size={24} /> : <Pause color={COLORS.error} size={24} />}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={toggleRecording}>
+                <Mic color={audioPath ? COLORS.primary : COLORS.textLight} size={24} />
+                <Text style={[styles.mediaBtnText, audioPath && { color: COLORS.primary }]}>
+                  {audioPath ? 'صدا ضبط شد (دوباره)' : 'ضبط صدا'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {imagePath && (
           <View style={styles.previewContainer}>
-            <Image source={{ uri: imagePath }} style={styles.previewImage} />
+            <Image 
+              source={{ uri: imagePath.startsWith('/uploads/') ? `${api.defaults.baseURL?.replace('/api', '')}${imagePath}` : imagePath }} 
+              style={styles.previewImage} 
+            />
             <TouchableOpacity style={styles.removePreviewBtn} onPress={() => setImagePath(null)}>
               <X color="#fff" size={20} />
             </TouchableOpacity>
@@ -308,13 +411,21 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
 
         {audioPath && !isRecording && (
           <View style={styles.audioPreview}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity style={styles.iconBtn} onPress={togglePlayback}>
                 {isPlaying ? <Pause color={COLORS.primary} size={24} /> : <Play color={COLORS.primary} size={24} />}
               </TouchableOpacity>
-              <Text style={styles.audioText}>{isPlaying ? 'در حال پخش...' : 'فایل صوتی ضبط شد'}</Text>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <View style={{ height: 4, backgroundColor: '#bfdbfe', borderRadius: 2, overflow: 'hidden' }}>
+                  <View style={{ height: '100%', width: `${playbackDur > 0 ? (playbackPos / playbackDur) * 100 : 0}%`, backgroundColor: COLORS.primary }} />
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                  <Text style={{ fontSize: 10, color: COLORS.textLight }}>{formatTime(playbackDur)}</Text>
+                  <Text style={{ fontSize: 10, color: COLORS.textLight }}>{formatTime(playbackPos)}</Text>
+                </View>
+              </View>
             </View>
-            <View style={{ flexDirection: 'row' }}>
+            <View style={{ flexDirection: 'row', marginLeft: 15 }}>
               <TouchableOpacity style={[styles.iconBtn, { marginRight: 10 }]} onPress={() => setAudioPath(null)}>
                 <RefreshCw color={COLORS.primary} size={20} />
               </TouchableOpacity>

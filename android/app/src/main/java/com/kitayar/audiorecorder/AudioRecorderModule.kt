@@ -2,6 +2,7 @@ package com.kitayar.audiorecorder
 
 import android.media.MediaRecorder
 import android.media.MediaPlayer
+import android.os.Build
 import android.util.Log
 import com.facebook.react.bridge.*
 import java.io.File
@@ -27,7 +28,6 @@ class AudioRecorderModule(reactContext: ReactApplicationContext) : ReactContextB
         }
 
         try {
-            // Compress by using AAC format, good quality vs size ratio
             val outputDir = reactApplicationContext.cacheDir
             val outputFile = File.createTempFile("audio_record_", ".m4a", outputDir)
             currentFilePath = outputFile.absolutePath
@@ -73,6 +73,34 @@ class AudioRecorderModule(reactContext: ReactApplicationContext) : ReactContextB
     }
 
     @ReactMethod
+    fun pauseRecording(promise: Promise) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                recorder?.pause()
+                promise.resolve(null)
+            } catch (e: Exception) {
+                promise.reject("PAUSE_FAILED", e.message)
+            }
+        } else {
+            promise.reject("UNSUPPORTED", "Pause requires API level 24")
+        }
+    }
+
+    @ReactMethod
+    fun resumeRecording(promise: Promise) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                recorder?.resume()
+                promise.resolve(null)
+            } catch (e: Exception) {
+                promise.reject("RESUME_FAILED", e.message)
+            }
+        } else {
+            promise.reject("UNSUPPORTED", "Resume requires API level 24")
+        }
+    }
+
+    @ReactMethod
     fun play(filePath: String, promise: Promise) {
         if (isPlaying) {
             player?.stop()
@@ -87,8 +115,6 @@ class AudioRecorderModule(reactContext: ReactApplicationContext) : ReactContextB
                 start()
                 setOnCompletionListener {
                     this@AudioRecorderModule.isPlaying = false
-                    release()
-                    player = null
                 }
             }
             this@AudioRecorderModule.isPlaying = true
@@ -101,13 +127,9 @@ class AudioRecorderModule(reactContext: ReactApplicationContext) : ReactContextB
 
     @ReactMethod
     fun stopPlaying(promise: Promise) {
-        if (!isPlaying) {
-            promise.resolve(null)
-            return
-        }
         try {
             player?.apply {
-                stop()
+                if (isPlaying) stop()
                 release()
             }
             player = null
@@ -116,6 +138,48 @@ class AudioRecorderModule(reactContext: ReactApplicationContext) : ReactContextB
         } catch (e: Exception) {
             Log.e("AudioRecorderModule", "stopPlaying failed", e)
             promise.reject("STOP_PLAYING_FAILED", e)
+        }
+    }
+
+    @ReactMethod
+    fun pausePlaying(promise: Promise) {
+        try {
+            player?.pause()
+            isPlaying = false
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("PAUSE_FAILED", e)
+        }
+    }
+
+    @ReactMethod
+    fun resumePlaying(promise: Promise) {
+        try {
+            player?.start()
+            isPlaying = true
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("RESUME_FAILED", e)
+        }
+    }
+
+    @ReactMethod
+    fun getPlaybackPosition(promise: Promise) {
+        try {
+            val position = player?.currentPosition ?: 0
+            promise.resolve(position)
+        } catch (e: Exception) {
+            promise.resolve(0)
+        }
+    }
+
+    @ReactMethod
+    fun getPlaybackDuration(promise: Promise) {
+        try {
+            val duration = player?.duration ?: 0
+            promise.resolve(duration)
+        } catch (e: Exception) {
+            promise.resolve(0)
         }
     }
 }

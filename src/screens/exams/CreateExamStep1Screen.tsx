@@ -32,15 +32,32 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
   const [startDay, setStartDay] = useState<number>(currentJalali.jd);
   const [startMonth, setStartMonth] = useState<number>(currentJalali.jm);
 
-  const [startHour, setStartHour] = useState('08');
-  const [startMinute, setStartMinute] = useState('00');
-  const [endHour, setEndHour] = useState('10');
-  const [endMinute, setEndMinute] = useState('00');
+  const now = new Date();
+  const defaultDuration = 45;
+  const defaultEndTime = new Date(now.getTime() + defaultDuration * 60000);
+
+  const [startHour, setStartHour] = useState(now.getHours().toString().padStart(2, '0'));
+  const [startMinute, setStartMinute] = useState(now.getMinutes().toString().padStart(2, '0'));
+  
+  const [examDuration, setExamDuration] = useState<number | 'custom'>(defaultDuration);
+
+  const [endHour, setEndHour] = useState(defaultEndTime.getHours().toString().padStart(2, '0'));
+  const [endMinute, setEndMinute] = useState(defaultEndTime.getMinutes().toString().padStart(2, '0'));
 
   const daysList = Array.from({ length: 31 }, (_, i) => ({ id: `d${i + 1}`, label: `${i + 1}`, value: i + 1 }));
   const monthsList = PERSIAN_MONTHS.map((m, i) => ({ id: `m${i + 1}`, label: m, value: i + 1 }));
   const hoursList = Array.from({ length: 24 }, (_, i) => ({ id: `h${i}`, label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }));
   const minutesList = Array.from({ length: 60 }, (_, i) => ({ id: `min${i}`, label: i.toString().padStart(2, '0'), value: i.toString().padStart(2, '0') }));
+
+  useEffect(() => {
+    if (examDuration !== 'custom') {
+      const gDate = jalaali.toGregorian(currentJalali.jy, startMonth, startDay);
+      const sTime = new Date(gDate.gy, gDate.gm - 1, gDate.gd, parseInt(startHour), parseInt(startMinute));
+      const eTime = new Date(sTime.getTime() + examDuration * 60000);
+      setEndHour(eTime.getHours().toString().padStart(2, '0'));
+      setEndMinute(eTime.getMinutes().toString().padStart(2, '0'));
+    }
+  }, [examDuration, startHour, startMinute, startDay, startMonth]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -210,29 +227,6 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
 
             <View style={styles.timeRow}>
               <View style={styles.halfInput}>
-                <Text style={styles.smallLabel}>ساعت پایان</Text>
-                <View style={[styles.timeRow, { marginTop: 4 }]}>
-                  <View style={{ flex: 0.48 }}>
-                    <CustomDropdown
-                      items={minutesList}
-                      selectedValue={endMinute}
-                      onSelect={(item) => setEndMinute(item.value)}
-                      placeholder="دقیقه"
-                    />
-                  </View>
-                  <Text style={{ alignSelf: 'center' }}>:</Text>
-                  <View style={{ flex: 0.48 }}>
-                    <CustomDropdown
-                      items={hoursList}
-                      selectedValue={endHour}
-                      onSelect={(item) => setEndHour(item.value)}
-                      placeholder="ساعت"
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.halfInput}>
                 <Text style={styles.smallLabel}>ساعت شروع</Text>
                 <View style={[styles.timeRow, { marginTop: 4 }]}>
                   <View style={{ flex: 0.48 }}>
@@ -254,7 +248,53 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
                   </View>
                 </View>
               </View>
+
+              <View style={styles.halfInput}>
+                <Text style={styles.smallLabel}>مدت زمان آزمون</Text>
+                <View style={{ marginTop: 4 }}>
+                  <CustomDropdown
+                    items={[
+                      { id: '15m', label: '۱۵ دقیقه', value: 15 },
+                      { id: '30m', label: '۳۰ دقیقه', value: 30 },
+                      { id: '45m', label: '۴۵ دقیقه', value: 45 },
+                      { id: '90m', label: '۹۰ دقیقه', value: 90 },
+                      { id: 'custom', label: 'سایر (انتخاب دستی)', value: 'custom' },
+                    ]}
+                    selectedValue={examDuration}
+                    onSelect={(item) => setExamDuration(item.value)}
+                    placeholder="انتخاب زمان"
+                  />
+                </View>
+              </View>
             </View>
+
+            {examDuration === 'custom' && (
+              <View style={[styles.timeRow, { marginTop: 16 }]}>
+                <View style={styles.halfInput}>
+                  <Text style={styles.smallLabel}>ساعت پایان</Text>
+                  <View style={[styles.timeRow, { marginTop: 4 }]}>
+                    <View style={{ flex: 0.48 }}>
+                      <CustomDropdown
+                        items={minutesList}
+                        selectedValue={endMinute}
+                        onSelect={(item) => setEndMinute(item.value)}
+                        placeholder="دقیقه"
+                      />
+                    </View>
+                    <Text style={{ alignSelf: 'center' }}>:</Text>
+                    <View style={{ flex: 0.48 }}>
+                      <CustomDropdown
+                        items={hoursList}
+                        selectedValue={endHour}
+                        onSelect={(item) => setEndHour(item.value)}
+                        placeholder="ساعت"
+                      />
+                    </View>
+                  </View>
+                </View>
+                <View style={styles.halfInput} />
+              </View>
+            )}
 
           </View>
 

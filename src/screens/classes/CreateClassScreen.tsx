@@ -14,26 +14,63 @@ import {
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
-// داده‌های تستی برای دوره‌ها و پایه‌ها (در آینده می‌توانید این‌ها را از بک‌اند دریافت کنید)
-const MOCK_COURSES = [
-  { _id: '64f1a2b3c4d5e6f7a8b9c001', name: 'ریاضیات' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c002', name: 'علوم تجربی' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c003', name: 'ادبیات فارسی' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c004', name: 'زبان انگلیسی' },
-];
-
-const MOCK_GRADES = [
-  { _id: '64f1a2b3c4d5e6f7a8b9c011', name: 'هفتم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c012', name: 'هشتم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c013', name: 'نهم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c014', name: 'دهم' },
-];
-
 const CreateClassScreen = ({ navigation }: any) => {
   const [className, setClassName] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [dbCourses, setDbCourses] = useState<any[]>([]);
+  const [dbFields, setDbFields] = useState<any[]>([]);
+  const [dbGrades, setDbGrades] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCourse) {
+      fetchFieldsAndGrades(selectedCourse);
+    } else {
+      setDbFields([]);
+      setDbGrades([]);
+      setSelectedField(null);
+      setSelectedGrade(null);
+    }
+  }, [selectedCourse]);
+
+  const fetchCourses = async () => {
+    try {
+      const res = await api.get('/teacher/builder/courses');
+      if (res.data.success) {
+        setDbCourses(res.data.data);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const fetchFieldsAndGrades = async (courseId: string) => {
+    try {
+      const res = await api.get(`/teacher/builder/courses/${courseId}/fields-grades`);
+      if (res.data.success) {
+        const { fields, grades } = res.data.data;
+        setDbFields(fields);
+        setDbGrades(grades);
+        
+        if (fields.length > 0 && !fields.find((f: any) => f._id === selectedField)) {
+          setSelectedField(null);
+        }
+        
+        if (grades.length > 0 && selectedGrade && !grades.find((g: any) => g._id === selectedGrade)) {
+          setSelectedGrade(null);
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   const handleCreateClass = async () => {
     if (!className.trim()) {
@@ -121,13 +158,27 @@ const CreateClassScreen = ({ navigation }: any) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>پایه تحصیلی</Text>
-            {renderSelector(MOCK_GRADES, selectedGrade, setSelectedGrade)}
+            <Text style={styles.label}>دوره تحصیلی</Text>
+            {renderSelector(dbCourses, selectedCourse, setSelectedCourse)}
           </View>
 
+          {dbFields.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>رشته تحصیلی</Text>
+              {renderSelector(dbFields, selectedField, (id) => {
+                setSelectedField(id);
+                setSelectedGrade(null);
+              })}
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>درس / دوره</Text>
-            {renderSelector(MOCK_COURSES, selectedCourse, setSelectedCourse)}
+            <Text style={styles.label}>پایه تحصیلی</Text>
+            {dbGrades.filter(g => !selectedField || g.field === selectedField).length > 0 ? (
+              renderSelector(dbGrades.filter(g => !selectedField || g.field === selectedField), selectedGrade, setSelectedGrade)
+            ) : (
+              <Text style={{ textAlign: 'right', color: COLORS.textLight, fontSize: 13, marginRight: 10 }}>بدون پایه (لطفاً ابتدا دوره و رشته را انتخاب کنید)</Text>
+            )}
           </View>
 
         </View>

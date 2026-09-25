@@ -106,6 +106,13 @@ const renderExamItem = ({ item }: { item: any }) => {
             <Text style={[styles.badgeText, { color: statusStyle.text }]}>{item.status}</Text>
           </View>
         </View>
+        
+        {item.className && (
+          <View style={styles.classBadgeContainer}>
+            <Text style={styles.classBadgeText}>کلاس: {item.className}</Text>
+          </View>
+        )}
+
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>شروع:</Text>
@@ -228,10 +235,12 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: COLORS.textLight, textAlign: 'center' },
   listContainer: { padding: 20, paddingBottom: 100 },
   card: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, elevation: 1 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 12 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 12 },
   examTitle: { fontSize: 17, fontWeight: 'bold', color: COLORS.primary, flex: 1, textAlign: 'right', marginLeft: 10 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: 12, fontWeight: 'bold' },
+  classBadgeContainer: { backgroundColor: '#f1f5f9', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, marginBottom: 12, alignSelf: 'flex-start' },
+  classBadgeText: { fontSize: 12, color: COLORS.textLight, fontWeight: 'bold' },
   cardBody: { marginBottom: 12 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
   infoLabel: { fontSize: 14, color: COLORS.textLight },

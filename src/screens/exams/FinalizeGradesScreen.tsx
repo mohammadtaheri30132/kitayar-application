@@ -45,20 +45,35 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
 
   useFocusEffect(useCallback(() => { fetchPreview(); }, []));
 
+  const handleSingleAction = async (sessionId: string, actionType: string, targetPhone?: string) => {
+    try {
+      const payload = [{ sessionId, action: actionType, targetPhone }];
+      const response = await api.post(`/teacher/exams/${examId}/finalize`, { actions: payload });
+      if (response.data.success) {
+        fetchPreview();
+      }
+    } catch (error) {
+      Alert.alert('خطا', 'مشکلی در ثبت تغییرات رخ داد.');
+    }
+  };
+
   const handleFinalize = async () => {
+    // We already apply actions immediately. 
+    // This button now just processes any pending actions if we still kept them, 
+    // but we can just use it to finish the flow and go back.
     setIsFinalizing(true);
     try {
-      const actionPayload = Object.keys(actions).map(sessionId => ({
+      const pendingActions = Object.keys(actions).map(sessionId => ({
         sessionId,
         ...actions[sessionId]
       }));
-
-      const response = await api.post(`/teacher/exams/${examId}/finalize`, { actions: actionPayload });
-      if (response.data.success) {
-        Alert.alert('موفقیت', 'نمرات با موفقیت ثبت و وضعیت دانش‌آموزان به‌روز شد.', [
-          { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-        ]);
+      if (pendingActions.length > 0) {
+        await api.post(`/teacher/exams/${examId}/finalize`, { actions: pendingActions });
       }
+      
+      Alert.alert('موفقیت', 'نمرات با موفقیت بررسی و در دفتر کلاسی ثبت شد.', [
+        { text: 'متوجه شدم', onPress: () => navigation.goBack() }
+      ]);
     } catch (error) {
       Alert.alert('خطا', 'مشکلی در ثبت نهایی رخ داد.');
     } finally {
@@ -110,7 +125,8 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
           let actionDisplay = '➕ ثبت به عنوان دانش‌آموز جدید';
           if (currentAction?.action === 'LINK') {
             const targetStudent = classMembers.find(c => c.studentPhone === currentAction.targetPhone);
-            actionDisplay = `🔗 اتصال به: ${targetStudent?.studentPhone}`;
+            const targetName = targetStudent?.firstName ? `${targetStudent.firstName} ${targetStudent.lastName}` : (targetStudent?.studentId?.user?.fullName || 'بدون نام');
+            actionDisplay = `🔗 اتصال به: ${targetName} (${targetStudent?.studentPhone})`;
           }
 
           return (
@@ -144,14 +160,20 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
       {/* Modal for selecting action */}
       <Modal visible={!!activeModalId} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <Text style={styles.modalTitle}>تعیین تکلیف دانش‌آموز ناشناس</Text>
             
             <TouchableOpacity 
               style={styles.modalOptionBtn}
               onPress={() => {
-                setActions(prev => ({ ...prev, [activeModalId!]: { action: 'NEW' } }));
+                const id = activeModalId!;
                 setActiveModalId(null);
+                setActions(prev => {
+                  const newActions = { ...prev };
+                  delete newActions[id];
+                  return newActions;
+                });
+                handleSingleAction(id, 'NEW');
               }}
             >
               <Text style={styles.modalOptionText}>➕ ثبت به عنوان دانش‌آموز جدید در این کلاس</Text>
@@ -161,19 +183,38 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
             <Text style={styles.modalSubtitle}>یا اتصال به یکی از دانش‌آموزان فعلی کلاس:</Text>
             
             <ScrollView style={{ maxHeight: 200 }}>
-              {classMembers.length === 0 && <Text style={styles.emptyText}>هیچ دانش‌آموزی در کلاس ثبت نشده است.</Text>}
-              {classMembers.map(member => (
-                <TouchableOpacity 
-                  key={member._id}
+              {(() => {
+                const availableClassMembers = classMembers.filter(member => 
+                  !matched.some(m => m.participantIdentifier === member.studentPhone)
+                );
+                
+                if (availableClassMembers.length === 0) {
+                  return <Text style={styles.emptyText}>هیچ دانش‌آموز آزادی در کلاس برای اتصال وجود ندارد.</Text>;
+                }
+                
+                return availableClassMembers.map(member => (
+                  <TouchableOpacity 
+                    key={member._id}
                   style={styles.memberSelectBtn}
                   onPress={() => {
-                    setActions(prev => ({ ...prev, [activeModalId!]: { action: 'LINK', targetPhone: member.studentPhone } }));
+                    const id = activeModalId!;
                     setActiveModalId(null);
+                    setActions(prev => {
+                      const newActions = { ...prev };
+                      delete newActions[id];
+                      return newActions;
+                    });
+                    handleSingleAction(id, 'LINK', member.studentPhone);
                   }}
                 >
-                  <Text style={styles.memberSelectText}>{member.studentPhone}</Text>
+                  <Text style={styles.memberSelectText}>
+                    {member.firstName ? `${member.firstName} ${member.lastName}` : (member.studentId?.user?.fullName || 'بدون نام')} 
+                    {' - '}
+                    <Text style={{ fontSize: 13, color: COLORS.textLight }}>{member.studentPhone}</Text>
+                  </Text>
                 </TouchableOpacity>
-              ))}
+                ));
+              })()}
             </ScrollView>
 
             <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setActiveModalId(null)}>

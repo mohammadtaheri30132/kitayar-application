@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -9,6 +9,7 @@ import {
   FlatList
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
@@ -63,9 +64,12 @@ const CreateExamStep2Screen = ({ route, navigation }: any) => {
     }
   };
 
-  useEffect(() => {
-    fetchQuestions(1, origin);
-  }, [origin]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchQuestions(1, origin);
+    }, [origin])
+  );
 
   const loadMoreData = () => {
     if (hasMore && !isFetchingMore && !isLoading) {

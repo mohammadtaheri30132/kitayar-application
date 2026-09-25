@@ -15,32 +15,25 @@ import {
 } from 'react-native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Settings, Plus, Trash2, UserPlus, Users, FileText, BarChart2, BookOpen } from 'lucide-react-native';
-
-const MOCK_COURSES = [
-  { _id: '64f1a2b3c4d5e6f7a8b9c001', name: 'ریاضیات' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c002', name: 'علوم تجربی' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c003', name: 'ادبیات فارسی' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c004', name: 'زبان انگلیسی' },
-];
-
-const MOCK_GRADES = [
-  { _id: '64f1a2b3c4d5e6f7a8b9c011', name: 'هفتم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c012', name: 'هشتم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c013', name: 'نهم' },
-  { _id: '64f1a2b3c4d5e6f7a8b9c014', name: 'دهم' },
-];
 
 const ClassDetailsScreen = ({ route, navigation }: any) => {
   const { classroom, classId, className } = route.params;
   const currentClassId = classId || classroom?._id;
   const currentClassName = className || classroom?.name;
+  const insets = useSafeAreaInsets();
 
   const [activeTab, setActiveTab] = useState<'STUDENTS' | 'EXAMS' | 'REPORTS'>('STUDENTS');
   const [memberships, setMemberships] = useState<any[]>([]);
   const [classExams, setClassExams] = useState<any[]>([]);
   const [reportData, setReportData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Dynamic Data State
+  const [dbCourses, setDbCourses] = useState<any[]>([]);
+  const [dbFields, setDbFields] = useState<any[]>([]);
+  const [dbGrades, setDbGrades] = useState<any[]>([]);
 
   // Add Student Form State
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -53,8 +46,9 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
   // Settings Form State
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [editClassName, setEditClassName] = useState(currentClassName);
-  const [editCourse, setEditCourse] = useState<string | null>(classroom?.course?._id || null);
-  const [editGrade, setEditGrade] = useState<string | null>(classroom?.grade?._id || null);
+  const [editCourse, setEditCourse] = useState<string | null>(classroom?.course?._id || classroom?.course || null);
+  const [editField, setEditField] = useState<string | null>(null);
+  const [editGrade, setEditGrade] = useState<string | null>(classroom?.grade?._id || classroom?.grade || null);
   const [editNote, setEditNote] = useState(classroom?.note || '');
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -62,7 +56,53 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
 
   useEffect(() => {
     fetchData();
+    fetchCourses();
   }, [currentClassId]);
+
+  useEffect(() => {
+    if (editCourse) {
+      fetchFieldsAndGrades(editCourse);
+    } else {
+      setDbFields([]);
+      setDbGrades([]);
+      setEditField(null);
+      setEditGrade(null);
+    }
+  }, [editCourse]);
+
+  const fetchCourses = async () => {
+    try {
+      const res = await api.get('/teacher/builder/courses');
+      if (res.data.success) {
+        setDbCourses(res.data.data);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const fetchFieldsAndGrades = async (courseId: string) => {
+    try {
+      const res = await api.get(`/teacher/builder/courses/${courseId}/fields-grades`);
+      if (res.data.success) {
+        const { fields, grades } = res.data.data;
+        setDbFields(fields);
+        setDbGrades(grades);
+        
+        // اگر رشته‌ای انتخاب نشده و رشته‌هایی وجود دارد، می‌توانیم رشته قبلی را در صورت تطابق حفظ کنیم یا خالی بگذاریم
+        if (fields.length > 0 && !fields.find((f: any) => f._id === editField)) {
+          setEditField(null);
+        }
+        
+        // اگر پایه‌ای انتخاب شده بود که در این دوره نیست، آن را ریست می‌کنیم
+        if (grades.length > 0 && editGrade && !grades.find((g: any) => g._id === editGrade)) {
+          setEditGrade(null);
+        }
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -376,7 +416,7 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
       {/* Add Student Modal */}
       <Modal visible={addModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>افزودن دانش‌آموز جدید</Text>
               <TouchableOpacity onPress={() => setAddModalVisible(false)}>
@@ -415,7 +455,7 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
       {/* Settings Modal */}
       <Modal visible={settingsModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 24) }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>تنظیمات کلاس</Text>
               <TouchableOpacity onPress={() => setSettingsModalVisible(false)}>
@@ -432,7 +472,7 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>دوره تحصیلی</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipContainer}>
-                  {MOCK_COURSES.map(course => (
+                  {dbCourses.map(course => (
                     <TouchableOpacity 
                       key={course._id} 
                       style={[styles.chip, editCourse === course._id && styles.chipSelected]} 
@@ -444,10 +484,30 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
                 </ScrollView>
               </View>
 
+              {dbFields.length > 0 && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>رشته تحصیلی</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipContainer}>
+                    {dbFields.map(field => (
+                      <TouchableOpacity 
+                        key={field._id} 
+                        style={[styles.chip, editField === field._id && styles.chipSelected]} 
+                        onPress={() => {
+                          setEditField(field._id);
+                          setEditGrade(null); // ریست کردن پایه هنگام تغییر رشته
+                        }}
+                      >
+                        <Text style={[styles.chipText, editField === field._id && styles.chipTextSelected]}>{field.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>پایه تحصیلی</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipContainer}>
-                  {MOCK_GRADES.map(grade => (
+                  {dbGrades.filter(g => !editField || g.field === editField).map(grade => (
                     <TouchableOpacity 
                       key={grade._id} 
                       style={[styles.chip, editGrade === grade._id && styles.chipSelected]} 
@@ -456,6 +516,9 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
                       <Text style={[styles.chipText, editGrade === grade._id && styles.chipTextSelected]}>{grade.name}</Text>
                     </TouchableOpacity>
                   ))}
+                  {dbGrades.filter(g => !editField || g.field === editField).length === 0 && (
+                    <Text style={styles.emptyText}>بدون پایه (لطفا دوره و رشته را انتخاب کنید)</Text>
+                  )}
                 </ScrollView>
               </View>
 

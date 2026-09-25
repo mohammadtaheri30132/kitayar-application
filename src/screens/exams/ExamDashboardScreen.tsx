@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Users, FileText, Settings, Share2, ChevronRight, PenSquare, Edit3 } from 'lucide-react-native';
+import { Users, FileText, Settings, Share2, ChevronRight, PenSquare, Edit3, Trash2 } from 'lucide-react-native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
@@ -25,6 +25,37 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [examIsActive, setExamIsActive] = useState(true);
+
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    let interval: any;
+    if (!isUntimed && endTime && examIsActive) {
+      interval = setInterval(() => {
+        const now = new Date().getTime();
+        const end = new Date(endTime).getTime();
+        const start = new Date(startTime).getTime();
+        
+        if (now >= start && now < end) {
+          setTimeLeft(Math.floor((end - now) / 1000));
+        } else {
+          setTimeLeft(null);
+        }
+      }, 1000);
+    } else {
+      setTimeLeft(null);
+    }
+    return () => clearInterval(interval);
+  }, [endTime, startTime, isUntimed, examIsActive]);
+
+  const formatTimeLeft = (sec: number) => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -40,6 +71,7 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
           setTitle(examData.title || examTitle);
           setTotalScore(String(examData.totalScore || 20));
           setIsUntimed(examData.isUntimed || false);
+          setExamIsActive(examData.isActive !== false);
           if (examData.startTime) setStartTime(new Date(examData.startTime));
           if (examData.endTime) setEndTime(new Date(examData.endTime));
         }
@@ -65,8 +97,8 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
   const renderStudentItem = ({ item, index }: { item: any, index: number }) => {
     const statusDisplay = getStatusDisplay(item.status, item.gradingStatus);
     const isClickable = item.status === 'تمام کرده';
-    const fullName = item.firstNameSnapshot || item.lastNameSnapshot 
-      ? `${item.firstNameSnapshot || ''} ${item.lastNameSnapshot || ''}`.trim()
+    const fullName = item.firstNameSnapshot || item.lastNameSnapshot || item.fatherNameSnapshot
+      ? `${item.firstNameSnapshot || ''} ${item.lastNameSnapshot || ''} ${item.fatherNameSnapshot ? `(فرزند ${item.fatherNameSnapshot})` : ''}`.trim()
       : 'بدون نام';
 
     return (
@@ -140,7 +172,61 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
     return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} - ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
   };
 
-  const WEB_BASE_URL = 'http://localhost:5001'; 
+  const handleDeleteExam = () => {
+    Alert.alert(
+      'حذف آزمون',
+      'آیا از حذف این آزمون مطمئن هستید؟ این عملیات غیرقابل بازگشت است.',
+      [
+        { text: 'انصراف', style: 'cancel' },
+        { 
+          text: 'حذف', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await api.delete(`/teacher/exams/${examId}`);
+              if (res.data.success) {
+                Alert.alert('موفقیت', 'آزمون حذف شد');
+                navigation.goBack();
+              }
+            } catch (err: any) {
+              Alert.alert('خطا', err.response?.data?.message || 'مشکلی در حذف آزمون رخ داد');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCloseExam = () => {
+    Alert.alert(
+      'بستن آزمون',
+      'آیا مطمئن هستید که می‌خواهید آزمون را هم‌اکنون ببندید؟ دانش‌آموزان دیگر قادر به ادامه یا ارسال پاسخ نخواهند بود.',
+      [
+        { text: 'انصراف', style: 'cancel' },
+        { 
+          text: 'بستن آزمون', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const res = await api.patch(`/teacher/exams/${examId}/end`);
+              if (res.data.success) {
+                Alert.alert('موفقیت', 'آزمون بسته شد.');
+                setExamIsActive(false);
+                setTimeLeft(null);
+                fetchDashboardData();
+              }
+            } catch (err: any) {
+              Alert.alert('خطا', err.response?.data?.message || 'مشکلی رخ داد');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  // استفاده از آدرس بیس تنظیم شده در کلاینت برای جلوگیری از مشکل لوکال هاست در گوشی
+  const baseURL = api.defaults.baseURL || 'http://192.168.1.128:5001/api';
+  const WEB_BASE_URL = baseURL.replace('/api', ''); 
   const examLink = `${WEB_BASE_URL}/exam/join/${examId}`;
 
   return (
@@ -154,7 +240,9 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle} numberOfLines={1}>{examTitle}</Text>
           </View>
-          <View style={{ width: 60 }} />
+          <TouchableOpacity style={{ width: 60, alignItems: 'flex-start', paddingLeft: 10 }} onPress={handleDeleteExam}>
+            <Trash2 size={20} color="#ef4444" />
+          </TouchableOpacity>
         </View>
 
         {/* نمایش لینک آزمون */}
@@ -167,6 +255,31 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
             <Share2 size={16} color="#fff" />
             <Text style={styles.shareButtonText}>اشتراک</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* وضعیت و دکمه بستن سریع آزمون */}
+        <View style={styles.statusContainer}>
+          <View style={styles.timerBox}>
+            <Text style={styles.timerLabel}>وضعیت:</Text>
+            {isUntimed && examIsActive ? (
+              <Text style={styles.timerActiveText}>در حال برگزاری (بدون محدودیت)</Text>
+            ) : timeLeft !== null ? (
+              <Text style={styles.timerActiveText}>{formatTimeLeft(timeLeft)} مانده</Text>
+            ) : !examIsActive ? (
+              <Text style={styles.timerClosedText}>پایان یافته</Text>
+            ) : (
+              <Text style={styles.timerPendingText}>شروع نشده</Text>
+            )}
+          </View>
+          
+          {(timeLeft !== null || (isUntimed && examIsActive) || examIsActive) && (
+            <TouchableOpacity 
+              style={styles.closeExamBtn} 
+              onPress={handleCloseExam}
+            >
+              <Text style={styles.closeExamBtnText}>بستن آزمون</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.tabsContainer}>
@@ -292,6 +405,20 @@ const styles = StyleSheet.create({
   shareButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3b82f6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   shareButtonText: { color: '#fff', fontSize: 11, fontWeight: 'bold', marginRight: 4 },
   
+  statusContainer: { 
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
+    marginHorizontal: 12, marginTop: 12, padding: 12, 
+    backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: COLORS.border 
+  },
+  timerBox: { flexDirection: 'row', alignItems: 'center' },
+  timerLabel: { fontSize: 12, color: COLORS.textLight, marginLeft: 6, fontWeight: 'bold' },
+  timerActiveText: { fontSize: 13, color: '#059669', fontWeight: 'bold' },
+  timerClosedText: { fontSize: 13, color: '#dc2626', fontWeight: 'bold' },
+  timerPendingText: { fontSize: 13, color: '#d97706', fontWeight: 'bold' },
+  
+  closeExamBtn: { backgroundColor: '#fee2e2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#fca5a5' },
+  closeExamBtnText: { color: '#dc2626', fontSize: 11, fontWeight: 'bold' },
+
   tabsContainer: { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, marginTop: 12 },
   tab: { flex: 1, flexDirection: 'row', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', gap: 6 },
   activeTab: { borderBottomColor: COLORS.primary },

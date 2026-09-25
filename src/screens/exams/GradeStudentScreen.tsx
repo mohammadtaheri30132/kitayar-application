@@ -9,10 +9,12 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  Image
 } from 'react-native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import { Play, Pause } from 'lucide-react-native';
 
 const GradeStudentScreen = ({ route, navigation }: any) => {
   // این پارامترها باید از صفحه‌ی «لیست شرکت‌کنندگان آزمون» به این صفحه پاس داده شوند
@@ -75,7 +77,17 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
   // رندر کردن هر پاسخ
   const renderAnswerItem = (ans: any, index: number) => {
     const question = ans.question;
-    const isEssay = question.type === 'تشریحی';
+    const isEssay = !['تستی', 'صحیح-غلط'].includes(question.type);
+
+    let answerText = ans.submittedAnswer;
+    let answerMedia = null;
+    let answerMediaType = null;
+
+    if (ans.submittedAnswer && typeof ans.submittedAnswer === 'object') {
+      answerText = ans.submittedAnswer.text;
+      answerMedia = ans.submittedAnswer.media;
+      answerMediaType = ans.submittedAnswer.mediaType;
+    }
 
     return (
       <View key={question._id} style={styles.answerCard}>
@@ -86,9 +98,19 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
 
         <View style={styles.responseContainer}>
           <Text style={styles.responseLabel}>پاسخ دانش‌آموز:</Text>
-          <Text style={[styles.responseText, !ans.submittedAnswer && styles.emptyResponse]}>
-            {ans.submittedAnswer || '(بدون پاسخ)'}
+          <Text style={[styles.responseText, !answerText && styles.emptyResponse]}>
+            {answerText || '(بدون پاسخ متنی)'}
           </Text>
+          
+          {answerMedia && answerMediaType === 'image' && (
+            <Image source={{ uri: answerMedia }} style={{ width: '100%', height: 200, borderRadius: 8, marginTop: 10, resizeMode: 'cover' }} />
+          )}
+          {answerMedia && answerMediaType === 'audio' && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#e0f2fe', padding: 10, borderRadius: 8, marginTop: 10 }}>
+              <Play color={COLORS.primary} size={20} />
+              <Text style={{ color: COLORS.primary, marginLeft: 8, fontWeight: 'bold' }}>پاسخ صوتی (در وب/اپلیکیشن دیگر)</Text>
+            </View>
+          )}
         </View>
 
         {/* برای سوالات تستی، پاسخ صحیح سیستم را هم نشان می‌دهیم */}
