@@ -15,8 +15,17 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import ClassManagementScreen from './src/screens/classes/ClassManagementScreen';
 import CreateClassScreen from './src/screens/classes/CreateClassScreen';
 import ClassDetailsScreen from './src/screens/classes/ClassDetailsScreen';
+import ClassStudentsScreen from './src/screens/classes/ClassStudentsScreen';
+import ClassExamsScreen from './src/screens/classes/ClassExamsScreen';
+import ClassReportsScreen from './src/screens/classes/ClassReportsScreen';
+import ClassBirthdaysScreen from './src/screens/classes/ClassBirthdaysScreen';
+import ClassAttendanceScreen from './src/screens/classes/ClassAttendanceScreen';
+import TakeAttendanceScreen from './src/screens/classes/TakeAttendanceScreen';
+import ClassSettingsScreen from './src/screens/classes/ClassSettingsScreen';
 import ManageSchoolsScreen from './src/screens/classes/ManageSchoolsScreen';
 import ManageClassesScreen from './src/screens/classes/ManageClassesScreen';
+import AddStudentToClassScreen from './src/screens/classes/AddStudentToClassScreen';
+import CreateSchoolScreen from './src/screens/classes/CreateSchoolScreen';
 import WeeklyScheduleBuilderScreen from './src/screens/main/WeeklyScheduleBuilderScreen';
 import CreateExamStep1Screen from './src/screens/exams/CreateExamStep1Screen';
 import CreateExamStep2Screen from './src/screens/exams/CreateExamStep2Screen';
@@ -96,6 +105,11 @@ import NewsSettingsScreen from './src/screens/interaction/settings/NewsSettingsS
 import TeacherQuestionBankScreen from './src/screens/question/TeacherQuestionBankScreen';
 import CreateTeacherQuestionScreen from './src/screens/question/CreateTeacherQuestionScreen';
 
+import GradebookOverviewScreen from './src/screens/classes/GradebookOverviewScreen';
+import GradebookTableScreen from './src/screens/classes/GradebookTableScreen';
+import GradebookAssessmentsScreen from './src/screens/classes/GradebookAssessmentsScreen';
+import GradebookSessionsScreen from './src/screens/classes/GradebookSessionsScreen';
+
 const Stack = createNativeStackNavigator();
 
 const AppContent = () => {
@@ -147,8 +161,17 @@ const AppContent = () => {
             <Stack.Screen name="ClassManagementScreen" component={ClassManagementScreen} />
             <Stack.Screen name="CreateClassScreen" component={CreateClassScreen} />
             <Stack.Screen name="ClassDetailsScreen" component={ClassDetailsScreen} />
+            <Stack.Screen name="ClassStudentsScreen" component={ClassStudentsScreen} />
+            <Stack.Screen name="ClassExamsScreen" component={ClassExamsScreen} />
+            <Stack.Screen name="ClassReportsScreen" component={ClassReportsScreen} />
+            <Stack.Screen name="ClassBirthdaysScreen" component={ClassBirthdaysScreen} />
+            <Stack.Screen name="ClassAttendanceScreen" component={ClassAttendanceScreen} />
+            <Stack.Screen name="TakeAttendanceScreen" component={TakeAttendanceScreen} />
+            <Stack.Screen name="ClassSettingsScreen" component={ClassSettingsScreen} />
             <Stack.Screen name="ManageSchoolsScreen" component={ManageSchoolsScreen} />
             <Stack.Screen name="ManageClassesScreen" component={ManageClassesScreen} />
+            <Stack.Screen name="AddStudentToClassScreen" component={AddStudentToClassScreen} />
+            <Stack.Screen name="CreateSchoolScreen" component={CreateSchoolScreen} />
             <Stack.Screen name="StudentProfileViewScreen" component={StudentProfileViewScreen} />
             <Stack.Screen name="WeeklyScheduleBuilderScreen" component={WeeklyScheduleBuilderScreen} />
             <Stack.Screen name="CreateExamStep1Screen" component={CreateExamStep1Screen} />
@@ -213,6 +236,10 @@ const AppContent = () => {
             <Stack.Screen name="EducationChaptersScreen" component={EducationChaptersScreen} />
             <Stack.Screen name="EducationLessonsScreen" component={EducationLessonsScreen} />
             <Stack.Screen name="EducationLessonContentScreen" component={EducationLessonContentScreen} />
+            <Stack.Screen name="GradebookOverviewScreen" component={GradebookOverviewScreen} />
+            <Stack.Screen name="GradebookTableScreen" component={GradebookTableScreen} />
+            <Stack.Screen name="GradebookAssessmentsScreen" component={GradebookAssessmentsScreen} />
+            <Stack.Screen name="GradebookSessionsScreen" component={GradebookSessionsScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

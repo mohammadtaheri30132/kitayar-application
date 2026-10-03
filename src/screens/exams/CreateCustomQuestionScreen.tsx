@@ -473,10 +473,10 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   half: { width: '48%' },
   inputGroup: { marginBottom: 20 },
-  label: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'right' },
+  label: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'left' },
   input: {
     borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 12,
-    fontSize: 15, color: COLORS.text, backgroundColor: COLORS.surface, textAlign: 'right'
+    fontSize: 15, color: COLORS.text, backgroundColor: COLORS.surface, textAlign: 'left'
   },
   textArea: { height: 100, textAlignVertical: 'top' },
   optionRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },

@@ -9,6 +9,7 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
 
   const [studentInfo, setStudentInfo] = useState<any>(null);
   const [examResults, setExamResults] = useState<any[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,6 +61,12 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
            }
         }
         setExamResults(results);
+      }
+
+      // گرفتن تاریخچه حضور و غیاب
+      const attRes = await api.get(`/teacher/classrooms/${classId}/students/${studentPhone}/attendance`);
+      if (attRes.data.success) {
+        setAttendanceData(attRes.data.data);
       }
     } catch (error) {
       console.warn('Error fetching student details', error);
@@ -141,6 +148,48 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
                 </View>
               </View>
 
+              {attendanceData && (
+                <View style={styles.infoBox}>
+                  <Text style={styles.sectionTitle}>آمار حضور و غیاب</Text>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statBox}>
+                      <Text style={styles.statValue}>{attendanceData.stats.present}</Text>
+                      <Text style={styles.statLabel}>حاضر</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                      <Text style={[styles.statValue, {color: '#dc2626'}]}>{attendanceData.stats.absentUnexcused}</Text>
+                      <Text style={styles.statLabel}>غیر موجه</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                      <Text style={[styles.statValue, {color: '#ca8a04'}]}>{attendanceData.stats.absentExcused}</Text>
+                      <Text style={styles.statLabel}>موجه</Text>
+                    </View>
+                    <View style={styles.statBox}>
+                      <Text style={[styles.statValue, {color: '#0284c7'}]}>{attendanceData.stats.late}</Text>
+                      <Text style={styles.statLabel}>تاخیر</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              <View style={styles.infoBox}>
+                <Text style={styles.sectionTitle}>وضعیت تحصیلی</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.statBox}>
+                     <Text style={[styles.statValue, { color: COLORS.primary }]}>۱۸.۵</Text>
+                     <Text style={styles.statLabel}>معدل کل</Text>
+                  </View>
+                  <View style={styles.statBox}>
+                     <Text style={[styles.statValue, { color: '#16a34a', fontSize: 14 }]}>۱۷ → ۱۸ → ۱۹</Text>
+                     <Text style={styles.statLabel}>روند پیشرفت</Text>
+                  </View>
+                  <View style={styles.statBox}>
+                     <Text style={[styles.statValue, { color: '#dc2626' }]}>۱</Text>
+                     <Text style={styles.statLabel}>نمره ثبت نشده</Text>
+                  </View>
+                </View>
+              </View>
+
               <Text style={styles.sectionTitle}>وضعیت در آزمون‌ها</Text>
             </View>
           }
@@ -171,8 +220,8 @@ const styles = StyleSheet.create({
   
   infoBox: { backgroundColor: COLORS.surface, width: '100%', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: COLORS.border, marginBottom: 24 },
   infoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  infoLabel: { fontSize: 13, color: COLORS.textLight, marginLeft: 8, width: 80, textAlign: 'right' },
-  infoText: { fontSize: 14, color: COLORS.text, fontWeight: 'bold', flex: 1, textAlign: 'right', marginRight: 12 },
+  infoLabel: { fontSize: 13, color: COLORS.textLight, marginLeft: 8, width: 80, textAlign: 'left' },
+  infoText: { fontSize: 14, color: COLORS.text, fontWeight: 'bold', flex: 1, textAlign: 'left', marginRight: 12 },
   
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, alignSelf: 'flex-end', marginBottom: 12 },
   
@@ -184,7 +233,12 @@ const styles = StyleSheet.create({
   scoreText: { color: '#166534', fontSize: 12, fontWeight: 'bold', marginLeft: 4 },
   pendingBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fee2e2', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   pendingText: { color: '#dc2626', fontSize: 12, fontWeight: 'bold', marginLeft: 4 },
-  emptyText: { textAlign: 'center', color: COLORS.textLight, marginTop: 20 }
+  emptyText: { textAlign: 'center', color: COLORS.textLight, marginTop: 20 },
+  
+  statsRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginTop: 12 },
+  statBox: { alignItems: 'center', flex: 1 },
+  statValue: { fontSize: 18, fontWeight: 'bold', color: '#16a34a', marginBottom: 4 },
+  statLabel: { fontSize: 11, color: COLORS.textLight },
 });
 
 export default StudentProfileViewScreen;

@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   valuePillText: { color: '#2563eb', fontWeight: 'bold', fontSize: 13 },
   optionRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderColor: '#f1f5f9' },
   optionRowActive: { backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 12, borderColor: 'transparent' },
-  optionText: { fontSize: 15, color: '#334155', textAlign: 'right' },
+  optionText: { fontSize: 15, color: '#334155', textAlign: 'left' },
   optionTextActive: { color: '#3b82f6', fontWeight: 'bold' },
 });
 

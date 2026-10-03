@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   removeThumbBtn: { position: 'absolute', top: -5, right: -5, backgroundColor: '#e74c3c', width: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' },
   
   settingsBox: { backgroundColor: '#fff', borderRadius: 15, padding: 15, elevation: 2, marginBottom: 25 },
-  settingsTitle: { fontSize: 16, fontWeight: 'bold', color: '#2c3e50', textAlign: 'right', marginBottom: 15 },
+  settingsTitle: { fontSize: 16, fontWeight: 'bold', color: '#2c3e50', textAlign: 'left', marginBottom: 15 },
   compressOpt: { backgroundColor: '#f8f9fa', borderWidth: 2, borderColor: '#f1f2f6', padding: 15, borderRadius: 12, alignItems: 'flex-end', marginBottom: 10 },
   compressOptActive: { borderColor: COLORS.primary, backgroundColor: '#f0f8ff' },
   compressOptTitle: { fontSize: 15, fontWeight: 'bold', color: '#34495e', marginBottom: 4 },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
 
   startBtn: { backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
   startBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'right', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'left', color: '#333' },
   
   historyCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 15, elevation: 2, overflow: 'hidden', position: 'relative' },
   
@@ -393,10 +393,10 @@ const styles = StyleSheet.create({
   previewBox: { marginLeft: 15, justifyContent: 'center' },
   historyThumb: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#f5f6fa', resizeMode: 'cover' },
   infoBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'center' },
-  historyTitle: { fontWeight: 'bold', fontSize: 13, color: '#2c3e50', marginBottom: 8, textAlign: 'right', direction: 'ltr' },
+  historyTitle: { fontWeight: 'bold', fontSize: 13, color: '#2c3e50', marginBottom: 8, textAlign: 'left', direction: 'ltr' },
   metaDataRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 6 },
-  metaSizeText: { fontSize: 12, color: '#16a085', fontWeight: 'bold', textAlign: 'right' },
-  metaFormatText: { fontSize: 11, color: '#95a5a6', fontWeight: 'bold', textAlign: 'right' },
+  metaSizeText: { fontSize: 12, color: '#16a085', fontWeight: 'bold', textAlign: 'left' },
+  metaFormatText: { fontSize: 11, color: '#95a5a6', fontWeight: 'bold', textAlign: 'left' },
   historyDate: { fontSize: 11, color: '#bdc3c7', marginTop: 4 },
   
   actionButtonsRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', padding: 10, gap: 8, backgroundColor: '#fafbfc' },

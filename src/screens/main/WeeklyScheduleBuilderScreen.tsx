@@ -13,16 +13,19 @@ const WeeklyScheduleBuilderScreen = ({ route, navigation }: any) => {
   const { colors } = useTheme();
   
   const initialDay = route.params?.initialDay ?? 6;
+  const initialClassId = route.params?.classId;
+  const initialClassName = route.params?.className || '';
+  const initialSchoolName = route.params?.schoolName || '';
   
   const [subject, setSubject] = useState('');
-  const [className, setClassName] = useState('');
+  const [className, setClassName] = useState(initialClassName);
   const [dayOfWeek, setDayOfWeek] = useState(initialDay); 
   
   const [shift, setShift] = useState<'morning' | 'afternoon'>('morning');
   const [period, setPeriod] = useState(0); // 0 = بدون زمان, 1 to 6
   const [duration, setDuration] = useState<45 | 90>(90);
   
-  const [schoolName, setSchoolName] = useState('');
+  const [schoolName, setSchoolName] = useState(initialSchoolName);
   const [schools, setSchools] = useState<any[]>([]);
   const [isLoadingSchools, setIsLoadingSchools] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -97,7 +100,7 @@ const WeeklyScheduleBuilderScreen = ({ route, navigation }: any) => {
 
       const { startTime, endTime } = computeTime(shift, period, duration);
 
-      const data = {
+      const data: any = {
         subject: subject.trim(),
         className: className.trim(),
         dayOfWeek,
@@ -106,6 +109,10 @@ const WeeklyScheduleBuilderScreen = ({ route, navigation }: any) => {
         schoolId: finalSchoolId,
         schoolName: schoolName.trim()
       };
+
+      if (initialClassId) {
+        data.classId = initialClassId;
+      }
       
       const response = await api.post('/teacher/schedule', data);
       if (response.data.success) {
@@ -266,14 +273,14 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX' },
   content: { padding: 16, paddingBottom: 40 },
-  label: { fontSize: 14, fontFamily: 'IRANSansX', marginBottom: 8, marginTop: 16, textAlign: 'right' },
+  label: { fontSize: 14, fontFamily: 'IRANSansX', marginBottom: 8, marginTop: 16, textAlign: 'left' },
   input: {
     height: 48,
     borderRadius: 8,
     borderWidth: 1,
     paddingHorizontal: 16,
     fontFamily: 'IRANSansX',
-    textAlign: 'right'
+    textAlign: 'left'
   },
   wrapContainer: {
     flexDirection: 'row-reverse',

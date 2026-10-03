@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: COLORS.border, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.surface },
   checkboxSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   checkmark: { color: COLORS.surface, fontSize: 16, fontWeight: 'bold', marginTop: -2 },
-  questionText: { fontSize: 15, color: COLORS.text, textAlign: 'right', lineHeight: 24 },
+  questionText: { fontSize: 15, color: COLORS.text, textAlign: 'left', lineHeight: 24 },
   footer: { padding: 20, backgroundColor: COLORS.surface, borderTopWidth: 1, borderTopColor: COLORS.border },
   button: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center' },
   buttonDisabled: { backgroundColor: COLORS.secondary, opacity: 0.7 },

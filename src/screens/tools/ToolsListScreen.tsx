@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '800', 
     color: '#4B5563', 
-    textAlign: 'right', 
+    textAlign: 'left', 
     marginBottom: 10,
     marginRight: 5
   },

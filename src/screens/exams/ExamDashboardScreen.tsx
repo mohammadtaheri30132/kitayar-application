@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
   avatarText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 12 },
   studentPhone: { fontSize: 14, fontWeight: 'bold', color: COLORS.text },
-  scoreText: { fontSize: 11, color: '#166534', fontWeight: 'bold', marginTop: 2, textAlign: 'right' },
+  scoreText: { fontSize: 11, color: '#166534', fontWeight: 'bold', marginTop: 2, textAlign: 'left' },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   badgeText: { fontSize: 10, fontWeight: 'bold' },
   
@@ -448,11 +448,11 @@ const styles = StyleSheet.create({
   editQuestionsBtnText: { fontSize: 12, color: COLORS.primary, fontWeight: 'bold' },
   
   questionCard: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
-  questionNumber: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, marginBottom: 6, textAlign: 'right' },
-  questionText: { fontSize: 14, color: COLORS.text, textAlign: 'right', lineHeight: 22 },
+  questionNumber: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, marginBottom: 6, textAlign: 'left' },
+  questionText: { fontSize: 14, color: COLORS.text, textAlign: 'left', lineHeight: 22 },
 
   formCard: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: 'bold', color: COLORS.text, marginBottom: 6, textAlign: 'right' },
+  label: { fontSize: 13, fontWeight: 'bold', color: COLORS.text, marginBottom: 6, textAlign: 'left' },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, fontSize: 14, backgroundColor: '#f8fafc', marginBottom: 16 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   switchLabel: { fontSize: 13, color: COLORS.text, fontWeight: '500' },

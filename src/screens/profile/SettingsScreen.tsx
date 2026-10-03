@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 12,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   card: {
     borderRadius: 16,

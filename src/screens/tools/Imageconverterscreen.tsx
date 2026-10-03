@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   convertButton: { backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, alignItems: 'center' },
   convertButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'right', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'left', color: '#333' },
   historyCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 15, elevation: 2, overflow: 'hidden', position: 'relative' },
   
   absoluteDeleteBtn: { position: 'absolute', top: 10, right: 10, zIndex: 10, padding: 6, backgroundColor: 'rgba(253, 237, 236, 0.9)', borderRadius: 8 },
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   previewBox: { marginLeft: 15, justifyContent: 'center' },
   thumbnail: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#f5f6fa', resizeMode: 'cover' },
   infoBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'center' },
-  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'right' },
+  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'left' },
   metaDataRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4 },
   metaText: { fontSize: 11, color: '#7f8c8d', fontWeight: 'bold' },
   metaDivider: { marginHorizontal: 6, color: '#bdc3c7', fontSize: 10 },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   
   modalPreviewCard: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#f8f9fa', padding: 15, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#e1e8ed', gap: 15 },
   modalThumbnail: { width: 50, height: 50, borderRadius: 8, resizeMode: 'cover' },
-  modalFormatText: { fontSize: 12, color: '#7f8c8d', textAlign: 'right', marginBottom: 4 },
+  modalFormatText: { fontSize: 12, color: '#7f8c8d', textAlign: 'left', marginBottom: 4 },
   modalFormatBadge: { backgroundColor: '#eaf4fc', color: '#2980b9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, fontWeight: 'bold', fontSize: 13, overflow: 'hidden' },
 
   formatsGrid: { flexDirection: 'row-reverse', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },

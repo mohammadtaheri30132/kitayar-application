@@ -107,10 +107,10 @@ const styles = StyleSheet.create({
   valuePillText: { color: '#2563eb', fontWeight: 'bold', fontSize: 13 },
   circleBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center' },
   circleBtnText: { fontSize: 20, color: '#334155', marginTop: -2 },
-  textInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 48, textAlign: 'right', fontSize: 14 },
+  textInput: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 48, textAlign: 'left', fontSize: 14 },
   optionRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderColor: '#f1f5f9' },
   optionRowActive: { backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 12, borderColor: 'transparent' },
-  optionText: { fontSize: 15, color: '#334155', textAlign: 'right' },
+  optionText: { fontSize: 15, color: '#334155', textAlign: 'left' },
   optionTextActive: { color: '#3b82f6', fontWeight: 'bold' },
 });
 

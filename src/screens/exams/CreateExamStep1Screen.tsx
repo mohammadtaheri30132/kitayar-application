@@ -17,15 +17,20 @@ import { COLORS } from '../../theme/colors';
 import * as jalaali from 'jalaali-js';
 import { PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
 import { CustomDropdown } from '../../components/common/CustomDropdown';
+import { School, BookOpen, Users, CheckCircle } from 'lucide-react-native';
 
-const CreateExamStep1Screen = ({ navigation }: any) => {
+const CreateExamStep1Screen = ({ route, navigation }: any) => {
   const insets = useSafeAreaInsets();
+  const passedClassId = route?.params?.classId || route?.params?.selectedClassroomId;
+  const passedClassName = route?.params?.className;
+  const passedClassroom = route?.params?.classroom;
+
   const [classes, setClasses] = useState<any[]>([]);
   const [isLoadingClasses, setIsLoadingClasses] = useState(true);
 
   // استیت‌های فرم
-  const [title, setTitle] = useState('');
-  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(null);
+  const [title, setTitle] = useState(passedClassName ? `آزمون ${passedClassName}` : '');
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string | null>(passedClassId || null);
   const [totalScore, setTotalScore] = useState('20');
   
   const currentJalali = jalaali.toJalaali(new Date());
@@ -67,7 +72,15 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
       try {
         const response = await api.get('/teacher/classrooms');
         if (response.data.success) {
-          setClasses(response.data.data);
+          const list = response.data.data || [];
+          setClasses(list);
+          if (passedClassId) {
+            setSelectedClassroomId(passedClassId);
+            const found = list.find((c: any) => c._id === passedClassId);
+            if (found && !title) {
+              setTitle(`آزمون ${found.name}`);
+            }
+          }
         }
       } catch (error) {
         Alert.alert('خطا', 'عدم موفقیت در دریافت لیست کلاس‌ها');
@@ -76,7 +89,7 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
       }
     };
     fetchClasses();
-  }, []);
+  }, [passedClassId]);
 
   const handleNextStep = async () => {
     if (!title.trim() || !selectedClassroomId) {
@@ -153,6 +166,8 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
     );
   };
 
+  const selectedClass = classes.find((c: any) => c._id === selectedClassroomId) || passedClassroom;
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.header}>
@@ -174,6 +189,38 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
             {renderClassSelector()}
           </View>
 
+          {selectedClass && (
+            <View style={styles.classInfoCard}>
+              <View style={styles.classInfoTitleRow}>
+                <CheckCircle size={16} color="#16a34a" />
+                <Text style={styles.classInfoTitle}>اطلاعات از قبل انتخاب‌شده برای این کلاس</Text>
+              </View>
+
+              <View style={styles.classInfoRow}>
+                <School size={16} color={COLORS.primary} />
+                <Text style={styles.classInfoValue}>
+                  {selectedClass.school?.name || passedClassroom?.school?.name || 'تعریف نشده'}
+                </Text>
+                <Text style={styles.classInfoLabel}>مدرسه:</Text>
+              </View>
+
+              <View style={styles.classInfoRow}>
+                <Users size={16} color={COLORS.primary} />
+                <Text style={styles.classInfoValue}>{selectedClass.name || passedClassName}</Text>
+                <Text style={styles.classInfoLabel}>نام کلاس:</Text>
+              </View>
+
+              <View style={styles.classInfoRow}>
+                <BookOpen size={16} color={COLORS.primary} />
+                <Text style={styles.classInfoValue}>
+                  {selectedClass.course?.name || selectedClass.subjectName || passedClassroom?.course?.name || 'عمومی'}
+                  {selectedClass.grade?.name || passedClassroom?.grade?.name ? ` · پایه ${selectedClass.grade?.name || passedClassroom?.grade?.name}` : ''}
+                </Text>
+                <Text style={styles.classInfoLabel}>درس و مقطع:</Text>
+              </View>
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>عنوان آزمون</Text>
             <TextInput
@@ -182,7 +229,7 @@ const CreateExamStep1Screen = ({ navigation }: any) => {
               placeholderTextColor={COLORS.textLight}
               value={title}
               onChangeText={setTitle}
-              textAlign="right"
+              textAlign="left"
             />
           </View>
 
@@ -339,7 +386,7 @@ const styles = StyleSheet.create({
   formContainer: { backgroundColor: COLORS.surface, borderRadius: 20, padding: 20, elevation: 2 },
   
   inputGroup: { marginBottom: 24 },
-  label: { fontSize: 15, color: COLORS.text, marginBottom: 12, textAlign: 'right', fontWeight: 'bold' },
+  label: { fontSize: 15, color: COLORS.text, marginBottom: 12, textAlign: 'left', fontWeight: 'bold' },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -349,7 +396,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: '#f8fafc',
   },
-  errorText: { color: COLORS.error, textAlign: 'right', fontSize: 14 },
+  errorText: { color: COLORS.error, textAlign: 'left', fontSize: 14 },
   
   chipContainer: { flexDirection: 'row', paddingVertical: 4 },
   chip: {
@@ -382,6 +429,50 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
+  classInfoCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  classInfoTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#dbeafe',
+  },
+  classInfoTitle: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1e40af',
+    marginRight: 6,
+  },
+  classInfoRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  classInfoLabel: {
+    fontSize: 12,
+    color: '#3b82f6',
+    fontWeight: 'bold',
+    marginLeft: 6,
+    width: 75,
+    textAlign: 'left',
+  },
+  classInfoValue: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'left',
+    marginRight: 8,
+  },
+
   button: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center' },
   buttonDisabled: { backgroundColor: COLORS.secondary, opacity: 0.7 },
   buttonText: { color: COLORS.surface, fontSize: 16, fontWeight: 'bold' },

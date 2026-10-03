@@ -15,7 +15,7 @@ if (Text.render) {
   Text.render = function(...args) {
     const origin = oldTextRender.call(this, ...args);
     return React.cloneElement(origin, {
-      style: [{ textAlign: 'right' }, origin.props.style]
+      style: [{ textAlign: 'left' }, origin.props.style]
     });
   };
 }
@@ -25,7 +25,7 @@ if (TextInput.render) {
   TextInput.render = function(...args) {
     const origin = oldTextInputRender.call(this, ...args);
     return React.cloneElement(origin, {
-      style: [{ textAlign: 'right' }, origin.props.style]
+      style: [{ textAlign: 'left' }, origin.props.style]
     });
   };
 }

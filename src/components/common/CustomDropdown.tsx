@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   dropdownButton: {
     flexDirection: 'row-reverse',
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    textAlign: 'right',
+    textAlign: 'left',
     flex: 1,
   },
   modalOverlay: {
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   listItemText: {
     fontSize: 16,
-    textAlign: 'right',
+    textAlign: 'left',
     flex: 1,
   }
 });

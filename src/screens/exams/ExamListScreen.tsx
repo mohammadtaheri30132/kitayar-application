@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   listContainer: { padding: 20, paddingBottom: 100 },
   card: { backgroundColor: COLORS.surface, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border, elevation: 1 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingBottom: 12 },
-  examTitle: { fontSize: 17, fontWeight: 'bold', color: COLORS.primary, flex: 1, textAlign: 'right', marginLeft: 10 },
+  examTitle: { fontSize: 17, fontWeight: 'bold', color: COLORS.primary, flex: 1, textAlign: 'left', marginLeft: 10 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   badgeText: { fontSize: 12, fontWeight: 'bold' },
   classBadgeContainer: { backgroundColor: '#f1f5f9', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, marginBottom: 12, alignSelf: 'flex-start' },

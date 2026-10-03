@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from '../utils/storage';
 import { generateHMACSignature } from '../utils/security';
 
-// const BASE_URL = 'http://10.62.166.125:5001/api';
+// const BASE_URL = 'http://10.111.2.125:5001/api';
 const BASE_URL = 'http://192.168.1.128:5001/api';
 
 // 👈 لیست مسیرهایی که باید با HMAC امضا بشن
@@ -28,17 +28,17 @@ api.interceptors.request.use(
 
     // چک می‌کنیم مسیر درخواستی تو لیست امنیتی ما هست یا نه
     const isSecureRoute = SECURE_ROUTES.some(route => config.url?.includes(route));
-    
+
     if (isSecureRoute) {
       const timestamp = Date.now().toString();
-      const endpoint = `/api${config.url}`; 
-      
+      const endpoint = `/api${config.url}`;
+
       const signature = generateHMACSignature(timestamp, endpoint, config.data);
 
       config.headers['x-timestamp'] = timestamp;
       config.headers['x-signature'] = signature;
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)

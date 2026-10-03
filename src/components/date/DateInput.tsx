@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'right',
+    textAlign: 'left',
   },
   inputRow: {
     flexDirection: 'row-reverse',
@@ -104,6 +104,6 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontSize: 12,
     marginTop: 4,
-    textAlign: 'right',
+    textAlign: 'left',
   }
 });

@@ -108,10 +108,10 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontWeight: 'bold' },
   loadingContainer: { alignItems: 'center', marginBottom: 15 },
   loadingText: { marginTop: 5, color: '#333' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'right', color: '#2c3e50' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 12, textAlign: 'left', color: '#2c3e50' },
   historyCard: { backgroundColor: '#fff', padding: 14, borderRadius: 10, marginBottom: 10, borderRightWidth: 4, borderRightColor: COLORS.primary, elevation: 1 },
-  historyTitle: { fontWeight: 'bold', textAlign: 'right', fontSize: 15, color: '#333' },
-  historyDate: { fontSize: 12, color: '#7f8c8d', textAlign: 'right', marginVertical: 6 },
+  historyTitle: { fontWeight: 'bold', textAlign: 'left', fontSize: 15, color: '#333' },
+  historyDate: { fontSize: 12, color: '#7f8c8d', textAlign: 'left', marginVertical: 6 },
   historyPath: { fontSize: 11, color: '#bdc3c7', textAlign: 'left', direction: 'ltr' }
 });
 

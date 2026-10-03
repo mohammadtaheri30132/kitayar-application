@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     borderColor: '#f1f5f9',
   },
   optionActive: { backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 12, borderColor: 'transparent' },
-  optionText: { fontSize: 15, color: '#334155', textAlign: 'right' },
+  optionText: { fontSize: 15, color: '#334155', textAlign: 'left' },
   optionTextActive: { color: '#3b82f6', fontWeight: 'bold' },
 });
 

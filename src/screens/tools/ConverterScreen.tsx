@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   actionTitle: { fontSize: 20, fontWeight: 'bold', color: '#2c3e50' },
   convertButton: { backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, alignItems: 'center' },
   convertButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'right', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'left', color: '#333' },
   
   historyCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 15, elevation: 2, overflow: 'hidden', position: 'relative' },
   
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   thumbnail: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#f5f6fa', resizeMode: 'cover' },
   pdfIconWrapper: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#fdedec', justifyContent: 'center', alignItems: 'center' },
   infoBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'center' },
-  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'right' },
+  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'left' },
   metaDataRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4 },
   metaText: { fontSize: 11, color: '#7f8c8d', fontWeight: 'bold' },
   metaDivider: { marginHorizontal: 6, color: '#bdc3c7', fontSize: 10 },
@@ -292,8 +292,8 @@ const styles = StyleSheet.create({
   
   fullModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   fullModalContainer: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', textAlign: 'right' },
-  nameInput: { backgroundColor: '#f5f6fa', borderWidth: 1, borderColor: '#dcdde1', borderRadius: 8, paddingHorizontal: 15, height: 50, textAlign: 'right', marginVertical: 15 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#2c3e50', textAlign: 'left' },
+  nameInput: { backgroundColor: '#f5f6fa', borderWidth: 1, borderColor: '#dcdde1', borderRadius: 8, paddingHorizontal: 15, height: 50, textAlign: 'left', marginVertical: 15 },
   modalButtons: { flexDirection: 'row-reverse', justifyContent: 'space-between', gap: 10, marginTop: 15 },
   modalBtnCancel: { flex: 1, backgroundColor: '#f1f2f6', padding: 14, borderRadius: 8, alignItems: 'center' },
   modalBtnConfirm: { flex: 2, backgroundColor: COLORS.primary, padding: 14, borderRadius: 8, alignItems: 'center' },

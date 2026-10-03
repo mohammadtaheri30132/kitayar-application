@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
   convertButton: { backgroundColor: COLORS.primary, padding: 15, borderRadius: 10, alignItems: 'center' },
   convertButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'right', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'left', color: '#333' },
   emptyText: { textAlign: 'center', color: '#95a5a6', marginTop: 20 },
   
   historyCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 15, elevation: 2, overflow: 'hidden', position: 'relative' },
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   previewBox: { marginLeft: 15, justifyContent: 'center' },
   thumbnail: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#f5f6fa', resizeMode: 'cover' },
   infoBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'center' },
-  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'right', direction: 'ltr' },
+  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'left', direction: 'ltr' },
   
   metaDataRow: { flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 4 },
   metaText: { fontSize: 11, color: '#7f8c8d', fontWeight: 'bold' },

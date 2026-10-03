@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from './../../context/ThemeContext';
 import { ChevronRight, Plus, MapPin } from 'lucide-react-native';
 import { PlanningService } from './../../api/planningService';
@@ -9,10 +10,6 @@ const ManageSchoolsScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchSchools();
-  }, []);
 
   const fetchSchools = async () => {
     try {
@@ -24,6 +21,12 @@ const ManageSchoolsScreen = ({ navigation }: any) => {
       setLoading(false);
     }
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSchools();
+    }, [])
+  );
 
   const renderSchool = ({ item }: { item: any }) => (
     <View style={[styles.schoolCard, { backgroundColor: colors.surface }]}>
@@ -44,7 +47,10 @@ const ManageSchoolsScreen = ({ navigation }: any) => {
           <ChevronRight color={colors.text} size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>مدارس من</Text>
-        <TouchableOpacity style={styles.addBtn}>
+        <TouchableOpacity 
+          style={styles.addBtn} 
+          onPress={() => navigation.navigate('CreateSchoolScreen')}
+        >
           <Plus color={colors.primary} size={24} />
         </TouchableOpacity>
       </View>

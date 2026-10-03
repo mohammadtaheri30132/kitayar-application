@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   highlightPhone: { fontWeight: 'bold', color: COLORS.primary },
   form: { marginBottom: 10 },
   inputGroup: { marginBottom: 20 },
-  label: { fontSize: 13, color: COLORS.textLight, marginBottom: 8, textAlign: 'right', fontWeight: 'bold' },
+  label: { fontSize: 13, color: COLORS.textLight, marginBottom: 8, textAlign: 'left', fontWeight: 'bold' },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',

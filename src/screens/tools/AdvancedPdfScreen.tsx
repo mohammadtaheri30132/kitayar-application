@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   convertButton: { padding: 15, borderRadius: 10, alignItems: 'center' },
   convertButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'right', color: '#333' },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'left', color: '#333' },
   emptyText: { textAlign: 'center', color: '#95a5a6', marginTop: 20 },
   
   historyCard: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 15, elevation: 2, overflow: 'hidden', position: 'relative' },
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   historyContent: { flexDirection: 'row-reverse', padding: 15, borderBottomWidth: 1, borderBottomColor: '#f1f2f6', alignItems: 'center' },
   iconWrapper: { width: 60, height: 60, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginLeft: 15 },
   infoBox: { flex: 1, alignItems: 'flex-end', justifyContent: 'center' },
-  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'right', direction: 'ltr' },
+  historyTitle: { fontWeight: 'bold', fontSize: 14, color: '#2c3e50', marginBottom: 6, textAlign: 'left', direction: 'ltr' },
   metaDataRow: { flexDirection: 'row-reverse', alignItems: 'center' },
   metaText: { fontSize: 11, color: '#7f8c8d', fontWeight: 'bold' },
   metaDivider: { marginHorizontal: 6, color: '#bdc3c7', fontSize: 10 },

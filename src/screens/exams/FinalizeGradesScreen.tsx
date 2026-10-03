@@ -239,8 +239,8 @@ const styles = StyleSheet.create({
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
   
   scrollContainer: { padding: 20, paddingBottom: 100 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#166534', textAlign: 'right', marginBottom: 8 },
-  descText: { fontSize: 13, color: COLORS.textLight, textAlign: 'right', marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#166534', textAlign: 'left', marginBottom: 8 },
+  descText: { fontSize: 13, color: COLORS.textLight, textAlign: 'left', marginBottom: 16 },
   emptyText: { textAlign: 'center', color: COLORS.textLight, marginVertical: 10 },
   divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 24 },
   
@@ -260,11 +260,11 @@ const styles = StyleSheet.create({
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: COLORS.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 20, textAlign: 'right' },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text, marginBottom: 20, textAlign: 'left' },
   modalOptionBtn: { backgroundColor: '#eff6ff', padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#bfdbfe' },
   modalOptionText: { color: '#1d4ed8', fontWeight: 'bold', fontSize: 14 },
   modalDivider: { height: 1, backgroundColor: COLORS.border, marginVertical: 20 },
-  modalSubtitle: { fontSize: 14, color: COLORS.text, textAlign: 'right', marginBottom: 12, fontWeight: 'bold' },
+  modalSubtitle: { fontSize: 14, color: COLORS.text, textAlign: 'left', marginBottom: 12, fontWeight: 'bold' },
   memberSelectBtn: { padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border, alignItems: 'center' },
   memberSelectText: { fontSize: 16, color: COLORS.text },
   modalCancelBtn: { marginTop: 20, padding: 16, alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 12 },

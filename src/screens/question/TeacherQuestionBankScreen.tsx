@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   qType: { fontSize: 11, backgroundColor: '#eff6ff', color: COLORS.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, fontWeight: 'bold', fontFamily: 'IRANSansX' },
   qDate: { fontSize: 12, color: COLORS.textLight, fontFamily: 'IRANSansX' },
-  qText: { fontSize: 15, color: COLORS.text, textAlign: 'right', lineHeight: 26, fontFamily: 'IRANSansX' },
+  qText: { fontSize: 15, color: COLORS.text, textAlign: 'left', lineHeight: 26, fontFamily: 'IRANSansX' },
   mediaRow: { flexDirection: 'row-reverse', gap: 8, marginTop: 12 },
   badge: { flexDirection: 'row-reverse', alignItems: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   badgeText: { fontSize: 11, color: COLORS.primary, fontFamily: 'IRANSansX' },

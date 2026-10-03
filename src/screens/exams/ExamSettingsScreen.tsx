@@ -183,14 +183,14 @@ const styles = StyleSheet.create({
   scrollContainer: { padding: 20 },
   
   linkCard: { backgroundColor: '#eff6ff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 20 },
-  linkTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e40af', marginBottom: 12, textAlign: 'right' },
+  linkTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e40af', marginBottom: 12, textAlign: 'left' },
   linkBox: { backgroundColor: COLORS.surface, padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 12 },
   linkText: { fontSize: 14, color: COLORS.text, textAlign: 'left' },
   copyBtn: { backgroundColor: '#3b82f6', padding: 12, borderRadius: 8, alignItems: 'center' },
   copyBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 14 },
 
   formCard: { backgroundColor: COLORS.surface, padding: 20, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 24 },
-  label: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'right' },
+  label: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 8, textAlign: 'left' },
   input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12, marginBottom: 16, backgroundColor: '#f8fafc', color: COLORS.text, fontSize: 16 },
   
   switchRow: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', marginBottom: 20, paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },

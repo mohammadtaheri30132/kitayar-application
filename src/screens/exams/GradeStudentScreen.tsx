@@ -235,16 +235,16 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 12,
   },
-  questionText: { flex: 1, fontSize: 15, color: COLORS.text, textAlign: 'right', fontWeight: 'bold', lineHeight: 24 },
+  questionText: { flex: 1, fontSize: 15, color: COLORS.text, textAlign: 'left', fontWeight: 'bold', lineHeight: 24 },
   
   responseContainer: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 8 },
-  responseLabel: { fontSize: 12, color: COLORS.textLight, marginBottom: 4, textAlign: 'right' },
-  responseText: { fontSize: 15, color: COLORS.text, textAlign: 'right', fontWeight: '500' },
+  responseLabel: { fontSize: 12, color: COLORS.textLight, marginBottom: 4, textAlign: 'left' },
+  responseText: { fontSize: 15, color: COLORS.text, textAlign: 'left', fontWeight: '500' },
   emptyResponse: { color: COLORS.error, fontStyle: 'italic' },
   
   correctAnswerContainer: { backgroundColor: '#f0fdf4', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#bbf7d0' },
-  correctLabel: { fontSize: 12, color: '#166534', marginBottom: 4, textAlign: 'right' },
-  correctText: { fontSize: 15, color: '#15803d', textAlign: 'right', fontWeight: 'bold' },
+  correctLabel: { fontSize: 12, color: '#166534', marginBottom: 4, textAlign: 'left' },
+  correctText: { fontSize: 15, color: '#15803d', textAlign: 'left', fontWeight: 'bold' },
 
   essayBadge: { marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#eff6ff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   essayBadgeText: { fontSize: 12, color: COLORS.secondary, fontWeight: 'bold' },

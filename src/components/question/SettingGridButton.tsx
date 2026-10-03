@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   gridIconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
-  gridItemText: { fontSize: 13, fontWeight: 'bold', color: '#334155', flex: 1, textAlign: 'right' },
+  gridItemText: { fontSize: 13, fontWeight: 'bold', color: '#334155', flex: 1, textAlign: 'left' },
 });
 
 export default SettingGridButton;

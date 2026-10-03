@@ -23,14 +23,31 @@ const PREDEFINED_HEADERS = [
   }
 ];
 
-const MobileQuestionBuilder = ({ navigation }: any) => {
+const MobileQuestionBuilder = ({ route, navigation }: any) => {
+  const passedCourseId = route?.params?.courseId || route?.params?.classroom?.course?._id || route?.params?.classroom?.course;
+  const passedGradeId = route?.params?.gradeId || route?.params?.classroom?.grade?._id || route?.params?.classroom?.grade;
+  const passedSchoolName = route?.params?.schoolName || route?.params?.classroom?.school?.name;
+  const passedClassName = route?.params?.className || route?.params?.classroom?.name;
+  const passedSubjectName = route?.params?.subjectName || route?.params?.classroom?.subjectName;
+
   const [courses, setCourses] = useState<any[]>([]);
   const [fields, setFields] = useState<any[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
 
-  const [selectedHeader, setSelectedHeader] = useState<any>(PREDEFINED_HEADERS[1]);
+  const defaultHeader = React.useMemo(() => {
+    const base = JSON.parse(JSON.stringify(PREDEFINED_HEADERS[1]));
+    if (passedSchoolName && base.standard1) {
+      base.standard1.schoolName = `آموزشگاه: ${passedSchoolName}`;
+    }
+    if (passedSubjectName && base.standard1) {
+      base.standard1.examSubject = `درس: ${passedSubjectName}`;
+    }
+    return base;
+  }, [passedSchoolName, passedSubjectName]);
+
+  const [selectedHeader, setSelectedHeader] = useState<any>(defaultHeader);
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [selectedField, setSelectedField] = useState<any>(null);
   const [selectedGrade, setSelectedGrade] = useState<any>(null);
@@ -48,12 +65,16 @@ const MobileQuestionBuilder = ({ navigation }: any) => {
       try {
         const res = await api.get('/teacher/builder/courses');
         if (res.data.success) {
-          setCourses(res.data.data);
+          const courseList = res.data.data || [];
+          setCourses(courseList);
+          if (passedCourseId) {
+            const foundCourse = courseList.find((c: any) => c._id === passedCourseId);
+            if (foundCourse) setSelectedCourse(foundCourse);
+          }
         } else {
           Alert.alert('خطا', 'سرور لیستی ارسال نکرد.');
         }
       } catch (e: any) {
-        // 👈 این الرت به ما میگه مشکل دقیقاً چیه
         Alert.alert(
           'خطای ارتباط با سرور', 
           e?.response?.status === 401 
@@ -64,12 +85,6 @@ const MobileQuestionBuilder = ({ navigation }: any) => {
       }
     };
 
-    // 👈 مهم‌ترین رفع ایراد سرعت ورود به صفحه:
-    // InteractionManager از هسته React Native حذف شده، پس به‌جاش از
-    // requestIdleCallback استفاده می‌کنیم (کار سنگین رو به زمانی موکول می‌کنه
-    // که ترد جاوااسکریپت بیکاره، یعنی بعد از اتمام انیمیشن ورود صفحه).
-    // چون requestIdleCallback روی همه‌ی نسخه‌های Hermes/RN تضمین‌شده نیست،
-    // یک fallback با setTimeout(0) هم در نظر گرفته شده.
     const ric: (cb: () => void) => number =
       (global as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 0) as unknown as number);
     const cic: (handle: number) => void =
@@ -80,7 +95,7 @@ const MobileQuestionBuilder = ({ navigation }: any) => {
     });
 
     return () => cic(handle);
-  }, []);
+  }, [passedCourseId]);
 
   useEffect(() => {
     if (!selectedCourse) return;
@@ -89,13 +104,23 @@ const MobileQuestionBuilder = ({ navigation }: any) => {
         const res = await api.get(`/teacher/builder/courses/${selectedCourse._id}/fields-grades`);
         if (res.data.success) {
           setFields(res.data.data.fields);
-          setGrades(res.data.data.grades);
-          setSelectedField(null); setSelectedGrade(null); setSelectedBook(null); setSelectedLessons(['all']);
+          const gradesList = res.data.data.grades || [];
+          setGrades(gradesList);
+          setSelectedField(null);
+          
+          if (passedGradeId) {
+            const foundG = gradesList.find((g: any) => g._id === passedGradeId);
+            setSelectedGrade(foundG || null);
+          } else {
+            setSelectedGrade(null);
+          }
+          setSelectedBook(null); 
+          setSelectedLessons(['all']);
         }
       } catch (e) { console.log(e); }
     };
     fetchFieldsAndGrades();
-  }, [selectedCourse]);
+  }, [selectedCourse, passedGradeId]);
 
   useEffect(() => {
     if (!selectedGrade) return;
@@ -357,13 +382,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
   content: { padding: 16 },
   card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
-  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#334155', marginBottom: 16, textAlign: 'right', flexDirection: 'row-reverse', alignItems: 'center' },
+  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#334155', marginBottom: 16, textAlign: 'left', flexDirection: 'row-reverse', alignItems: 'center' },
   formCol: { flexDirection: 'column' },
   selector: { width: '100%', marginBottom: 16 },
   disabledSelector: { opacity: 0.5 },
-  selectorLabel: { fontSize: 13, color: '#64748b', marginBottom: 8, textAlign: 'right' },
+  selectorLabel: { fontSize: 13, color: '#64748b', marginBottom: 8, textAlign: 'left' },
   selectorValueBox: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 48 },
-  selectorValue: { fontSize: 14, color: '#0f172a', fontWeight: '500', flex: 1, textAlign: 'right', marginRight: 8 },
+  selectorValue: { fontSize: 14, color: '#0f172a', fontWeight: '500', flex: 1, textAlign: 'left', marginRight: 8 },
   input: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: 'bold', color: '#0f172a' },
   fixedBottomContainer: {
     position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: 16,
@@ -394,7 +419,7 @@ const styles = StyleSheet.create({
   sheetHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottomWidth: 1, borderColor: '#f1f5f9', marginBottom: 8 },
   sheetTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
   sheetItem: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderColor: '#f8fafc' },
-  sheetItemText: { fontSize: 14, color: '#334155', textAlign: 'right' },
+  sheetItemText: { fontSize: 14, color: '#334155', textAlign: 'left' },
   
   // استایل‌های جدید مربوط به چک باکس
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: '#cbd5e1', justifyContent: 'center', alignItems: 'center' },

@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   highlightPhone: { fontWeight: 'bold', color: COLORS.primary },
   form: { marginBottom: 20 },
   inputGroup: { marginBottom: 20 },
-  label: { fontSize: 13, color: COLORS.textLight, marginBottom: 8, textAlign: 'right', fontWeight: 'bold' },
+  label: { fontSize: 13, color: COLORS.textLight, marginBottom: 8, textAlign: 'left', fontWeight: 'bold' },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,

@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   filtersContainer: { backgroundColor: '#fff', padding: 12, borderBottomWidth: 1, borderColor: '#e2e8f0' },
   
   searchBox: { flexDirection: 'row-reverse', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 10, height: 48, marginBottom: 12, borderWidth: 1, borderColor: '#e2e8f0', overflow: 'hidden' },
-  searchInput: { flex: 1, textAlign: 'right', paddingHorizontal: 12, fontFamily: 'System', fontSize: 14 },
+  searchInput: { flex: 1, textAlign: 'left', paddingHorizontal: 12, fontFamily: 'System', fontSize: 14 },
   searchIconBtn: { backgroundColor: '#3b82f6', height: '100%', paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
   
   filterChip: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f1f5f9', marginLeft: 8 },
@@ -364,15 +364,15 @@ const styles = StyleSheet.create({
   qHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 12 },
   qType: { fontSize: 11, backgroundColor: '#eff6ff', color: '#2563eb', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, fontWeight: 'bold' },
   qDifficulty: { fontSize: 11, color: '#64748b', backgroundColor: '#f8fafc', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  qText: { fontSize: 15, color: '#1e293b', textAlign: 'right', lineHeight: 28, marginBottom: 16 },
+  qText: { fontSize: 15, color: '#1e293b', textAlign: 'left', lineHeight: 28, marginBottom: 16 },
   
   optionsContainer: { backgroundColor: '#f8fafc', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#f1f5f9' },
-  optionText: { fontSize: 13, color: '#475569', textAlign: 'right', marginBottom: 8, lineHeight: 22 },
+  optionText: { fontSize: 13, color: '#475569', textAlign: 'left', marginBottom: 8, lineHeight: 22 },
   correctOptionText: { color: '#059669', fontWeight: 'bold' },
   
   answerBox: { backgroundColor: '#f0fdf4', padding: 12, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#d1fae5' },
-  answerLabel: { fontSize: 12, fontWeight: 'bold', color: '#059669', marginBottom: 6, textAlign: 'right' },
-  answerText: { fontSize: 14, color: '#065f46', textAlign: 'right', lineHeight: 24 },
+  answerLabel: { fontSize: 12, fontWeight: 'bold', color: '#059669', marginBottom: 6, textAlign: 'left' },
+  answerText: { fontSize: 14, color: '#065f46', textAlign: 'left', lineHeight: 24 },
   correctOptionBadge: { alignSelf: 'flex-end', backgroundColor: '#d1fae5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginTop: 10 },
   correctOptionBadgeText: { color: '#065f46', fontSize: 12, fontWeight: 'bold' },
 
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e293b' },
   
   selector: { width: '100%', marginBottom: 16 },
-  selectorLabel: { fontSize: 13, color: '#64748b', marginBottom: 8, textAlign: 'right' },
+  selectorLabel: { fontSize: 13, color: '#64748b', marginBottom: 8, textAlign: 'left' },
   selectorValueBox: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, height: 48 },
   selectorValue: { fontSize: 14, color: '#0f172a', fontWeight: '500' },
   applyFilterBtn: { backgroundColor: '#10b981', padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 10 },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   innerModalHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderColor: '#f1f5f9' },
   innerModalTitle: { fontSize: 14, fontWeight: 'bold', color: '#3b82f6' },
   innerModalItem: { paddingVertical: 14, borderBottomWidth: 1, borderColor: '#f8fafc' },
-  innerModalItemText: { fontSize: 14, textAlign: 'right', color: '#334155' }
+  innerModalItemText: { fontSize: 14, textAlign: 'left', color: '#334155' }
 });
 
 export default SwapQuestionScreen;

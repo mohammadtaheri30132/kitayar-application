@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '600',
-    textAlign: 'right',
+    textAlign: 'left',
   },
   emptyContainer: {
     flex: 1,

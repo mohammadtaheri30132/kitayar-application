@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -11,23 +11,44 @@ import {
   Platform,
   ScrollView
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import { getTodayJalali } from '../../utils/date/jalaliHelper';
 
 const CreateClassScreen = ({ navigation }: any) => {
   const [className, setClassName] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [selectedGrade, setSelectedGrade] = useState<string | null>(null);
+  const [academicYear, setAcademicYear] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [dbCourses, setDbCourses] = useState<any[]>([]);
   const [dbFields, setDbFields] = useState<any[]>([]);
   const [dbGrades, setDbGrades] = useState<any[]>([]);
 
+  // School states
+  const [dbSchools, setDbSchools] = useState<any[]>([]);
+  const [selectedSchool, setSelectedSchool] = useState<string | null>(null);
+
   useEffect(() => {
     fetchCourses();
+    
+    // محاسبه سال تحصیلی
+    const { jy, jm } = getTodayJalali();
+    if (jm >= 7 && jm <= 12) {
+      setAcademicYear(`${jy}-${jy + 1}`);
+    } else {
+      setAcademicYear(`${jy - 1}-${jy}`);
+    }
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSchools();
+    }, [])
+  );
 
   useEffect(() => {
     if (selectedCourse) {
@@ -45,6 +66,17 @@ const CreateClassScreen = ({ navigation }: any) => {
       const res = await api.get('/teacher/builder/courses');
       if (res.data.success) {
         setDbCourses(res.data.data);
+      }
+    } catch (e) {
+      console.warn(e);
+    }
+  };
+
+  const fetchSchools = async () => {
+    try {
+      const res = await api.get('/teacher/schools');
+      if (res.data.success) {
+        setDbSchools(res.data.data);
       }
     } catch (e) {
       console.warn(e);
@@ -73,6 +105,10 @@ const CreateClassScreen = ({ navigation }: any) => {
   };
 
   const handleCreateClass = async () => {
+    if (!selectedSchool) {
+      Alert.alert('توجه', 'لطفاً مدرسه را انتخاب کنید.');
+      return;
+    }
     if (!className.trim()) {
       Alert.alert('توجه', 'لطفاً نام کلاس را وارد کنید.');
       return;
@@ -85,16 +121,17 @@ const CreateClassScreen = ({ navigation }: any) => {
     setIsSubmitting(true);
     try {
       const response = await api.post('/teacher/classrooms', {
+        schoolId: selectedSchool,
         name: className,
         course: selectedCourse,
         grade: selectedGrade,
+        academicYear,
       });
 
       if (response.data.success) {
         Alert.alert('موفقیت', 'کلاس جدید با موفقیت ایجاد شد!', [
           { 
             text: 'باشه', 
-            // بازگشت به صفحه قبل پس از تایید
             onPress: () => navigation.goBack() 
           }
         ]);
@@ -107,7 +144,6 @@ const CreateClassScreen = ({ navigation }: any) => {
     }
   };
 
-  // کامپوننت داخلی برای رندر کردن لیست‌های افقی (Chips)
   const renderSelector = (items: any[], selectedId: string | null, onSelect: (id: string) => void) => (
     <ScrollView 
       horizontal 
@@ -139,12 +175,55 @@ const CreateClassScreen = ({ navigation }: any) => {
           <Text style={styles.backButtonText}>🔙 بازگشت</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>ایجاد کلاس جدید</Text>
-        <View style={{ width: 60 }} /> {/* برای بالانس کردن هدر */}
+        <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.formContainer}>
           
+          <View style={styles.inputGroup}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <TouchableOpacity onPress={() => navigation.navigate('CreateSchoolScreen')}>
+                <Text style={{ color: COLORS.primary, fontSize: 13, fontWeight: 'bold' }}>+ ایجاد مدرسه جدید</Text>
+              </TouchableOpacity>
+              <Text style={styles.label}>مدرسه <Text style={{ color: COLORS.error }}>*</Text></Text>
+            </View>
+            
+            {dbSchools.length === 0 ? (
+              <TouchableOpacity 
+                style={styles.emptySchoolBtn}
+                onPress={() => navigation.navigate('CreateSchoolScreen')}
+              >
+                <Text style={styles.emptySchoolText}>مدرسه‌ای یافت نشد. برای ایجاد کلیک کنید.</Text>
+              </TouchableOpacity>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.chipContainer}
+              >
+                {dbSchools.map((item) => {
+                  const isSelected = item._id === selectedSchool;
+                  return (
+                    <TouchableOpacity
+                      key={item._id}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.chip, 
+                        isSelected && { backgroundColor: item.color || COLORS.primary, borderColor: item.color || COLORS.primary }
+                      ]}
+                      onPress={() => setSelectedSchool(item._id)}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>نام کلاس</Text>
             <TextInput
@@ -153,6 +232,16 @@ const CreateClassScreen = ({ navigation }: any) => {
               placeholderTextColor={COLORS.textLight}
               value={className}
               onChangeText={setClassName}
+              textAlign="right"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>سال تحصیلی</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: '#f1f5f9', color: COLORS.textLight, fontWeight: 'bold' }]}
+              value={academicYear}
+              editable={false}
               textAlign="right"
             />
           </View>
@@ -177,7 +266,7 @@ const CreateClassScreen = ({ navigation }: any) => {
             {dbGrades.filter(g => !selectedField || g.field === selectedField).length > 0 ? (
               renderSelector(dbGrades.filter(g => !selectedField || g.field === selectedField), selectedGrade, setSelectedGrade)
             ) : (
-              <Text style={{ textAlign: 'right', color: COLORS.textLight, fontSize: 13, marginRight: 10 }}>بدون پایه (لطفاً ابتدا دوره و رشته را انتخاب کنید)</Text>
+              <Text style={{ textAlign: 'left', color: COLORS.textLight, fontSize: 13, marginRight: 10 }}>بدون پایه (لطفاً ابتدا دوره و رشته را انتخاب کنید)</Text>
             )}
           </View>
 
@@ -220,7 +309,7 @@ const styles = StyleSheet.create({
   formContainer: { backgroundColor: COLORS.surface, borderRadius: 20, padding: 20, elevation: 2 },
   
   inputGroup: { marginBottom: 24 },
-  label: { fontSize: 15, color: COLORS.text, marginBottom: 12, textAlign: 'right', fontWeight: 'bold' },
+  label: { fontSize: 15, color: COLORS.text, marginBottom: 12, textAlign: 'left', fontWeight: 'bold' },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -232,7 +321,7 @@ const styles = StyleSheet.create({
   },
   
   chipContainer: {
-    flexDirection: 'row', // راست‌چین شدن آیتم‌های اسکرول افقی
+    flexDirection: 'row',
     paddingVertical: 4,
   },
   chip: {
@@ -242,7 +331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginLeft: 10, // فاصله از چپ برای چینش راست‌به‌چپ
+    marginLeft: 10,
   },
   chipSelected: {
     backgroundColor: COLORS.primary,
@@ -250,6 +339,21 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 14, color: COLORS.textLight, fontWeight: '600' },
   chipTextSelected: { color: COLORS.surface },
+
+  emptySchoolBtn: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    backgroundColor: '#eff6ff'
+  },
+  emptySchoolText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '500'
+  },
 
   footer: {
     padding: 20,

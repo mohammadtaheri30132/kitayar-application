@@ -7,7 +7,7 @@ import { Home, Users, Wrench, MessageCircle, BookOpen } from 'lucide-react-nativ
 import DashboardScreen from '../screens/main/DashboardScreen';
 import TeacherToolsScreen from '../screens/tools/TeacherToolsScreen';
 import ClassManagementScreen from '../screens/classes/ClassManagementScreen';
-import InteractionScreen from '../screens/interaction/InteractionScreen';
+// import InteractionScreen from '../screens/interaction/InteractionScreen';
 import EducationDashboardScreen from '../screens/education/EducationDashboardScreen';
 
 const Tab = createBottomTabNavigator();
@@ -63,11 +63,11 @@ const MainTabNavigator = () => {
         component={EducationDashboardScreen} 
         options={{ title: 'آموزشیار' }} 
       />
-      <Tab.Screen 
+      {/* <Tab.Screen 
         name="InteractionTab" 
         component={InteractionScreen} 
         options={{ title: 'تعامل' }} 
-      />
+      /> */}
       <Tab.Screen 
         name="ToolsTab" 
         component={TeacherToolsScreen} 

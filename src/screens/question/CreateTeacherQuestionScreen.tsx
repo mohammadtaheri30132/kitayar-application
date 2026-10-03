@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX', color: COLORS.text },
   scrollContent: { padding: 16, paddingBottom: 40 },
-  label: { fontSize: 14, fontWeight: 'bold', fontFamily: 'IRANSansX', color: COLORS.text, marginBottom: 8, textAlign: 'right', marginTop: 16 },
+  label: { fontSize: 14, fontWeight: 'bold', fontFamily: 'IRANSansX', color: COLORS.text, marginBottom: 8, textAlign: 'left', marginTop: 16 },
   
   typeSelectorRow: { flexDirection: 'row-reverse', marginBottom: 8 },
   typeBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, marginLeft: 8 },
@@ -176,15 +176,15 @@ const styles = StyleSheet.create({
   typeText: { fontFamily: 'IRANSansX', fontSize: 14, color: COLORS.text },
   typeTextActive: { color: COLORS.surface, fontWeight: 'bold' },
 
-  textArea: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'right', minHeight: 120, textAlignVertical: 'top' },
-  input: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'right' },
+  textArea: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'left', minHeight: 120, textAlignVertical: 'top' },
+  input: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 16, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'left' },
   
   mediaContainer: { flexDirection: 'row-reverse', gap: 12 },
   mediaBtn: { flex: 1, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderStyle: 'dashed', borderRadius: 12, padding: 20, alignItems: 'center', justifyContent: 'center' },
   mediaBtnText: { marginTop: 8, fontFamily: 'IRANSansX', fontSize: 13, color: COLORS.textLight },
 
   optionsContainer: { marginTop: 8 },
-  optionInput: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 14, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'right', marginBottom: 12 },
+  optionInput: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 14, fontSize: 15, fontFamily: 'IRANSansX', textAlign: 'left', marginBottom: 12 },
 
   footer: { padding: 16, backgroundColor: COLORS.surface, borderTopWidth: 1, borderColor: COLORS.border },
   submitBtn: { backgroundColor: COLORS.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
