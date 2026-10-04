@@ -105,11 +105,6 @@ import NewsSettingsScreen from './src/screens/interaction/settings/NewsSettingsS
 import TeacherQuestionBankScreen from './src/screens/question/TeacherQuestionBankScreen';
 import CreateTeacherQuestionScreen from './src/screens/question/CreateTeacherQuestionScreen';
 
-import GradebookOverviewScreen from './src/screens/classes/GradebookOverviewScreen';
-import GradebookTableScreen from './src/screens/classes/GradebookTableScreen';
-import GradebookAssessmentsScreen from './src/screens/classes/GradebookAssessmentsScreen';
-import GradebookSessionsScreen from './src/screens/classes/GradebookSessionsScreen';
-
 const Stack = createNativeStackNavigator();
 
 const AppContent = () => {
@@ -236,10 +231,6 @@ const AppContent = () => {
             <Stack.Screen name="EducationChaptersScreen" component={EducationChaptersScreen} />
             <Stack.Screen name="EducationLessonsScreen" component={EducationLessonsScreen} />
             <Stack.Screen name="EducationLessonContentScreen" component={EducationLessonContentScreen} />
-            <Stack.Screen name="GradebookOverviewScreen" component={GradebookOverviewScreen} />
-            <Stack.Screen name="GradebookTableScreen" component={GradebookTableScreen} />
-            <Stack.Screen name="GradebookAssessmentsScreen" component={GradebookAssessmentsScreen} />
-            <Stack.Screen name="GradebookSessionsScreen" component={GradebookSessionsScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

@@ -9,6 +9,7 @@ import {
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Settings, Users, BookOpen, BarChart2, Gift, Calendar, CheckSquare } from 'lucide-react-native';
+import GradebookTable from '../../components/classes/GradebookTable';
 
 const ClassDetailsScreen = ({ route, navigation }: any) => {
   const { classroom, classId, className } = route.params;
@@ -17,12 +18,6 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
   const insets = useSafeAreaInsets();
 
   const menuItems = [
-    {
-      id: 'GRADEBOOK',
-      title: 'دفتر نمره',
-      icon: <BookOpen size={32} color={COLORS.primary} />,
-      route: 'GradebookOverviewScreen'
-    },
     {
       id: 'STUDENTS',
       title: 'دانش‌آموزان',
@@ -104,6 +99,8 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
             </TouchableOpacity>
           ))}
         </View>
+
+        <GradebookTable classId={currentClassId} classroom={classroom} />
       </ScrollView>
     </View>
   );

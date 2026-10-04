@@ -26,6 +26,7 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
     setLoading(true);
     try {
       const response = await api.get(`/teacher/classrooms/${currentClassId}/students/list`);
+      console.log(`[ClassStudentsScreen] fetch response success:`, response.data.success, 'students count:', response.data.data?.length);
       if (response.data.success) {
         setMemberships(response.data.data);
       }
