@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, UserPlus, Trash2 } from 'lucide-react-native';
+import { ChevronRight, UserPlus } from 'lucide-react-native';
 
 const ClassStudentsScreen = ({ route, navigation }: any) => {
   const { currentClassId, currentClassName } = route.params;
@@ -20,13 +20,11 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
 
   const [memberships, setMemberships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isRemoving, setIsRemoving] = useState<string | null>(null);
 
   const fetchStudents = async () => {
     setLoading(true);
     try {
       const response = await api.get(`/teacher/classrooms/${currentClassId}/students/list`);
-      console.log(`[ClassStudentsScreen] fetch response success:`, response.data.success, 'students count:', response.data.data?.length);
       if (response.data.success) {
         setMemberships(response.data.data);
       }
@@ -44,33 +42,6 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
     }, [currentClassId])
   );
 
-  const handleRemoveStudent = (phone: string) => {
-    Alert.alert(
-      'حذف دانش‌آموز',
-      `آیا از حذف این دانش‌آموز مطمئن هستید؟`,
-      [
-        { text: 'انصراف', style: 'cancel' },
-        { 
-          text: 'حذف', 
-          style: 'destructive',
-          onPress: async () => {
-            setIsRemoving(phone);
-            try {
-              const response = await api.delete(`/teacher/classrooms/${currentClassId}/students/${phone}`);
-              if (response.data.success) {
-                fetchStudents();
-              }
-            } catch (error: any) {
-              Alert.alert('خطا', 'مشکلی در حذف دانش‌آموز رخ داد.');
-            } finally {
-              setIsRemoving(null);
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const renderStudentItem = ({ item, index }: { item: any, index: number }) => {
     const displayName = item.firstName 
       ? `${item.firstName} ${item.lastName}` 
@@ -79,6 +50,7 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
     return (
       <TouchableOpacity 
         style={styles.card}
+        activeOpacity={0.6}
         onPress={() => navigation.navigate('StudentProfileViewScreen', {
           studentPhone: item.studentPhone,
           classId: currentClassId,
@@ -88,29 +60,11 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
           fatherName: item.fatherName
         })}
       >
-        <View style={styles.cardInfo}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{index + 1}</Text>
-          </View>
-          <View style={styles.cardTextContainer}>
-            <Text style={styles.studentName}>{displayName}</Text>
-            <Text style={styles.studentPhone}>{item.studentPhone}</Text>
-            <Text style={styles.statusText}>
-              وضعیت: {item.status === 'ACTIVE' ? 'فعال' : item.status}
-            </Text>
-          </View>
+        <Text style={styles.studentIndex}>{index + 1}</Text>
+        <View style={styles.cardTextContainer}>
+          <Text style={styles.studentName}>{displayName}</Text>
+          <Text style={styles.studentPhone}>{item.studentPhone}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.iconButton}
-          onPress={() => handleRemoveStudent(item.studentPhone)}
-          disabled={isRemoving === item.studentPhone}
-        >
-          {isRemoving === item.studentPhone ? (
-            <ActivityIndicator size="small" color={COLORS.error} />
-          ) : (
-            <Trash2 size={20} color={COLORS.error} />
-          )}
-        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -138,7 +92,7 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
               onPress={() => navigation.navigate('AddStudentToClassScreen', { currentClassId, currentClassName })}
               activeOpacity={0.8}
             >
-              <UserPlus size={20} color={COLORS.surface} />
+              <UserPlus size={20} color={COLORS.primary} />
               <Text style={styles.addBtnText}>افزودن دانش‌آموز جدید</Text>
             </TouchableOpacity>
 
@@ -147,13 +101,15 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
                 <Text style={styles.emptyText}>هیچ دانش‌آموزی در این کلاس وجود ندارد.</Text>
               </View>
             ) : (
-              <FlatList
-                data={memberships}
-                keyExtractor={(item) => item._id}
-                renderItem={renderStudentItem}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-              />
+              <View style={styles.listWrapper}>
+                <FlatList
+                  data={memberships}
+                  keyExtractor={(item) => item._id}
+                  renderItem={renderStudentItem}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.listContent}
+                />
+              </View>
             )}
           </>
         )}
@@ -163,68 +119,70 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
     padding: 16, 
-    backgroundColor: COLORS.surface, 
-    elevation: 2,
+    backgroundColor: '#fff', 
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
+    borderBottomColor: '#F0F0F0'
   },
   backButton: { padding: 8 },
   headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
-  headerSubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 4 },
+  headerTitle: { fontSize: 17, fontFamily: 'IRANSansX', fontWeight: 'bold', color: COLORS.text },
+  headerSubtitle: { fontSize: 12, fontFamily: 'IRANSansX', color: COLORS.textLight, marginTop: 4 },
   
   content: { flex: 1 },
-  listContent: { padding: 16, paddingBottom: 100 },
+  listWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    marginHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    flex: 1,
+    marginBottom: 16
+  },
+  listContent: { paddingVertical: 8 },
   
   addBtnContainer: { 
-    backgroundColor: COLORS.primary, 
+    backgroundColor: '#E8F0FE', 
     flexDirection: 'row', 
     alignItems: 'center', 
     justifyContent: 'center', 
     padding: 14, 
     borderRadius: 12, 
     margin: 16, 
-    marginBottom: 8, 
-    elevation: 2 
+    marginBottom: 16, 
   },
-  addBtnText: { color: COLORS.surface, fontSize: 15, fontWeight: 'bold', marginLeft: 8 },
+  addBtnText: { color: COLORS.primary, fontSize: 14, fontFamily: 'IRANSansX', fontWeight: 'bold', marginLeft: 8 },
   
   card: { 
     flexDirection: 'row', 
-    justifyContent: 'space-between', 
     alignItems: 'center', 
-    backgroundColor: COLORS.surface, 
-    padding: 16, 
-    borderRadius: 16, 
-    marginBottom: 12, 
-    borderWidth: 1, 
-    borderColor: COLORS.border 
+    paddingVertical: 14, 
+    paddingHorizontal: 16,
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F7F7F7' 
   },
-  cardInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  avatar: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 22, 
-    backgroundColor: '#f1f5f9', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginLeft: 12 
+  studentIndex: {
+    fontSize: 14,
+    fontFamily: 'IRANSansX',
+    color: '#CBD5E1',
+    fontWeight: 'bold',
+    width: 30,
+    textAlign: 'center'
   },
-  avatarText: { fontSize: 16, fontWeight: 'bold', color: COLORS.textLight },
-  cardTextContainer: { flex: 1, marginRight: 10 },
-  studentName: { fontSize: 15, fontWeight: 'bold', color: COLORS.text, marginBottom: 4, textAlign: 'left' },
-  studentPhone: { fontSize: 13, color: COLORS.textLight, marginBottom: 4, textAlign: 'left' },
-  statusText: { fontSize: 12, color: COLORS.textLight, textAlign: 'left' },
-  iconButton: { padding: 8 },
+  cardTextContainer: { flex: 1, marginRight: 10, alignItems: 'flex-start' },
+  studentName: { fontSize: 15, fontFamily: 'IRANSansX', fontWeight: '600', color: COLORS.text, marginBottom: 4 },
+  studentPhone: { fontSize: 13, fontFamily: 'IRANSansX', color: COLORS.textLight },
   
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
-  emptyText: { color: COLORS.textLight, fontSize: 15 },
+  emptyText: { color: COLORS.textLight, fontSize: 14, fontFamily: 'IRANSansX' },
 });
 
 export default ClassStudentsScreen;

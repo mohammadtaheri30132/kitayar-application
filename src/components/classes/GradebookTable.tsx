@@ -18,6 +18,7 @@ import {
   FileText, Users, CheckSquare, MessageCircle, 
   X, User, Plus
 } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../../theme/colors';
 import { api } from '../../api/axiosConfig';
 import { toJalaali, toGregorian } from 'jalaali-js';
@@ -113,6 +114,8 @@ const renderEventChip = (event: any, isDetailed = false) => {
 };
 
 const GradebookTable = ({ classId, classroom }: any) => {
+  const navigation = useNavigation<any>();
+
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -318,15 +321,20 @@ const GradebookTable = ({ classId, classroom }: any) => {
              
              <View style={{ overflow: 'hidden' }}>
                 {students.map((student, index) => (
-                   <View 
+                   <TouchableOpacity 
                      key={student._id} 
                      style={[
                        styles.studentCell, 
                        { height: rowHeights[student._id] || 60, width: 100, borderLeftWidth: 0, justifyContent: 'center' }
                      ]}
+                     onPress={() => navigation.navigate('StudentProfileViewScreen', {
+                        studentPhone: student.phone || student._id,
+                        classId: classId,
+                        className: classroom?.name || 'کلاس'
+                     })}
                    >
                       <Text style={styles.studentName} numberOfLines={2}>{index + 1}- {student.name}</Text>
-                   </View>
+                   </TouchableOpacity>
                 ))}
              </View>
           </View>
