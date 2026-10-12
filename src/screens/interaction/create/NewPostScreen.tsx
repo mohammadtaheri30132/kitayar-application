@@ -1,18 +1,33 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Image, I18nManager } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TextInput, 
+  TouchableOpacity, 
+  ScrollView, 
+  Image, 
+  ActivityIndicator, 
+  Alert, 
+  I18nManager 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, ChevronLeft, Image as ImageIcon, X } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import ImagePicker from 'react-native-image-crop-picker';
+import { communityService } from '../../../services/community/communityService';
 
-const MAX_CHARS = 500;
+const MAX_CHARS = 1000;
 
 const NewPostScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
 
   const [text, setText] = useState('');
-  const [imageUri, setImageUri] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState<string>('');
+  const [imageMime, setImageMime] = useState<string>('image/jpeg');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState('');
 
   const handleSelectImage = async () => {
     try {
@@ -21,67 +36,100 @@ const NewPostScreen = ({ navigation }: any) => {
         cropping: false,
       });
 
-      // Simple validation: 10MB approx
       if (image.size && image.size > 10 * 1024 * 1024) {
-        setErrorMsg('حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد.');
+        Alert.alert('خطا', 'حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد.');
         return;
       }
 
-      setImageUri(image.path);
-      setErrorMsg('');
-    } catch (err) {
+      setLocalImageUri(image.path);
+      const filename = image.filename || `post_${Date.now()}.jpg`;
+      setImageFileName(filename);
+      setImageMime(image.mime || 'image/jpeg');
+    } catch {
       // User cancelled
     }
   };
 
-  const handleSubmit = () => {
-    if (!text.trim() && !imageUri) return;
-    
-    // Fake submission delay
-    setTimeout(() => {
-      navigation.goBack();
-    }, 500);
+  const handleSubmit = async () => {
+    if (!text.trim() && !localImageUri) {
+      Alert.alert('خطا', 'لطفاً متن پست یا یک تصویر اضافه کنید.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const images: string[] = [];
+
+      if (localImageUri) {
+        setUploadProgressText('در حال بارگذاری تصویر...');
+        const uploadedUrl = await communityService.uploadAttachment(
+          localImageUri,
+          imageFileName,
+          imageMime
+        );
+        if (uploadedUrl) {
+          images.push(uploadedUrl);
+        }
+      }
+
+      setUploadProgressText('در حال ذخیره پست...');
+      await communityService.createPost({
+        content: text.trim(),
+        images,
+      });
+
+      Alert.alert('موفقیت', 'پست شما با موفقیت منتشر شد.', [
+        { text: 'متوجه شدم', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطا در انتشار پست. لطفاً اتصال اینترنت را بررسی کنید.';
+      Alert.alert('خطا', msg);
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgressText('');
+    }
   };
 
-  const isFormValid = text.trim().length > 0 || imageUri;
+  const isFormValid = text.trim().length > 0 || !!localImageUri;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} disabled={isSubmitting}>
           {I18nManager.isRTL ? <ChevronRight color={colors.text} size={28} /> : <ChevronLeft color={colors.text} size={28} />}
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>ارسال پست جدید</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>ارسال تجربه / پست جدید</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        
         <TextInput
-          style={[styles.inputTextArea, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]}
-          placeholder="متن پست را اینجا بنویسید..."
+          style={[styles.inputTextArea, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
+          placeholder="تجربه تدریس، چالش کلاسی، روش نوآورانه یا مطلب خود را بنویسید..."
           placeholderTextColor={colors.textLight}
           value={text}
           onChangeText={(val) => { if (val.length <= MAX_CHARS) setText(val); }}
           multiline
           textAlignVertical="top"
+          editable={!isSubmitting}
         />
         <Text style={[styles.charCounter, { color: colors.textLight }]}>
           {text.length}/{MAX_CHARS}
         </Text>
 
         <TouchableOpacity 
-          style={[styles.imageUploadArea, { borderColor: colors.border, backgroundColor: colors.card }]}
+          style={[styles.imageUploadArea, { borderColor: colors.border, backgroundColor: colors.surface }]}
           onPress={handleSelectImage}
+          disabled={isSubmitting}
         >
-          {imageUri ? (
+          {localImageUri ? (
             <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+              <Image source={{ uri: localImageUri }} style={styles.imagePreview} resizeMode="cover" />
               <TouchableOpacity 
                 style={styles.removeImageBtn} 
-                onPress={() => setImageUri(null)}
+                onPress={() => setLocalImageUri(null)}
+                disabled={isSubmitting}
               >
                 <X color="#fff" size={20} />
               </TouchableOpacity>
@@ -89,105 +137,151 @@ const NewPostScreen = ({ navigation }: any) => {
           ) : (
             <View style={styles.uploadPlaceholder}>
               <ImageIcon color={colors.textLight} size={40} />
-              <Text style={[styles.uploadTitle, { color: colors.text }]}>افزودن عکس</Text>
+              <Text style={[styles.uploadTitle, { color: colors.text }]}>افزودن عکس به پست</Text>
               <Text style={[styles.uploadSubtitle, { color: colors.textLight }]}>
-                حداکثر یک عکس - هر عکس تا 10 مگابایت
+                یک تصویر مرتبط با تجربه آموزشی خود انتخاب کنید (حداکثر ۱۰ مگابایت)
               </Text>
             </View>
           )}
         </TouchableOpacity>
 
-        {errorMsg ? (
-          <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
+        {uploadProgressText ? (
+          <View style={styles.progressRow}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.progressText, { color: colors.primary }]}>{uploadProgressText}</Text>
+          </View>
         ) : null}
 
-        <View style={styles.actionRow}>
-          <TouchableOpacity 
-            style={[styles.cancelBtn, { backgroundColor: colors.surface }]}
-            onPress={() => navigation.goBack()}
-          >
-            <Text style={[styles.cancelText, { color: colors.text }]}>انصراف</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.submitBtn, { backgroundColor: isFormValid ? colors.primary : colors.surface }]}
-            disabled={!isFormValid}
-            onPress={handleSubmit}
-          >
-            <Text style={[styles.submitText, { color: isFormValid ? '#fff' : colors.textLight }]}>ارسال</Text>
-          </TouchableOpacity>
-        </View>
-
+        <TouchableOpacity 
+          style={[
+            styles.submitBtn, 
+            { backgroundColor: isFormValid && !isSubmitting ? colors.primary : colors.border }
+          ]}
+          onPress={handleSubmit}
+          disabled={!isFormValid || isSubmitting}
+          activeOpacity={0.8}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={styles.submitBtnText}>انتشار در جامعه معلمان</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
+    height: 56,
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
     borderBottomWidth: 1,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX' },
-  content: { padding: 20 },
+  backBtn: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+  },
+  content: {
+    padding: 16,
+    paddingBottom: 40,
+  },
   inputTextArea: {
-    minHeight: 180, borderRadius: 12, borderWidth: 1, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16,
-    fontFamily: 'IRANSansX', textAlign: I18nManager.isRTL ? 'right' : 'left'
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: 'IRANSansX',
+    height: 160,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   charCounter: {
-    fontFamily: 'monospace', fontSize: 12, textAlign: I18nManager.isRTL ? 'left' : 'right',
-    marginTop: 8, marginBottom: 24, paddingHorizontal: 8
+    fontSize: 12,
+    fontFamily: 'IRANSansX',
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginBottom: 16,
   },
   imageUploadArea: {
-    borderRadius: 12, borderWidth: 1, borderStyle: 'dashed',
-    minHeight: 150, justifyContent: 'center', alignItems: 'center',
-    marginBottom: 16, overflow: 'hidden'
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 14,
+    overflow: 'hidden',
+    minHeight: 140,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   uploadPlaceholder: {
-    alignItems: 'center', padding: 20
+    alignItems: 'center',
+    padding: 20,
   },
   uploadTitle: {
-    fontSize: 16, fontWeight: 'bold', fontFamily: 'IRANSansX', marginTop: 12, marginBottom: 4
+    fontSize: 14,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+    marginTop: 8,
   },
   uploadSubtitle: {
-    fontSize: 12, fontFamily: 'IRANSansX'
+    fontSize: 12,
+    fontFamily: 'IRANSansX',
+    textAlign: 'center',
+    marginTop: 4,
   },
   imagePreviewContainer: {
-    width: '100%', height: 200, position: 'relative'
+    width: '100%',
+    height: 220,
+    position: 'relative',
   },
   imagePreview: {
-    width: '100%', height: '100%'
+    width: '100%',
+    height: '100%',
   },
   removeImageBtn: {
-    position: 'absolute', top: 12, right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)', width: 32, height: 32, borderRadius: 16,
-    justifyContent: 'center', alignItems: 'center'
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: '#00000080',
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  errorText: {
-    fontFamily: 'IRANSansX', fontSize: 12, marginBottom: 16, textAlign: 'center'
-  },
-  actionRow: {
+  progressRow: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
-    justifyContent: 'space-between', marginTop: 24
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 14,
   },
-  cancelBtn: {
-    flex: 1, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center',
-    marginLeft: I18nManager.isRTL ? 12 : 0, marginRight: I18nManager.isRTL ? 0 : 12
-  },
-  cancelText: {
-    fontSize: 16, fontWeight: 'bold', fontFamily: 'IRANSansX'
+  progressText: {
+    fontSize: 13,
+    fontFamily: 'IRANSansX',
+    fontWeight: '500',
   },
   submitBtn: {
-    flex: 2, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center'
+    height: 50,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  submitText: {
-    fontSize: 16, fontWeight: 'bold', fontFamily: 'IRANSansX'
+  submitBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
   }
 });
 

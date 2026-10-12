@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, I18nManager } from 'react-native';
-import { MessageCircleQuestion, Newspaper, MessagesSquare } from 'lucide-react-native';
+import { MessageCircleQuestion, UserCheck } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
-export type TabType = 'qna' | 'news' | 'posts';
+export type TabType = 'qna' | 'my_questions';
 
 interface Props {
   activeTab: TabType;
@@ -13,12 +13,19 @@ interface Props {
 const InteractionTabs = ({ activeTab, onChangeTab }: Props) => {
   const { colors } = useTheme();
 
+  // Safety fallback
+  const currentTab: TabType = activeTab === 'my_questions' ? 'my_questions' : 'qna';
+
   const renderTab = (id: TabType, label: string, Icon: any) => {
-    const isActive = activeTab === id;
+    const isActive = currentTab === id;
     return (
       <TouchableOpacity 
-        style={[styles.tab, isActive && { borderBottomColor: colors.primary, borderBottomWidth: 3 }]} 
+        style={[
+          styles.tab, 
+          isActive && { borderBottomColor: colors.primary, borderBottomWidth: 3 }
+        ]} 
         onPress={() => onChangeTab(id)}
+        activeOpacity={0.7}
       >
         <Icon color={isActive ? colors.primary : colors.textLight} size={20} />
         <Text style={[styles.tabText, { color: isActive ? colors.primary : colors.textLight }]}>
@@ -31,8 +38,7 @@ const InteractionTabs = ({ activeTab, onChangeTab }: Props) => {
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       {renderTab('qna', 'پرسش و پاسخ', MessageCircleQuestion)}
-      {renderTab('news', 'اخبار', Newspaper)}
-      {renderTab('posts', 'پست‌ها', MessagesSquare)}
+      {renderTab('my_questions', 'پرسش‌های من', UserCheck)}
     </View>
   );
 };

@@ -23,6 +23,9 @@ import com.kitayar.modules.texttopdf.TextToPdfPackage
 import com.kitayar.modules.advancedpdf.AdvancedPdfPackage
 import com.kitayar.modules.pdfcore.PdfCorePackage
 import com.kitayar.audiorecorder.AudioRecorderPackage
+import com.kitayar.modules.persiandatepicker.PersianDatePickerPackage
+import com.kitayar.modules.scanner.DocumentScannerPackage
+import com.kitayar.modules.community.CommunityQnaPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -35,8 +38,8 @@ class MainApplication : Application(), ReactApplication {
           // add(MyReactNativePackage())
           add(FilePickerPackage())
           add(PdfConverterPackage())
-          add(FileSharePackage()) // 👈 این خط را اضافه کن
-          add(ImageCompressorPackage()) // 👈 این خط اضافه شود
+          add(FileSharePackage())
+          add(ImageCompressorPackage())
           add(ImageConverterPackage())
           add(FileSaverPackage())
           add(CollagePackage())
@@ -50,12 +53,21 @@ class MainApplication : Application(), ReactApplication {
           add(AdvancedPdfPackage())
           add(PdfCorePackage())
           add(AudioRecorderPackage())
+          add(PersianDatePickerPackage())
+          add(DocumentScannerPackage())
+          add(CommunityQnaPackage())
         },
     )
   }
 
   override fun onCreate() {
     super.onCreate()
+
+    if (!org.opencv.android.OpenCVLoader.initDebug()) {
+      android.util.Log.e("KitayarScanner", "Unable to load OpenCV")
+    } else {
+      android.util.Log.d("KitayarScanner", "OpenCV loaded successfully")
+    }
 
     loadReactNative(this)
   }

@@ -127,9 +127,9 @@ export const PlanningService = {
     }
   },
 
-  getNotes: async (date?: string): Promise<{ success: boolean, data: DailyNote[] }> => {
+  getNotes: async (date?: string, classId?: string): Promise<{ success: boolean, data: DailyNote[] }> => {
     try {
-      const response = await api.get('/teacher/notes', { params: { date } });
+      const response = await api.get('/teacher/notes', { params: { date, classId } });
       return response.data;
     } catch (error) {
       console.warn('API getNotes failed');

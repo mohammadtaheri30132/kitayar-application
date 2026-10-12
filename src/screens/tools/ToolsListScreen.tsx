@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   ArrowUpDown, Crop, Droplet, FileArchive, FileMinus, FileOutput, 
-  FileSpreadsheet, FileText, Grid, Image as ImageIcon, Layers, 
+  FileSpreadsheet, FileText, FileScan, Grid, Image as ImageIcon, Layers, 
   Lock, Maximize, Mic, Minimize, Minimize2, Music, Presentation, 
   RotateCw, Scissors, ChevronLeft 
 } from 'lucide-react-native';
@@ -12,8 +12,9 @@ import { COLORS } from '../../theme/colors';
 // دسته‌بندی و ترتیب‌بندی ابزارها
 const TOOLS_CATEGORIES = [
   {
-    title: 'ابزارهای پرکاربرد تصویر',
+    title: 'ابزارهای پرکاربرد تصویر و اسکن',
     data: [
+      { route: 'DocumentScannerScreen', title: 'اسکنر مدارک و اوراق (File Scanner)', Icon: FileScan, color: '#10b981' },
       { route: 'ImageResizeScreen', title: 'تغییر ابعاد عکس', Icon: Maximize, color: '#3498db' },
       { route: 'ImageCompressorScreen', title: 'کاهش حجم تصویر', Icon: Minimize, color: '#9b59b6' },
       { route: 'ImageCropScreen', title: 'برش تصویر (Crop)', Icon: Crop, color: '#e74c3c' },

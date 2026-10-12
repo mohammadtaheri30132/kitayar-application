@@ -38,20 +38,20 @@ import StudentProfileViewScreen from './src/screens/classes/StudentProfileViewSc
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
 import EditExamScreen from './src/screens/exams/EditExamScreen';
+import ToolsListScreen from './src/screens/tools/ToolsListScreen';
+import AddNoteScreen from './src/screens/planning/AddNoteScreen';
 import ExamSettingsScreen from './src/screens/exams/ExamSettingsScreen';
 import MobileQuestionBuilder from './src/screens/question/MobileQuestionBuilder';
-import PreviewExamScreen from './src/screens/question/PreviewExamScreen'; 
+import PreviewExamScreen from './src/screens/question/PreviewExamScreen';
 import { initializeSslPinning } from 'react-native-ssl-public-key-pinning';
 import SwapQuestionScreen from './src/screens/question/SwapQuestionScreen';
 import ManageQuestionsScreen from './src/screens/question/ManageQuestionsScreen';
 import QuestionSettingsScreen from './src/screens/question/QuestionSettingsScreen';
-import ToolsListScreen from './src/screens/tools/ToolsListScreen';
 import PdfConverterScreen from './src/screens/tools/PdfConverterScreen';
 import ConverterScreen from './src/screens/tools/ConverterScreen';
 import PdfViewerScreen from './src/screens/tools/PdfViewerScreen';
 import ImageViewerScreen from './src/screens/tools/ImageViewerScreen';
 import ImageCompressorScreen from './src/screens/tools/ImageCompressorScreen';
-import PersianOcrScreen from './src/screens/tools/PersianOcrScreen';
 import ImageConverterScreen from './src/screens/tools/Imageconverterscreen';
 import CollageScreen from './src/screens/tools/CollageScreen';
 import ImageResizeScreen from './src/screens/tools/ImageResizeScreen';
@@ -62,6 +62,9 @@ import AudioToTextScreen from './src/screens/tools/AudioToTextScreen';
 import DocumentToPdfScreen from './src/screens/tools/DocumentToPdfScreen';
 import AdvancedPdfScreen from './src/screens/tools/AdvancedPdfScreen';
 import PdfReaderScreen from './src/components/pdf/PdfReaderScreen';
+import DocumentScannerScreen from './src/screens/scanner/DocumentScannerScreen';
+import CropAdjustmentScreen from './src/screens/scanner/CropAdjustmentScreen';
+import ScannerPreviewScreen from './src/screens/scanner/ScannerPreviewScreen';
 import SplashScreen from './src/screens/SplashScreen';
 import PlaceholderScreen from './src/components/common/PlaceholderScreen';
 import GenericCategoryScreen from './src/screens/tools/GenericCategoryScreen';
@@ -104,6 +107,13 @@ import NewsSettingsScreen from './src/screens/interaction/settings/NewsSettingsS
 
 import TeacherQuestionBankScreen from './src/screens/question/TeacherQuestionBankScreen';
 import CreateTeacherQuestionScreen from './src/screens/question/CreateTeacherQuestionScreen';
+
+// Form Builder & Survey Platform Screens
+import FormDashboardScreen from './src/screens/forms/FormDashboardScreen';
+import FormTemplateGalleryScreen from './src/screens/forms/FormTemplateGalleryScreen';
+import CreateOrEditFormScreen from './src/screens/forms/CreateOrEditFormScreen';
+import FormPreviewScreen from './src/screens/forms/FormPreviewScreen';
+import FormResponsesScreen from './src/screens/forms/FormResponsesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -168,6 +178,7 @@ const AppContent = () => {
             <Stack.Screen name="AddStudentToClassScreen" component={AddStudentToClassScreen} />
             <Stack.Screen name="CreateSchoolScreen" component={CreateSchoolScreen} />
             <Stack.Screen name="StudentProfileViewScreen" component={StudentProfileViewScreen} />
+            <Stack.Screen name="AddNoteScreen" component={AddNoteScreen} />
             <Stack.Screen name="WeeklyScheduleBuilderScreen" component={WeeklyScheduleBuilderScreen} />
             <Stack.Screen name="CreateExamStep1Screen" component={CreateExamStep1Screen} />
             <Stack.Screen name="CreateExamStep2Screen" component={CreateExamStep2Screen} />
@@ -190,6 +201,9 @@ const AppContent = () => {
             <Stack.Screen name="CreateTeacherQuestionScreen" component={CreateTeacherQuestionScreen} />
 
             <Stack.Screen name="ToolsListScreen" component={ToolsListScreen} />
+            <Stack.Screen name="DocumentScannerScreen" component={DocumentScannerScreen} />
+            <Stack.Screen name="CropAdjustmentScreen" component={CropAdjustmentScreen} />
+            <Stack.Screen name="ScannerPreviewScreen" component={ScannerPreviewScreen} />
             <Stack.Screen name="PdfConverterScreen" component={PdfConverterScreen} />
             <Stack.Screen name="ConverterScreen" component={ConverterScreen} />
             <Stack.Screen name="CollageScreen" component={CollageScreen} />
@@ -231,6 +245,13 @@ const AppContent = () => {
             <Stack.Screen name="EducationChaptersScreen" component={EducationChaptersScreen} />
             <Stack.Screen name="EducationLessonsScreen" component={EducationLessonsScreen} />
             <Stack.Screen name="EducationLessonContentScreen" component={EducationLessonContentScreen} />
+
+            {/* Form Builder & Survey Platform Screens */}
+            <Stack.Screen name="FormDashboardScreen" component={FormDashboardScreen} />
+            <Stack.Screen name="FormTemplateGalleryScreen" component={FormTemplateGalleryScreen} />
+            <Stack.Screen name="CreateOrEditFormScreen" component={CreateOrEditFormScreen} />
+            <Stack.Screen name="FormPreviewScreen" component={FormPreviewScreen} />
+            <Stack.Screen name="FormResponsesScreen" component={FormResponsesScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

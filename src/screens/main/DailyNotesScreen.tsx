@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight, Plus, FileText, MoreVertical } from 'lucide-react-native';
 import { PlanningService, DailyNote } from '../../api/planningService';
-import AddNoteModal from '../../components/planning/AddNoteModal';
 
 const DailyNotesScreen = ({ navigation }: any) => {
   const { colors } = useTheme();
@@ -59,9 +58,19 @@ const DailyNotesScreen = ({ navigation }: any) => {
         ) : (
           <View style={styles.notesGrid}>
             {notesState.map(note => (
-              <TouchableOpacity key={note._id || Math.random().toString()} style={[styles.noteCard, { backgroundColor: note.color || '#fef08a' }]} activeOpacity={0.8}>
+              <TouchableOpacity 
+                key={note._id || Math.random().toString()} 
+                style={[styles.noteCard, { backgroundColor: note.color || '#fef08a' }]} 
+                activeOpacity={0.8}
+                onPress={() => navigation.navigate('AddNoteScreen', { note })}
+              >
                 <View style={styles.noteHeader}>
                   <Text style={styles.noteDate}>{note.date}</Text>
+                  {note.classId && note.classId.name && (
+                    <View style={{ backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 'auto', marginRight: 8 }}>
+                      <Text style={{ fontSize: 10, fontFamily: 'IRANSansX', color: '#333' }}>{note.classId.name}</Text>
+                    </View>
+                  )}
                   <TouchableOpacity><MoreVertical color="#475569" size={16} /></TouchableOpacity>
                 </View>
                 {note.title && <Text style={styles.noteTitle}>{note.title}</Text>}
@@ -73,16 +82,9 @@ const DailyNotesScreen = ({ navigation }: any) => {
 
       </ScrollView>
 
-      {/* FAB */}
-      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => setIsModalVisible(true)}>
+      <TouchableOpacity style={[styles.fab, { backgroundColor: colors.primary }]} activeOpacity={0.8} onPress={() => navigation.navigate('AddNoteScreen')}>
         <Plus color="#fff" size={28} />
       </TouchableOpacity>
-
-      <AddNoteModal 
-        visible={isModalVisible}
-        onClose={() => setIsModalVisible(false)}
-        onSave={handleSaveNote}
-      />
 
     </SafeAreaView>
   );

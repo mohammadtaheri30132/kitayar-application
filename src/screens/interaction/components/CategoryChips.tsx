@@ -2,13 +2,19 @@ import React from 'react';
 import { ScrollView, TouchableOpacity, Text, StyleSheet, I18nManager } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
-interface Props {
-  categories: string[];
-  selectedCategory: string;
-  onSelect: (category: string) => void;
+export interface CategoryChipItem {
+  id: string;
+  name: string;
+  color?: string;
 }
 
-const CategoryChips = ({ categories, selectedCategory, onSelect }: Props) => {
+interface Props {
+  categories: (string | CategoryChipItem)[];
+  selectedCategoryId: string;
+  onSelect: (categoryId: string) => void;
+}
+
+const CategoryChips = ({ categories, selectedCategoryId, onSelect }: Props) => {
   const { colors } = useTheme();
 
   return (
@@ -18,24 +24,28 @@ const CategoryChips = ({ categories, selectedCategory, onSelect }: Props) => {
       style={styles.container}
       contentContainerStyle={styles.content}
     >
-      {categories.map((category) => {
-        const isSelected = selectedCategory === category;
+      {categories.map((item) => {
+        const id = typeof item === 'string' ? item : item.id;
+        const name = typeof item === 'string' ? item : item.name;
+        const isSelected = selectedCategoryId === id;
         return (
           <TouchableOpacity
-            key={category}
+            key={id}
             style={[
               styles.chip,
-              { backgroundColor: isSelected ? colors.primary : colors.surface,
+              { 
+                backgroundColor: isSelected ? colors.primary : colors.surface,
                 borderColor: isSelected ? colors.primary : colors.border
               }
             ]}
-            onPress={() => onSelect(category)}
+            onPress={() => onSelect(id)}
+            activeOpacity={0.7}
           >
             <Text style={[
               styles.text, 
               { color: isSelected ? '#fff' : colors.textLight }
             ]}>
-              {category}
+              {name}
             </Text>
           </TouchableOpacity>
         );

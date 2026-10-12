@@ -3,7 +3,8 @@ import {
   Sun, Music, BookOpen, Scaling, Calculator, Calendar, 
   Percent, Hash, Banknote, Ruler, Weight, Thermometer, 
   Clock, Zap, Microscope, FlaskConical, Sigma, HeartPulse,
-  Shapes, Box, PercentSquare, Award, Square, Plus, Dices, Users, Flag
+  Shapes, Box, PercentSquare, Award, Square, Plus, Dices, Users, Flag,
+  ClipboardList
 } from 'lucide-react-native';
 
 export interface ToolItem {
@@ -30,7 +31,7 @@ export const teacherToolsHierarchy: ToolItem[] = [
     ]
   },
   { id: '2', title: 'برگه آزمون‌ساز', route: 'MobileQuestionBuilder', icon: FileText, color: '#10b981' },
-  { id: '3', title: 'فرم‌ساز', route: 'PlaceholderScreen', params: { title: 'فرم‌ساز' }, icon: Settings, color: '#8b5cf6' },
+  { id: '3', title: 'فرم‌ساز و پرسش‌نامه', route: 'FormDashboardScreen', icon: ClipboardList, color: '#8b5cf6' },
   { id: '4', title: 'ابزار فایل', route: 'ToolsListScreen', icon: Layers, color: '#f59e0b' },
   { id: '5', title: 'اطلاعات و آدرس', route: 'PlaceholderScreen', params: { title: 'اطلاعات و آدرس' }, icon: MapPin, color: '#ef4444' },
   {

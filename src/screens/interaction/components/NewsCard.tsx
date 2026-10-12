@@ -14,7 +14,7 @@ const NewsCard = ({ news, onPress }: Props) => {
 
   return (
     <TouchableOpacity 
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]} 
       onPress={onPress}
       activeOpacity={0.7}
     >

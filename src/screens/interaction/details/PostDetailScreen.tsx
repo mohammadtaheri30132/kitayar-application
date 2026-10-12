@@ -1,65 +1,206 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, I18nManager } from 'react-native';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  TextInput, 
+  TouchableOpacity, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ActivityIndicator, 
+  Alert,
+  I18nManager 
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, ChevronRight, ChevronLeft } from 'lucide-react-native';
+import { Send, ChevronRight, ChevronLeft, Flag } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
+import { AuthContext } from '../../../context/AuthContext';
 import PostCard from '../components/PostCard';
 import CommentCard from '../components/CommentCard';
-import { MOCK_POSTS, MOCK_COMMENTS, Comment } from '../mockData';
+import { 
+  communityService, 
+  CommunityPostItem, 
+  CommunityCommentItem 
+} from '../../../services/community/communityService';
+
+import { getUserIdFromToken } from '../../../utils/storage';
 
 const PostDetailScreen = ({ route, navigation }: any) => {
   const { colors } = useTheme();
   const { postId } = route.params;
 
-  const post = MOCK_POSTS.find(p => p.id === postId);
-  
-  const [comments, setComments] = useState<Comment[]>(
-    MOCK_COMMENTS.filter(c => c.postId === postId)
-  );
+  const [post, setPost] = useState<CommunityPostItem | null>(null);
+  const [comments, setComments] = useState<CommunityCommentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputText, setInputText] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  if (!post) {
+  useEffect(() => {
+    getUserIdFromToken().then(id => setCurrentUserId(id));
+  }, []);
+
+  const loadData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await communityService.getPostById(postId);
+      setPost(res.post);
+      setComments(res.comments);
+    } catch (err: any) {
+      Alert.alert('خطا', 'امکان دریافت جزئیات پست وجود ندارد.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [postId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleSendComment = async () => {
+    if (!inputText.trim() || isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const text = replyTo ? `در پاسخ به ${replyTo}:\n${inputText.trim()}` : inputText.trim();
+      const newComment = await communityService.createComment(postId, { content: text });
+
+      setComments(prev => [...prev, newComment]);
+      setInputText('');
+      setReplyTo(null);
+
+      if (post) {
+        setPost({
+          ...post,
+          commentCount: (post.commentCount || 0) + 1,
+        });
+      }
+    } catch (err: any) {
+      Alert.alert('خطا', 'ثبت نظر انجام نشد.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    Alert.alert(
+      'حذف نظر',
+      'آیا از حذف این نظر اطمینان دارید؟',
+      [
+        { text: 'انصراف', style: 'cancel' },
+        {
+          text: 'حذف',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await communityService.deleteComment(commentId);
+              setComments(prev => prev.filter(c => c._id !== commentId));
+              if (post) {
+                setPost({
+                  ...post,
+                  commentCount: Math.max(0, (post.commentCount || 1) - 1),
+                });
+              }
+            } catch {
+              Alert.alert('خطا', 'امکان حذف نظر وجود ندارد.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleReport = (targetType: 'post' | 'comment', targetId: string) => {
+    Alert.alert(
+      'گزارش تخلف',
+      'آیا مایل به گزارش این مورد به تیم پشتیبانی هستید؟',
+      [
+        { text: 'انصراف', style: 'cancel' },
+        {
+          text: 'ارسال گزارش',
+          onPress: async () => {
+            try {
+              await communityService.reportContent({
+                targetType,
+                targetId,
+                reason: 'inappropriate',
+                description: 'گزارش محتوای نامناسب توسط کاربر',
+              });
+              Alert.alert('سپاس', 'گزارش شما با موفقیت برای مدیریت ارسال شد.');
+            } catch {
+              Alert.alert('خطا', 'ارسال گزارش ناموفق بود.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderHeader = () => {
+    if (!post) return null;
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.text }}>پست یافت نشد.</Text>
+      <View style={styles.headerComponent}>
+        <PostCard 
+          post={post} 
+          currentUserId={currentUserId || undefined}
+          onPress={() => {}} 
+          onReportPress={() => handleReport('post', post._id)}
+        />
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          نظرات ({comments.length})
+        </Text>
       </View>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={[styles.navBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            {I18nManager.isRTL ? <ChevronRight color={colors.text} size={28} /> : <ChevronLeft color={colors.text} size={28} />}
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>پست و نظرات</Text>
+          <View style={{ width: 28 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textLight }]}>در حال بارگذاری...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      postId,
-      author: { id: 'me', name: 'محمد طاهری', role: 'معلم', avatar: 'https://i.pravatar.cc/150?u=fake' },
-      createdAt: 'همین الان',
-      text: replyTo ? `در پاسخ به ${replyTo}:\n${inputText}` : inputText,
-    };
-
-    setComments([...comments, newComment]);
-    setInputText('');
-    setReplyTo(null);
-  };
-
-  const renderHeader = () => (
-    <View style={styles.headerComponent}>
-      <PostCard post={post} onPress={() => {}} />
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>نظرات</Text>
-    </View>
-  );
+  if (!post) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={[styles.navBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            {I18nManager.isRTL ? <ChevronRight color={colors.text} size={28} /> : <ChevronLeft color={colors.text} size={28} />}
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>پست و نظرات</Text>
+          <View style={{ width: 28 }} />
+        </View>
+        <View style={styles.centerContainer}>
+          <Text style={{ color: colors.text, fontFamily: 'IRANSansX' }}>پست یافت نشد یا حذف شده است.</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      {/* Top Bar */}
+      <View style={[styles.navBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
           {I18nManager.isRTL ? <ChevronRight color={colors.text} size={28} /> : <ChevronLeft color={colors.text} size={28} />}
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>پست کامل</Text>
-        <View style={{ width: 28 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>پست و نظرات</Text>
+        <TouchableOpacity onPress={() => handleReport('post', post._id)}>
+          <Flag color={colors.textLight} size={20} />
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView 
@@ -68,17 +209,24 @@ const PostDetailScreen = ({ route, navigation }: any) => {
       >
         <FlatList
           data={comments}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
           ListHeaderComponent={renderHeader}
           renderItem={({ item }) => (
             <CommentCard 
               data={item} 
-              onReplyPress={() => setReplyTo(item.author.name)}
+              currentUserId={currentUserId || undefined}
+              onReplyPress={() => setReplyTo(item.author?.name || 'کاربر')}
+              onDeletePress={() => handleDeleteComment(item._id)}
+              onReportPress={() => handleReport('comment', item._id)}
             />
           )}
           ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: colors.textLight }]}>هنوز نظری ثبت نشده است.</Text>
+            <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyText, { color: colors.textLight }]}>
+                هنوز نظری برای این پست ثبت نشده است. اولین نظر را بنویسید!
+              </Text>
+            </View>
           }
         />
 
@@ -88,25 +236,36 @@ const PostDetailScreen = ({ route, navigation }: any) => {
             <View style={[styles.replyBadge, { backgroundColor: colors.background }]}>
               <Text style={[styles.replyText, { color: colors.textLight }]}>در پاسخ به {replyTo}</Text>
               <TouchableOpacity onPress={() => setReplyTo(null)}>
-                <Text style={{ color: colors.error, marginLeft: 8 }}>✕</Text>
+                <Text style={{ color: colors.error, marginHorizontal: 8 }}>✕</Text>
               </TouchableOpacity>
             </View>
           )}
           <View style={styles.inputRow}>
             <TextInput
-              style={[styles.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+              style={[
+                styles.input, 
+                { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }
+              ]}
               placeholder="نظر خود را بنویسید..."
               placeholderTextColor={colors.textLight}
               value={inputText}
               onChangeText={setInputText}
               multiline
+              maxLength={500}
             />
             <TouchableOpacity 
-              style={[styles.sendBtn, { backgroundColor: inputText.trim() ? colors.primary : colors.textLight }]} 
-              onPress={handleSend}
-              disabled={!inputText.trim()}
+              style={[
+                styles.sendBtn, 
+                { backgroundColor: inputText.trim() && !isSubmitting ? colors.primary : colors.border }
+              ]}
+              onPress={handleSendComment}
+              disabled={!inputText.trim() || isSubmitting}
             >
-              <Send color="#fff" size={20} />
+              {isSubmitting ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Send color="#fff" size={18} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -116,40 +275,101 @@ const PostDetailScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
+  container: {
+    flex: 1,
+  },
+  keyboardAvoid: {
+    flex: 1,
+  },
+  navBar: {
+    height: 56,
+    flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+  },
+  backBtn: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    fontFamily: 'IRANSansX',
+  },
+  listContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  headerComponent: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: 'IRANSansX',
+  },
+  inputContainer: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+  },
+  replyBadge: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 6,
   },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX' },
-  keyboardAvoid: { flex: 1 },
-  listContent: { padding: 16, paddingBottom: 24 },
-  headerComponent: { marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', fontFamily: 'IRANSansX', marginBottom: 12, textAlign: I18nManager.isRTL ? 'right' : 'left' },
-  emptyText: { textAlign: 'center', marginTop: 24, fontFamily: 'IRANSansX', fontSize: 14 },
-  inputContainer: { padding: 16, borderTopWidth: 1 },
-  replyBadge: {
+  replyText: {
+    fontSize: 12,
+    fontFamily: 'IRANSansX',
+  },
+  inputRow: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
-    alignItems: 'center', alignSelf: 'flex-start',
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, marginBottom: 8
+    alignItems: 'flex-end',
+    gap: 8,
   },
-  replyText: { fontSize: 12, fontFamily: 'IRANSansX' },
-  inputRow: { flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse', alignItems: 'flex-end' },
   input: {
-    flex: 1, minHeight: 44, maxHeight: 120, borderRadius: 22, borderWidth: 1,
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-    fontFamily: 'IRANSansX', textAlign: I18nManager.isRTL ? 'right' : 'left',
+    flex: 1,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: 'IRANSansX',
+    maxHeight: 100,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    justifyContent: 'center', alignItems: 'center',
-    marginRight: I18nManager.isRTL ? 0 : 12,
-    marginLeft: I18nManager.isRTL ? 12 : 0,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 

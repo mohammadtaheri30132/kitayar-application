@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Switch } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { toPersianNumbers } from '../../utils/date/jalaliHelper';
+import { PlanningService } from '../../api/planningService';
+import { getTodayJalali } from '../../utils/date/jalaliHelper';
 
 interface AddNoteModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (noteData: any) => Promise<void>;
-  initialDate?: string; // Standard Jalali string
+  initialDate?: string; 
+  initialClassId?: string;
 }
 
 const PASTEL_COLORS = [
@@ -22,37 +24,76 @@ const PASTEL_COLORS = [
   '#ffffff', // white
 ];
 
-const AddNoteModal = ({ visible, onClose, onSave, initialDate }: AddNoteModalProps) => {
+const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+const YEARS = [1402, 1403, 1404, 1405];
+
+const AddNoteModal = ({ visible, onClose, onSave, initialDate, initialClassId }: AddNoteModalProps) => {
   const { colors } = useTheme();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [date, setDate] = useState(initialDate || '');
   const [color, setColor] = useState(PASTEL_COLORS[0]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize date when modal opens if empty
-  React.useEffect(() => {
-    if (visible && !date && initialDate) {
-      setDate(initialDate);
+  // Date selection
+  const { jy, jm, jd } = getTodayJalali();
+  const [selectedYear, setSelectedYear] = useState(jy);
+  const [selectedMonth, setSelectedMonth] = useState(jm);
+  const [selectedDay, setSelectedDay] = useState(jd);
+
+  // Class selection
+  const [isClassRelated, setIsClassRelated] = useState(false);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [classes, setClasses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      if (initialDate) {
+        const parts = initialDate.split('-');
+        if(parts.length === 3) {
+          setSelectedYear(parseInt(parts[0], 10));
+          setSelectedMonth(parseInt(parts[1], 10));
+          setSelectedDay(parseInt(parts[2], 10));
+        }
+      } else {
+        setSelectedYear(jy);
+        setSelectedMonth(jm);
+        setSelectedDay(jd);
+      }
+      
+      if (initialClassId) {
+        setIsClassRelated(true);
+        setSelectedClassId(initialClassId);
+      } else {
+        setIsClassRelated(false);
+        setSelectedClassId(null);
+      }
+
+      // Fetch classes
+      PlanningService.getClasses().then((res) => {
+        if (res.success) {
+          setClasses(res.data);
+        }
+      }).catch(console.warn);
     }
-  }, [visible, initialDate]);
+  }, [visible, initialDate, initialClassId]);
 
   const handleSave = async () => {
-    if (!content.trim() || !date.trim()) return;
+    if (!content.trim()) return;
 
+    const formattedDate = `${selectedYear}-${selectedMonth.toString().padStart(2, '0')}-${selectedDay.toString().padStart(2, '0')}`;
     setIsLoading(true);
     try {
       await onSave({
         title: title || undefined,
         content,
-        date,
-        color
+        date: formattedDate,
+        color,
+        classId: isClassRelated ? selectedClassId : undefined
       });
       // Reset
       setTitle('');
       setContent('');
-      setDate(initialDate || '');
       setColor(PASTEL_COLORS[0]);
       onClose();
     } catch (e) {
@@ -60,6 +101,11 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate }: AddNoteModalPro
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const getDaysArray = () => {
+    const daysInMonth = selectedMonth <= 6 ? 31 : (selectedMonth <= 11 ? 30 : 29); // Simplified
+    return Array.from({length: daysInMonth}, (_, i) => i + 1);
   };
 
   return (
@@ -76,6 +122,36 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate }: AddNoteModalPro
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
             
+            {/* Class Selection */}
+            <View style={styles.switchRow}>
+              <Text style={[styles.label, { color: colors.text, marginTop: 0, marginBottom: 0 }]}>مربوط به کلاس خاصی است؟</Text>
+              <Switch 
+                value={isClassRelated} 
+                onValueChange={setIsClassRelated}
+                trackColor={{ false: '#cbd5e1', true: colors.primary }}
+              />
+            </View>
+
+            {isClassRelated && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 8 }}>
+                {classes.map((cls) => (
+                  <TouchableOpacity 
+                    key={cls._id} 
+                    style={[
+                      styles.chip, 
+                      { borderColor: colors.border },
+                      selectedClassId === cls._id && { backgroundColor: colors.primary, borderColor: colors.primary }
+                    ]}
+                    onPress={() => setSelectedClassId(cls._id)}
+                  >
+                    <Text style={[styles.chipText, { color: colors.text }, selectedClassId === cls._id && { color: '#fff' }]}>
+                      {cls.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
             <Text style={[styles.label, { color: colors.text }]}>عنوان یادداشت (اختیاری)</Text>
             <TextInput 
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
@@ -85,15 +161,42 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate }: AddNoteModalPro
               onChangeText={setTitle}
             />
 
-            <Text style={[styles.label, { color: colors.text }]}>تاریخ (مثال: 1403-07-25)</Text>
-            <TextInput 
-              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, textAlign: 'left' }]} 
-              placeholder="1403-07-25"
-              placeholderTextColor={colors.textLight}
-              value={date}
-              onChangeText={setDate}
-              keyboardType="number-pad"
-            />
+            <Text style={[styles.label, { color: colors.text }]}>تاریخ</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              {/* Day */}
+              <View style={{ flex: 1, height: 120 }}>
+                <Text style={styles.pickerLabel}>روز</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 40 }} snapToInterval={40} decelerationRate="fast">
+                  {getDaysArray().map(d => (
+                    <TouchableOpacity key={d} style={[styles.pickerItem, selectedDay === d && styles.pickerItemSelected]} onPress={() => setSelectedDay(d)}>
+                      <Text style={[styles.pickerItemText, selectedDay === d && styles.pickerItemTextSelected]}>{d}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              {/* Month */}
+              <View style={{ flex: 1.5, height: 120 }}>
+                <Text style={styles.pickerLabel}>ماه</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 40 }} snapToInterval={40} decelerationRate="fast">
+                  {MONTHS.map((m, i) => (
+                    <TouchableOpacity key={i} style={[styles.pickerItem, selectedMonth === i+1 && styles.pickerItemSelected]} onPress={() => setSelectedMonth(i+1)}>
+                      <Text style={[styles.pickerItemText, selectedMonth === i+1 && styles.pickerItemTextSelected]}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+              {/* Year */}
+              <View style={{ flex: 1, height: 120 }}>
+                <Text style={styles.pickerLabel}>سال</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 40 }} snapToInterval={40} decelerationRate="fast">
+                  {YEARS.map(y => (
+                    <TouchableOpacity key={y} style={[styles.pickerItem, selectedYear === y && styles.pickerItemSelected]} onPress={() => setSelectedYear(y)}>
+                      <Text style={[styles.pickerItemText, selectedYear === y && styles.pickerItemTextSelected]}>{y}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
 
             <Text style={[styles.label, { color: colors.text }]}>متن یادداشت *</Text>
             <TextInput 
@@ -131,10 +234,10 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate }: AddNoteModalPro
               style={[
                 styles.saveBtn, 
                 { backgroundColor: colors.primary },
-                (!content.trim() || !date.trim()) && { opacity: 0.5 }
+                (!content.trim()) && { opacity: 0.5 }
               ]} 
               onPress={handleSave}
-              disabled={!content.trim() || !date.trim() || isLoading}
+              disabled={!content.trim() || isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
@@ -156,7 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    height: '90%',
+    height: '92%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     overflow: 'hidden',
@@ -193,6 +296,48 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     fontFamily: 'IRANSansX',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16
+  },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontFamily: 'IRANSansX',
+  },
+  pickerLabel: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontFamily: 'IRANSansX',
+    color: '#64748b',
+    marginBottom: 4
+  },
+  pickerItem: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pickerItemSelected: {
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8
+  },
+  pickerItemText: {
+    fontSize: 14,
+    fontFamily: 'IRANSansX',
+    color: '#475569'
+  },
+  pickerItemTextSelected: {
+    color: '#0f172a',
+    fontWeight: 'bold'
   },
   colorsRow: {
     flexDirection: 'row',

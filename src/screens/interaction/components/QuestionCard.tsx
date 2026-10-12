@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, I18nManager } from 'react-native';
-import { MoreVertical, MessageCircle } from 'lucide-react-native';
+import { MoreVertical, MessageCircle, Heart, Pin, CheckCircle2 } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
-import { Question } from '../mockData';
+import { CommunityQuestionItem } from '../../../services/community/communityService';
+import { formatRelativeTime, toPersianDigits } from '../../../utils/communityHelpers';
 
 interface Props {
-  question: Question;
+  question: CommunityQuestionItem | any;
   onPress: () => void;
   onMenuPress?: () => void;
 }
@@ -13,47 +14,107 @@ interface Props {
 const QuestionCard = ({ question, onPress, onMenuPress }: Props) => {
   const { colors } = useTheme();
 
+  const authorName = question.author?.name || 'کاربر کیتایار';
+  const authorAvatar = question.author?.avatar;
+  const authorRole = question.author?.role || 'معلم';
+  const timeText = question.createdAt ? formatRelativeTime(question.createdAt) : '';
+  const answerCount = question.answerCount || 0;
+  const likeCount = question.likeCount || 0;
+  const isResolved = !!question.isResolved;
+  const isPinned = !!question.isPinned;
+  const categoryName = question.category?.name;
+  const categoryColor = question.category?.color || colors.primary;
+
   return (
     <TouchableOpacity 
-      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
+      style={[
+        styles.card, 
+        { 
+          backgroundColor: colors.surface, 
+          borderColor: isPinned ? colors.primary : colors.border,
+          borderWidth: isPinned ? 1.5 : 1
+        }
+      ]} 
       onPress={onPress}
       activeOpacity={0.7}
     >
+      {/* Top badges: Pinned / Review Status */}
+      {(isPinned || question.status === 'pending_review') && (
+        <View style={styles.badgeRow}>
+          {isPinned && (
+            <View style={[styles.statusBadge, { backgroundColor: '#fef3c7' }]}>
+              <Pin color="#d97706" size={12} />
+              <Text style={[styles.statusBadgeText, { color: '#b45309' }]}>سنجاق شده</Text>
+            </View>
+          )}
+          {question.status === 'pending_review' && (
+            <View style={[styles.statusBadge, { backgroundColor: '#fef3c7' }]}>
+              <Text style={[styles.statusBadgeText, { color: '#b45309' }]}>⏳ در حال بررسی توسط ناظر</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.authorInfo}>
-          <Image source={{ uri: question.author.avatar }} style={styles.avatar} />
+          {authorAvatar ? (
+            <Image source={{ uri: authorAvatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+              <Text style={styles.avatarInitial}>{authorName.charAt(0)}</Text>
+            </View>
+          )}
           <View>
-            <Text style={[styles.authorName, { color: colors.text }]}>{question.author.name}</Text>
-            <Text style={[styles.timeText, { color: colors.textLight }]}>{question.createdAt}</Text>
+            <Text style={[styles.authorName, { color: colors.text }]}>{authorName}</Text>
+            <Text style={[styles.timeText, { color: colors.textLight }]}>
+              {authorRole ? `${authorRole} • ` : ''}{timeText}
+            </Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress}>
-          <MoreVertical color={colors.textLight} size={20} />
-        </TouchableOpacity>
+
+        {onMenuPress && (
+          <TouchableOpacity style={styles.menuBtn} onPress={onMenuPress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <MoreVertical color={colors.textLight} size={20} />
+          </TouchableOpacity>
+        )}
       </View>
 
+      {/* Title */}
       <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
         {question.title}
       </Text>
       
+      {/* Body preview */}
       <Text style={[styles.body, { color: colors.text }]} numberOfLines={3}>
         {question.body}
       </Text>
 
+      {/* Category and Tags */}
       <View style={styles.tagsContainer}>
-        {question.tags.map((tag, index) => (
+        {categoryName && (
+          <View style={[styles.categoryBadge, { backgroundColor: categoryColor + '18', borderColor: categoryColor }]}>
+            <Text style={[styles.categoryBadgeText, { color: categoryColor }]}>
+              {categoryName}
+            </Text>
+          </View>
+        )}
+        {Array.isArray(question.tags) && question.tags.map((tag: string, index: number) => (
           <View key={index} style={[styles.tag, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
+            <Text style={[styles.tagText, { color: colors.textLight }]}>#{tag}</Text>
           </View>
         ))}
       </View>
 
-      <View style={styles.footer}>
-        <View style={styles.answerCount}>
-          <MessageCircle color={colors.textLight} size={16} />
-          <Text style={[styles.answerText, { color: colors.textLight }]}>
-            {question.answerCount} پاسخ
-          </Text>
+      {/* Footer Stats */}
+      <View style={[styles.footer, { borderTopColor: colors.border }]}>
+        <View style={styles.statsLeft}>
+          <View style={styles.statItem}>
+            <MessageCircle color={colors.textLight} size={15} />
+            <Text style={[styles.statText, { color: colors.textLight }]}>
+              {toPersianDigits(answerCount)} پاسخ
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -64,8 +125,26 @@ const styles = StyleSheet.create({
   card: {
     padding: 16,
     borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+  badgeRow: {
+    flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  statusBadge: {
+    flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  statusBadgeText: {
+    fontSize: 11,
+    fontFamily: 'IRANSansX',
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
@@ -78,68 +157,102 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginHorizontal: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginHorizontal: 10,
     backgroundColor: '#eee'
+  },
+  avatarPlaceholder: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginHorizontal: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
   },
   authorName: {
     fontSize: 14,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'IRANSansX',
     marginTop: 2,
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   menuBtn: {
     padding: 4,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
     marginBottom: 8,
+    lineHeight: 22,
     textAlign: I18nManager.isRTL ? 'right' : 'left'
   },
   body: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'IRANSansX',
-    lineHeight: 22,
-    marginBottom: 16,
+    lineHeight: 21,
+    marginBottom: 12,
     textAlign: I18nManager.isRTL ? 'right' : 'left'
   },
   tagsContainer: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
     flexWrap: 'wrap',
-    marginBottom: 16,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
   },
-  tag: {
+  categoryBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginHorizontal: 4,
-    marginBottom: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  tagText: {
+  categoryBadgeText: {
     fontSize: 11,
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
   },
+  tag: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  tagText: {
+    fontSize: 11,
+    fontFamily: 'IRANSansX',
+  },
   footer: {
+    borderTopWidth: 0.5,
+    paddingTop: 10,
+    flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statsLeft: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
     alignItems: 'center',
   },
-  answerCount: {
+  statItem: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
     alignItems: 'center',
+    gap: 5,
   },
-  answerText: {
+  statText: {
     fontSize: 12,
     fontFamily: 'IRANSansX',
-    marginHorizontal: 6,
   }
 });
 

@@ -35,6 +35,18 @@ export const formatJalaliStandard = (jy: number, jm: number, jd: number) => {
   return `${jy}-${jm.toString().padStart(2, '0')}-${jd.toString().padStart(2, '0')}`;
 };
 
+export const formatIsoToJalali = (isoStr?: string | Date, includeTime = false): string => {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const { jy, jm, jd } = jalaali.toJalaali(d);
+  const dateStr = `${toPersianNumbers(jd)} ${PERSIAN_MONTHS[jm - 1]} ${toPersianNumbers(jy)}`;
+  if (!includeTime) return dateStr;
+  const hour = d.getHours().toString().padStart(2, '0');
+  const minute = d.getMinutes().toString().padStart(2, '0');
+  return `${dateStr} - ${toPersianNumbers(hour)}:${toPersianNumbers(minute)}`;
+};
+
 export const getDaysInJalaliMonth = (jy: number, jm: number): number => {
   return jalaali.jalaaliMonthLength(jy, jm);
 };
