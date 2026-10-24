@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import { showSuccess, showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context'; // 👈 حل مشکل استاتوس بار
 import PdfConverterModule from '../../native/PdfConverter';
 import { saveToolHistory, getToolHistory } from '../../services/ToolHistoryManager';
@@ -29,10 +30,10 @@ const convertImageToPdf = async () => {
     
     await saveToolHistory('تبدیل عکس به PDF', resultPath);
     loadHistory();
-    Alert.alert("عملیات موفق", `فایل شما ذخیره شد:\n${resultPath}`);
-  } catch (err) {
-    if (err.code !== 'CANCELLED') {
-      Alert.alert("خطا", err.message || "خطا در پردازش تصویر");
+    showSuccess('فایل PDF با موفقیت ذخیره شد.');
+  } catch (err: any) {
+    if (err?.code !== 'CANCELLED') {
+      showError(err?.message || 'خطا در پردازش تصویر');
     }
   } finally {
     setIsLoading(false);
@@ -49,10 +50,10 @@ const convertPdfToImage = async () => {
     
     await saveToolHistory('تبدیل PDF به عکس', resultPath);
     loadHistory();
-    Alert.alert("عملیات موفق", `فایل شما ذخیره شد:\n${resultPath}`);
-  } catch (err) {
-    if (err.code !== 'CANCELLED') {
-      Alert.alert("خطا", err.message || "خطا در پردازش PDF");
+    showSuccess('تصویر با موفقیت ذخیره شد.');
+  } catch (err: any) {
+    if (err?.code !== 'CANCELLED') {
+      showError(err?.message || 'خطا در پردازش PDF');
     }
   } finally {
     setIsLoading(false);

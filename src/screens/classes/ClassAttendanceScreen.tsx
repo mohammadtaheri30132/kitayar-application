@@ -5,9 +5,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  FlatList,
-  Alert
+  FlatList
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,7 +38,7 @@ const ClassAttendanceScreen = ({ route, navigation }: any) => {
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در دریافت جلسات رخ داد.');
+      showError('مشکلی در دریافت جلسات رخ داد.');
     } finally {
       setLoading(false);
     }

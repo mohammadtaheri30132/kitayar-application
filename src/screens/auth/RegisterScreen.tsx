@@ -6,12 +6,12 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showWarning, showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { AuthContext } from '../../context/AuthContext';
@@ -29,11 +29,11 @@ const RegisterScreen = ({ route, navigation }: any) => {
   const handleRegister = async () => {
     Keyboard.dismiss();
     if (!fullName.trim() || !password || !otp) {
-      Alert.alert('توجه', 'لطفاً تمامی فیلدها را تکمیل کنید.');
+      showWarning('لطفاً تمامی فیلدها را تکمیل کنید.');
       return;
     }
     if (password.length < 6) {
-      Alert.alert('توجه', 'رمز عبور باید حداقل ۶ کاراکتر باشد.');
+      showWarning('رمز عبور باید حداقل ۶ کاراکتر باشد.');
       return;
     }
 
@@ -51,7 +51,7 @@ const RegisterScreen = ({ route, navigation }: any) => {
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'خطای ارتباط با سرور';
-      Alert.alert('خطا در ثبت‌نام', errorMessage);
+      showError(errorMessage, 'خطا در ثبت‌نام');
     } finally {
       setIsLoading(false);
     }

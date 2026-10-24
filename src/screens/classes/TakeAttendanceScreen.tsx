@@ -6,9 +6,9 @@ import {
   StyleSheet, 
   ActivityIndicator, 
   FlatList,
-  Alert,
   TextInput
 } from 'react-native';
+import { showError, showSuccess } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +35,7 @@ const TakeAttendanceScreen = ({ route, navigation }: any) => {
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در دریافت لیست دانش‌آموزان رخ داد.');
+      showError('مشکلی در دریافت لیست دانش‌آموزان رخ داد.');
     } finally {
       setLoading(false);
     }
@@ -61,13 +61,12 @@ const TakeAttendanceScreen = ({ route, navigation }: any) => {
         attendanceData: attendance
       });
       if (response.data.success) {
-        Alert.alert('موفق', 'حضور و غیاب با موفقیت ثبت شد', [
-          { text: 'باشه', onPress: () => navigation.goBack() }
-        ]);
+        showSuccess('حضور و غیاب با موفقیت ثبت شد');
+        navigation.goBack();
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در ذخیره حضور غیاب رخ داد.');
+      showError('مشکلی در ذخیره حضور غیاب رخ داد.');
     } finally {
       setIsSaving(false);
     }

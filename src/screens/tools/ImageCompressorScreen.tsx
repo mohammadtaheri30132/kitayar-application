@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  View, Text, TouchableOpacity, FlatList, StyleSheet, 
   ActivityIndicator, Image, TextInput 
 } from 'react-native';
+import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Share2, Eye, Trash2, Plus, Minimize, Settings, X, ArrowLeftRight, CheckSquare, Square, FileArchive, Download } from 'lucide-react-native';
@@ -80,10 +81,10 @@ const ImageCompressorScreen = ({ navigation }) => {
       const uris = await FilePickerModule.pickMultipleImages();
       const combined = [...selectedImages, ...uris];
       let finalSelection = combined.length > 10 ? combined.slice(0, 10) : combined;
-      if (combined.length > 10) Alert.alert("محدودیت انتخاب", "شما حداکثر می‌توانید ۱۰ تصویر را همزمان انتخاب کنید.");
+      if (combined.length > 10) showWarning('شما حداکثر می‌توانید ۱۰ تصویر را همزمان انتخاب کنید.');
       setSelectedImages(finalSelection);
       if (finalSelection.length > 0) updatePreviewDimensions(finalSelection[0]);
-    } catch (err) { if (err.code !== 'CANCELLED') Alert.alert("خطا", err.message); }
+    } catch (err: any) { if (err?.code !== 'CANCELLED') showError(err?.message || 'خطا در انتخاب تصویر'); }
   };
 
   const removeSelectedImage = (index) => {
@@ -139,8 +140,8 @@ const ImageCompressorScreen = ({ navigation }) => {
       loadHistory();
       setSelectedImages([]);
       setFirstImageDim({width: 0, height: 0});
-      Alert.alert("عملیات موفق", `${successCount} تصویر با موفقیت فشرده شد.`);
-    } catch (err) { Alert.alert("خطا در فشرده‌سازی", err.message); } finally { setIsLoading(false); }
+      showSuccess(`${successCount} تصویر با موفقیت فشرده شد.`);
+    } catch (err: any) { showError(err?.message || 'خطا در فشرده‌سازی'); } finally { setIsLoading(false); }
   };
 
   const handleShare = async (path, formatMethod) => {
@@ -162,7 +163,7 @@ const ImageCompressorScreen = ({ navigation }) => {
       }, 3000);
     } catch (err) {
       console.log('Error saving file:', err);
-      Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد.");
+      showError('ذخیره فایل با مشکل مواجه شد.');
     }
   };
 

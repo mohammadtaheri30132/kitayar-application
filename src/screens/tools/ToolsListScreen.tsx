@@ -5,7 +5,7 @@ import {
   ArrowUpDown, Crop, Droplet, FileArchive, FileMinus, FileOutput, 
   FileSpreadsheet, FileText, FileScan, Grid, Image as ImageIcon, Layers, 
   Lock, Maximize, Mic, Minimize, Minimize2, Music, Presentation, 
-  RotateCw, Scissors, ChevronLeft 
+  RotateCw, Scissors, ChevronLeft, Clock, Sun 
 } from 'lucide-react-native';
 import { COLORS } from '../../theme/colors';
 
@@ -53,6 +53,12 @@ const TOOLS_CATEGORIES = [
       { route: 'VideoTrimScreen', title: 'برش حرفه‌ای ویدیو', Icon: Scissors, color: '#e74c3c' },
       { route: 'VideoToAudioScreen', title: 'تبدیل ویدیو به صوت', Icon: Music, color: '#9b59b6' },
       { route: 'AudioToTextScreen', title: 'تایپ صوتی (صوت به متن)', Icon: Mic, color: '#f39c12' },
+    ]
+  },
+  {
+    title: 'ابزارهای مذهبی و روزانه',
+    data: [
+      { route: 'PrayerTimesScreen', title: 'اوقات شرعی و اذان ایران', Icon: Sun, color: '#0d9488' },
     ]
   }
 ];

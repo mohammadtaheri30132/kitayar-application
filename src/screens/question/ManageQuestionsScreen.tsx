@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, ArrowUpCircle, ArrowDownCircle, RefreshCcw, Trash2, Eye, EyeOff, Plus } from 'lucide-react-native';
 
@@ -27,13 +28,18 @@ const ManageQuestionsScreen = ({ route, navigation }: any) => {
   };
 
   const removeQuestion = (index: number) => {
-    Alert.alert('حذف سوال', 'آیا از حذف این سوال اطمینان دارید؟', [
-      { text: 'انصراف', style: 'cancel' },
-      { text: 'حذف', style: 'destructive', onPress: () => {
-          const newQuestions = questions.filter((_, i) => i !== index);
-          setQuestions(newQuestions);
-      }}
-    ]);
+    showConfirm({
+      title: 'حذف سوال',
+      message: 'آیا از حذف این سوال اطمینان دارید؟',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: () => {
+        const newQuestions = questions.filter((_, i) => i !== index);
+        setQuestions(newQuestions);
+      },
+    });
   };
 
   const handleSwap = (index: number) => {

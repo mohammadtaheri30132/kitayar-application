@@ -7,9 +7,9 @@ import {
   Image,
   Dimensions,
   ActivityIndicator,
-  Alert,
   PanResponder,
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -278,7 +278,7 @@ export const CropAdjustmentScreen: React.FC<CropAdjustmentScreenProps> = ({ rout
       cornersRef.current = mapped;
       setCorners(mapped);
     } catch (err: any) {
-      Alert.alert('خطا', 'تشخیص خودکار ناموفق بود');
+      showError('تشخیص خودکار ناموفق بود');
     } finally {
       setIsProcessing(false);
     }
@@ -335,7 +335,7 @@ export const CropAdjustmentScreen: React.FC<CropAdjustmentScreenProps> = ({ rout
       });
     } catch (err: any) {
       setIsProcessing(false);
-      Alert.alert('خطا در تصحیح پرسپکتیو', err?.message || 'پردازش تصویر با خطا مواجه شد');
+      showError(err?.message || 'پردازش تصویر با خطا مواجه شد');
     }
   };
 

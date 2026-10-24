@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert,
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet,
   ActivityIndicator, Image, Modal
 } from 'react-native';
+import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Share2, Repeat, Eye, Trash2, X, Download } from 'lucide-react-native';
@@ -45,7 +46,7 @@ const ImageConverterScreen = ({ route, navigation }) => {
       const detection = await ImageConverter.detectFormat(uri);
       
       if (!detection.supported) {
-        Alert.alert('فرمت ناشناخته', 'فرمت این تصویر پشتیبانی نمی‌شود.');
+        showWarning('فرمت این تصویر پشتیبانی نمی‌شود.');
         setIsLoading(false);
         return;
       }
@@ -53,8 +54,8 @@ const ImageConverterScreen = ({ route, navigation }) => {
       setSelectedImageUri(uri);
       setDetectedFormat(detection);
       setIsModalVisible(true);
-    } catch (err) {
-      if (err.code !== 'CANCELLED') Alert.alert("خطا", err.message);
+    } catch (err: any) {
+      if (err?.code !== 'CANCELLED') showError(err?.message || 'خطا در انتخاب تصویر');
     } finally {
       setIsLoading(false);
     }
@@ -75,11 +76,12 @@ const ImageConverterScreen = ({ route, navigation }) => {
       
       await saveToolHistory(toolType, fileName, result.path, sizeStr, targetFormat);
       loadHistory();
+      showSuccess(`تصویر با موفقیت به ${targetFormat} تبدیل شد.`);
       
       setSelectedImageUri(null);
       setDetectedFormat(null);
-    } catch (err) {
-      Alert.alert('خطا در تبدیل', err.message || JSON.stringify(err));
+    } catch (err: any) {
+      showError(err?.message || 'خطا در تبدیل');
     } finally {
       setIsLoading(false);
     }
@@ -98,7 +100,7 @@ const ImageConverterScreen = ({ route, navigation }) => {
       
       await FileShareModule.shareFile(path, mimeType);
     } catch (err) {
-      Alert.alert("خطا", "امکان اشتراک‌گذاری این فایل وجود ندارد.");
+      showError('امکان اشتراک‌گذاری این فایل وجود ندارد.');
     }
   };
 
@@ -112,7 +114,7 @@ const ImageConverterScreen = ({ route, navigation }) => {
       }, 3000);
     } catch (err) {
       console.log('Error saving file:', err);
-      Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد.");
+      showError('ذخیره فایل با مشکل مواجه شد.');
     }
   };
 

@@ -6,11 +6,11 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showWarning, showSuccess, showError } from '../../components/feedback';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
@@ -106,15 +106,15 @@ const CreateClassScreen = ({ navigation }: any) => {
 
   const handleCreateClass = async () => {
     if (!selectedSchool) {
-      Alert.alert('توجه', 'لطفاً مدرسه را انتخاب کنید.');
+      showWarning('لطفاً مدرسه را انتخاب کنید.');
       return;
     }
     if (!className.trim()) {
-      Alert.alert('توجه', 'لطفاً نام کلاس را وارد کنید.');
+      showWarning('لطفاً نام کلاس را وارد کنید.');
       return;
     }
     if (!selectedCourse || !selectedGrade) {
-      Alert.alert('توجه', 'لطفاً دوره و پایه تحصیلی را انتخاب کنید.');
+      showWarning('لطفاً دوره و پایه تحصیلی را انتخاب کنید.');
       return;
     }
 
@@ -129,16 +129,12 @@ const CreateClassScreen = ({ navigation }: any) => {
       });
 
       if (response.data.success) {
-        Alert.alert('موفقیت', 'کلاس جدید با موفقیت ایجاد شد!', [
-          { 
-            text: 'باشه', 
-            onPress: () => navigation.goBack() 
-          }
-        ]);
+        showSuccess('کلاس جدید با موفقیت ایجاد شد!');
+        navigation.goBack();
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'خطا در ساخت کلاس';
-      Alert.alert('خطا', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

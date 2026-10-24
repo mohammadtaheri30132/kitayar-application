@@ -8,11 +8,11 @@ import {
   FlatList,
   TextInput,
   ActivityIndicator,
-  Alert,
   Share,
   Modal,
   Linking,
 } from 'react-native';
+import { showError, showSuccess, showDialog } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -74,7 +74,7 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
       setAnalytics(analyticsData);
       setResponses(responsesData?.data || []);
     } catch (err: any) {
-      Alert.alert('خطا', 'خطا در دریافت نتایج و آمار فرم');
+      showError('خطا در دریافت نتایج و آمار فرم');
     } finally {
       setLoading(false);
     }
@@ -88,10 +88,10 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
     try {
       const baseURL = formService.getPublicFormUrl('').replace('/forms/', '');
       const downloadUrl = `${baseURL}/api/teacher/forms/${formId}/export/csv`;
-      Alert.alert(
-        'خروجی اکسل (CSV)',
-        'فایل اکسل با پشتیبانی کامل از حروف فارسی آماده است.',
-        [
+      showDialog({
+        title: 'خروجی اکسل (CSV)',
+        message: 'فایل اکسل با پشتیبانی کامل از حروف فارسی آماده است.',
+        buttons: [
           { text: 'انصراف', style: 'cancel' },
           { text: 'دانلود در مرورگر', onPress: () => Linking.openURL(downloadUrl) },
           {
@@ -101,8 +101,8 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
               Share.share({ title: form?.title, message: summary });
             },
           },
-        ]
-      );
+        ],
+      });
     } catch (err) {}
   };
 
@@ -135,11 +135,11 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
       await formService.gradeResponse(formId, selectedResponse._id, gradesArray, teacherNotes);
       setSavingGrades(false);
       setGradingModalVisible(false);
-      Alert.alert('موفق', 'نمرات و بازخورد معلم با موفقیت ذخیره شد');
+      showSuccess('نمرات و بازخورد معلم با موفقیت ذخیره شد');
       fetchData();
     } catch (err) {
       setSavingGrades(false);
-      Alert.alert('خطا', 'ثبت نمره ناموفق بود');
+      showError('ثبت نمره ناموفق بود');
     }
   };
 

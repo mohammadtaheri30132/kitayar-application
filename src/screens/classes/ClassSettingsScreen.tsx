@@ -6,11 +6,11 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   ScrollView,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { showConfirm, showError, showSuccess, showWarning } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -84,7 +84,7 @@ const ClassSettingsScreen = ({ route, navigation }: any) => {
 
   const handleUpdateClass = async () => {
     if (!editClassName.trim()) {
-      Alert.alert('خطا', 'نام کلاس نمی‌تواند خالی باشد.');
+      showWarning('نام کلاس نمی‌تواند خالی باشد.');
       return;
     }
 
@@ -97,49 +97,39 @@ const ClassSettingsScreen = ({ route, navigation }: any) => {
         note: editNote
       });
       if (response.data.success) {
-        Alert.alert('موفقیت', 'تنظیمات کلاس با موفقیت بروزرسانی شد.', [
-          { text: 'باشه', onPress: () => navigation.goBack() }
-        ]);
+        showSuccess('تنظیمات کلاس با موفقیت بروزرسانی شد.');
+        navigation.goBack();
       }
     } catch (error: any) {
-      Alert.alert('خطا', error.response?.data?.message || 'خطا در بروزرسانی کلاس');
+      showError(error.response?.data?.message || 'خطا در بروزرسانی کلاس');
     } finally {
       setIsUpdating(false);
     }
   };
 
   const handleDeleteClass = () => {
-    Alert.alert(
-      'حذف کلاس',
-      `آیا از حذف کامل کلاس «${currentClassName}» و تمام داده‌های آن مطمئن هستید؟ این عملیات قابل بازگشت نیست.`,
-      [
-        { text: 'انصراف', style: 'cancel' },
-        { 
-          text: 'بله، حذف کن', 
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              const res = await api.delete(`/teacher/classrooms/${currentClassId}`);
-              if (res.data.success) {
-                Alert.alert('موفقیت', 'کلاس با موفقیت حذف شد.', [
-                  { 
-                    text: 'متوجه شدم', 
-                    onPress: () => {
-                      navigation.popToTop();
-                    } 
-                  }
-                ]);
-              }
-            } catch (error: any) {
-              Alert.alert('خطا', error.response?.data?.message || 'خطا در حذف کلاس');
-            } finally {
-              setIsDeleting(false);
-            }
+    showConfirm({
+      title: 'حذف کلاس',
+      message: `آیا از حذف کامل کلاس «${currentClassName}» و تمام داده‌های آن مطمئن هستید؟ این عملیات قابل بازگشت نیست.`,
+      confirmText: 'بله، حذف کن',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: async () => {
+        setIsDeleting(true);
+        try {
+          const res = await api.delete(`/teacher/classrooms/${currentClassId}`);
+          if (res.data.success) {
+            showSuccess('کلاس با موفقیت حذف شد.');
+            navigation.popToTop();
           }
+        } catch (error: any) {
+          showError(error.response?.data?.message || 'خطا در حذف کلاس');
+        } finally {
+          setIsDeleting(false);
         }
-      ]
-    );
+      },
+    });
   };
 
   return (

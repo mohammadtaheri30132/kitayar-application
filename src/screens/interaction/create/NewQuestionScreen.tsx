@@ -7,9 +7,9 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ActivityIndicator, 
-  Alert,
   I18nManager 
 } from 'react-native';
+import { showError, showWarning, showSuccess, showInfo } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, ChevronLeft, Check, Plus, Folder, Tag } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
@@ -41,7 +41,7 @@ const NewQuestionScreen = ({ navigation }: any) => {
         setSelectedCategoryId(data[0]._id);
       }
     } catch (err) {
-      Alert.alert('خطا', 'امکان بارگذاری دسته‌بندی‌ها وجود ندارد.');
+      showError('امکان بارگذاری دسته‌بندی‌ها وجود ندارد.');
     } finally {
       setIsLoadingCats(false);
     }
@@ -61,15 +61,15 @@ const NewQuestionScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert('خطا', 'لطفاً عنوان سوال را وارد کنید.');
+      showWarning('لطفاً عنوان سوال را وارد کنید.');
       return;
     }
     if (!body.trim()) {
-      Alert.alert('خطا', 'لطفاً متن سوال را وارد کنید.');
+      showWarning('لطفاً متن سوال را وارد کنید.');
       return;
     }
     if (!selectedCategoryId) {
-      Alert.alert('خطا', 'لطفاً یک دسته‌بندی برای سوال انتخاب کنید.');
+      showWarning('لطفاً یک دسته‌بندی برای سوال انتخاب کنید.');
       return;
     }
 
@@ -82,17 +82,15 @@ const NewQuestionScreen = ({ navigation }: any) => {
         tags,
       });
 
-      const alertTitle = res.isPending ? 'در انتظار بررسی' : 'موفقیت';
-      const alertMsg = res.message || (res.isPending 
-        ? 'پرسش شما ثبت شد و پس از بررسی و تایید ناظر در تالار گفتگو منتشر خواهد شد.'
-        : 'پرسش شما با موفقیت در تالار گفتگو منتشر شد.');
-
-      Alert.alert(alertTitle, alertMsg, [
-        { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-      ]);
+      if (res.isPending) {
+        showInfo(res.message || 'پرسش شما ثبت شد و پس از بررسی و تایید ناظر در تالار گفتگو منتشر خواهد شد.');
+      } else {
+        showSuccess(res.message || 'پرسش شما با موفقیت در تالار گفتگو منتشر شد.');
+      }
+      navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'خطا در ثبت سوال. لطفاً دوباره تلاش کنید.';
-      Alert.alert('خطا', msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }

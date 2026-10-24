@@ -5,9 +5,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  ScrollView,
-  Alert
+  ScrollView
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,7 +43,7 @@ const ClassBirthdaysScreen = ({ route, navigation }: any) => {
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات دانش‌آموزان رخ داد.');
+      showError('مشکلی در دریافت اطلاعات دانش‌آموزان رخ داد.');
     } finally {
       setLoading(false);
     }

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, 
   TextInput, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
+import { showError, showWarning, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Share2, Trash2, Mic, FileText, Download, Check } from 'lucide-react-native';
@@ -33,9 +34,9 @@ const AudioToTextScreen = ({ navigation }) => {
         setRecognizedText(prev => prev ? prev + ' ' + text : text);
         setIsEditing(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err !== 'CANCELLED' && err?.code !== 'CANCELLED') {
-        Alert.alert("خطا", err.message || "خطا در تشخیص صدا");
+        showError(err?.message || 'خطا در تشخیص صدا');
       }
     }
   };
@@ -43,7 +44,7 @@ const AudioToTextScreen = ({ navigation }) => {
   // ذخیره متن به صورت فایل .txt
   const handleSaveTextFile = async () => {
     if (!recognizedText.trim()) {
-      Alert.alert("خطا", "متنی برای ذخیره وجود ندارد.");
+      showWarning('متنی برای ذخیره وجود ندارد.');
       return;
     }
 
@@ -62,10 +63,10 @@ const AudioToTextScreen = ({ navigation }) => {
       
       setRecognizedText('');
       setIsEditing(false);
-      Alert.alert("عملیات موفق", "متن شما به عنوان فایل ذخیره شد.");
+      showSuccess('متن شما به عنوان فایل ذخیره شد.');
       
-    } catch (err) {
-      Alert.alert("خطا در ذخیره سازی", err.message);
+    } catch (err: any) {
+      showError(err?.message || 'خطا در ذخیره‌سازی');
     }
   };
 
@@ -81,7 +82,7 @@ const AudioToTextScreen = ({ navigation }) => {
       await FileSaverModule.saveFile(item.resultPath, false);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+    } catch (err) { showError('ذخیره فایل با مشکل مواجه شد.'); }
   };
 
   return (

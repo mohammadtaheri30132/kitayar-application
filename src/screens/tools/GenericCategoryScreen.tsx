@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import { ChevronLeft, ListFilter } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, ListFilter } from 'lucide-react-native';
 import { ToolItem } from '../../data/teacherTools';
 
 const GenericCategoryScreen = ({ route, navigation }: any) => {
@@ -30,7 +30,7 @@ const GenericCategoryScreen = ({ route, navigation }: any) => {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronLeft color={colors.textLight} size={24} />
+          <ChevronRight color={colors.text} size={24} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{title}</Text>
         <View style={{ width: 40 }} />
@@ -121,9 +121,11 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: 'IRANSansX',
     fontWeight: '600',
-    textAlign: 'left',
+    textAlign: 'right',
+    marginRight: 12,
   },
   emptyContainer: {
     flex: 1,

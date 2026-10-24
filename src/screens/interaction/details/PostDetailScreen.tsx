@@ -9,11 +9,11 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ActivityIndicator, 
-  Alert,
   I18nManager 
 } from 'react-native';
+import { showError, showSuccess, showConfirm } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, ChevronRight, ChevronLeft, Flag } from 'lucide-react-native';
+import { Send, ChevronRight, ChevronLeft, Flag, Trash2 } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { AuthContext } from '../../../context/AuthContext';
 import PostCard from '../components/PostCard';
@@ -49,7 +49,7 @@ const PostDetailScreen = ({ route, navigation }: any) => {
       setPost(res.post);
       setComments(res.comments);
     } catch (err: any) {
-      Alert.alert('خطا', 'امکان دریافت جزئیات پست وجود ندارد.');
+      showError('امکان دریافت جزئیات پست وجود ندارد.');
     } finally {
       setIsLoading(false);
     }
@@ -78,64 +78,60 @@ const PostDetailScreen = ({ route, navigation }: any) => {
         });
       }
     } catch (err: any) {
-      Alert.alert('خطا', 'ثبت نظر انجام نشد.');
+      showError('ثبت نظر انجام نشد.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteComment = (commentId: string) => {
-    Alert.alert(
-      'حذف نظر',
-      'آیا از حذف این نظر اطمینان دارید؟',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'حذف',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await communityService.deleteComment(commentId);
-              setComments(prev => prev.filter(c => c._id !== commentId));
-              if (post) {
-                setPost({
-                  ...post,
-                  commentCount: Math.max(0, (post.commentCount || 1) - 1),
-                });
-              }
-            } catch {
-              Alert.alert('خطا', 'امکان حذف نظر وجود ندارد.');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'حذف نظر',
+      message: 'آیا از حذف این نظر اطمینان دارید؟',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: Trash2,
+      onConfirm: async () => {
+        try {
+          await communityService.deleteComment(commentId);
+          setComments(prev => prev.filter(c => c._id !== commentId));
+          if (post) {
+            setPost({
+              ...post,
+              commentCount: Math.max(0, (post.commentCount || 1) - 1),
+            });
+          }
+          showSuccess('نظر با موفقیت حذف شد.');
+        } catch {
+          showError('امکان حذف نظر وجود ندارد.');
+        }
+      },
+    });
   };
 
   const handleReport = (targetType: 'post' | 'comment', targetId: string) => {
-    Alert.alert(
-      'گزارش تخلف',
-      'آیا مایل به گزارش این مورد به تیم پشتیبانی هستید؟',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'ارسال گزارش',
-          onPress: async () => {
-            try {
-              await communityService.reportContent({
-                targetType,
-                targetId,
-                reason: 'inappropriate',
-                description: 'گزارش محتوای نامناسب توسط کاربر',
-              });
-              Alert.alert('سپاس', 'گزارش شما با موفقیت برای مدیریت ارسال شد.');
-            } catch {
-              Alert.alert('خطا', 'ارسال گزارش ناموفق بود.');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'گزارش تخلف',
+      message: 'آیا مایل به گزارش این مورد به تیم پشتیبانی هستید؟',
+      confirmText: 'ارسال گزارش',
+      cancelText: 'انصراف',
+      isDestructive: false,
+      icon: Flag,
+      onConfirm: async () => {
+        try {
+          await communityService.reportContent({
+            targetType,
+            targetId,
+            reason: 'inappropriate',
+            description: 'گزارش محتوای نامناسب توسط کاربر',
+          });
+          showSuccess('گزارش شما با موفقیت برای مدیریت ارسال شد.');
+        } catch {
+          showError('ارسال گزارش ناموفق بود.');
+        }
+      },
+    });
   };
 
   const renderHeader = () => {

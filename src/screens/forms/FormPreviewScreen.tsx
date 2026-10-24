@@ -7,11 +7,11 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
-  Alert,
   Image,
   NativeModules,
   I18nManager,
 } from 'react-native';
+import { showError, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -66,7 +66,7 @@ export const FormPreviewScreen: React.FC<FormPreviewScreenProps> = ({ route, nav
       setForm(data);
       setPreviewMode(data.theme?.mode || 'conversational');
     } catch (err: any) {
-      Alert.alert('خطا', 'خطا در بارگذاری پیش‌نمایش فرم');
+      showError('خطا در بارگذاری پیش‌نمایش فرم');
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export const FormPreviewScreen: React.FC<FormPreviewScreenProps> = ({ route, nav
     if (!form) return;
     const q = form.questions[currentIdx];
     if (q.required && !answers[q.id]) {
-      Alert.alert('توجه', 'پاسخ به این سوال الزامی است.');
+      showWarning('پاسخ به این سوال الزامی است.');
       return;
     }
     if (currentIdx < form.questions.length - 1) {

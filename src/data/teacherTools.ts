@@ -4,7 +4,7 @@ import {
   Percent, Hash, Banknote, Ruler, Weight, Thermometer, 
   Clock, Zap, Microscope, FlaskConical, Sigma, HeartPulse,
   Shapes, Box, PercentSquare, Award, Square, Plus, Dices, Users, Flag,
-  ClipboardList
+  ClipboardList, Palette, QrCode, ScanLine, Compass, Navigation, Mic, Gauge, Triangle, Phone, Tv, Radio
 } from 'lucide-react-native';
 
 export interface ToolItem {
@@ -31,8 +31,10 @@ export const teacherToolsHierarchy: ToolItem[] = [
     ]
   },
   { id: '2', title: 'برگه آزمون‌ساز', route: 'MobileQuestionBuilder', icon: FileText, color: '#10b981' },
+  { id: 'smart-exam-sheets', title: 'پاسخ‌برگ هوشمند (تصحیح تستی با دوربین)', route: 'SmartSheetHubScreen', icon: ScanLine, color: '#4f46e5' },
   { id: '3', title: 'فرم‌ساز و پرسش‌نامه', route: 'FormDashboardScreen', icon: ClipboardList, color: '#8b5cf6' },
   { id: '4', title: 'ابزار فایل', route: 'ToolsListScreen', icon: Layers, color: '#f59e0b' },
+  { id: 'infinite-canvas', title: 'تخته وایت‌برد و بوم بی‌نهایت', route: 'InfiniteCanvasScreen', icon: Palette, color: '#6366f1' },
   { id: '5', title: 'اطلاعات و آدرس', route: 'PlaceholderScreen', params: { title: 'اطلاعات و آدرس' }, icon: MapPin, color: '#ef4444' },
   {
     id: '6', title: 'ورزشی', route: 'GenericCategoryScreen', icon: Activity, color: '#ec4899',
@@ -47,7 +49,33 @@ export const teacherToolsHierarchy: ToolItem[] = [
     ]
   },
   { id: '7', title: 'صبحگاه', route: 'PlaceholderScreen', params: { title: 'صبحگاه' }, icon: Sun, color: '#f97316' },
-  { id: '8', title: 'موزیک', route: 'PlaceholderScreen', params: { title: 'موزیک' }, icon: Music, color: '#6366f1' },
+  { id: 'prayer-times', title: 'اوقات شرعی', route: 'PrayerTimesScreen', icon: Clock, color: '#0d9488' },
+  { id: 'quran', title: 'قرآن کریم', route: 'QuranSurahListScreen', icon: BookOpen, color: '#059669' },
+  { id: '8', title: 'موزیک و نواها', route: 'MusicMainScreen', icon: Music, color: '#ec4899' },
+  { id: 'phonebook', title: 'دفترچه تلفن و مخاطبین', route: 'PhonebookScreen', icon: Phone, color: '#2563eb' },
+  { id: 'barcode-tools', title: 'بارکدخوان و بارکدساز', route: 'BarcodeHubScreen', icon: QrCode, color: '#0284c7' },
+  { id: 'ir-remote', title: 'ریموت کنترل کلاسی (پروژکتور و کولر)', route: 'IrRemoteHubScreen', icon: Tv, color: '#6366f1' },
+  {
+    id: 'sensor-lab',
+    title: 'سنسورها و ابزار آزمایشگاه',
+    route: 'GenericCategoryScreen',
+    icon: Gauge,
+    color: '#06b6d4',
+    children: [
+      { id: 'qibla-sub', title: 'قبله‌نما', route: 'QiblaCompassScreen', icon: Compass, color: '#059669' },
+      { id: 'compass-sub', title: 'قطب‌نما و تراز', route: 'CompassScreen', icon: Navigation, color: '#0284c7' },
+      { id: 'sound-sub', title: 'صداسنج (دسی‌بل)', route: 'SoundMeterScreen', icon: Mic, color: '#ec4899' },
+      { id: 'light-sub', title: 'نورسنج (لوکس‌متر)', route: 'LightMeterScreen', icon: Sun, color: '#eab308' },
+      { id: 'prot-sub', title: 'نقاله و زاویه‌سنج', route: 'ProtractorScreen', icon: Triangle, color: '#8b5cf6' },
+      { id: 'seismo-sub', title: 'لرزه‌نگار و زلزله‌سنج', route: 'SeismographScreen', icon: Activity, color: '#ef4444' },
+    ]
+  },
+  { id: 'qibla-compass', title: 'قبله‌نما', route: 'QiblaCompassScreen', icon: Compass, color: '#059669' },
+  { id: 'compass', title: 'قطب‌نما و تراز', route: 'CompassScreen', icon: Navigation, color: '#0284c7' },
+  { id: 'sound-meter', title: 'صداسنج (دسی‌بل)', route: 'SoundMeterScreen', icon: Mic, color: '#ec4899' },
+  { id: 'light-meter', title: 'نورسنج (لوکس‌متر)', route: 'LightMeterScreen', icon: Sun, color: '#eab308' },
+  { id: 'protractor', title: 'نقاله و زاویه‌سنج', route: 'ProtractorScreen', icon: Triangle, color: '#8b5cf6' },
+  { id: 'seismograph', title: 'لرزه‌نگار و زلزله‌سنج', route: 'SeismographScreen', icon: Activity, color: '#ef4444' },
   { id: '9', title: 'ابزار تدریس', route: 'PlaceholderScreen', params: { title: 'ابزار تدریس' }, icon: BookOpen, color: '#14b8a6' },
   
   // 🧮 محاسبه‌گرها

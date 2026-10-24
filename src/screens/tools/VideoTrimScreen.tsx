@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, 
   ActivityIndicator, TextInput, PanResponder, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { Share2, Trash2, Download, Scissors, FileVideo, Play, Pause } from 'luci
 import KitayarVideo from '../../components/KitayarVideo';
 import { saveToolHistory, getToolHistory, deleteToolHistory } from '../../services/ToolHistoryManager';
 import { COLORS } from '../../theme/colors';
+import { showSuccess, showError, showWarning, showConfirm } from '../../components/feedback';
 
 const { FileShareModule, FileSaverModule, VideoProcessorModule, VideoPickerModule } = NativeModules;
 const TOOL_ID = 'VIDEO_TRIMMER';
@@ -153,9 +154,9 @@ const VideoTrimScreen = ({ navigation }) => {
       setCurrentTime(0);
       
       setIsLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       setIsLoading(false);
-      if (err !== 'CANCELLED' && err?.code !== 'CANCELLED') Alert.alert("خطا", err.message);
+      if (err !== 'CANCELLED' && err?.code !== 'CANCELLED') showError(err?.message || 'خطا در انتخاب ویدیو');
     }
   };
 
@@ -163,7 +164,7 @@ const VideoTrimScreen = ({ navigation }) => {
     if (!selectedVideo) return;
     
     if (isNaN(startSec) || isNaN(endSec) || startSec >= endSec || endSec > duration || startSec < 0) {
-      Alert.alert("خطا", "زمان‌های وارد شده نامعتبر است.");
+      showWarning("زمان‌های وارد شده نامعتبر است.");
       return;
     }
 
@@ -178,9 +179,9 @@ const VideoTrimScreen = ({ navigation }) => {
       await saveToolHistory(TOOL_ID, fileName, resultPath, sizeStr, 'MP4');
       loadHistory();
       setSelectedVideo(null);
-      Alert.alert("عملیات موفق", "ویدیو با موفقیت برش داده شد.");
-    } catch (err) {
-      Alert.alert("خطا در برش", err.message);
+      showSuccess("ویدیو با موفقیت برش داده شد.");
+    } catch (err: any) {
+      showError(err?.message || "خطا در برش");
     } finally {
       setIsLoading(false);
     }
@@ -206,16 +207,33 @@ const VideoTrimScreen = ({ navigation }) => {
     videoRef.current?.seek(time);
   };
 
-  const handleDelete = async (id) => { setHistory(await deleteToolHistory(TOOL_ID, id)); };
+  const handleDelete = (id) => {
+    showConfirm({
+      title: 'حذف از تاریخچه',
+      message: 'آیا از حذف این ویدیو از تاریخچه اطمینان دارید؟',
+      type: 'danger',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      onConfirm: async () => {
+        setHistory(await deleteToolHistory(TOOL_ID, id));
+        showSuccess('ویدیو با موفقیت حذف شد.');
+      },
+    });
+  };
+
   const handleShare = async (path) => {
     try { await FileShareModule.shareFile(path, 'video/mp4'); } catch (err) {}
   };
+
   const handleSaveToDevice = async (item) => {
     try {
       await FileSaverModule.saveFile(item.resultPath, false);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+      showSuccess('ویدیو در گالری ذخیره شد.');
+    } catch (err) { 
+      showError("ذخیره فایل با مشکل مواجه شد."); 
+    }
   };
 
   return (

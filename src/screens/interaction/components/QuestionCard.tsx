@@ -12,7 +12,7 @@ interface Props {
 }
 
 const QuestionCard = ({ question, onPress, onMenuPress }: Props) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const authorName = question.author?.name || 'کاربر کیتایار';
   const authorAvatar = question.author?.avatar;
@@ -42,14 +42,14 @@ const QuestionCard = ({ question, onPress, onMenuPress }: Props) => {
       {(isPinned || question.status === 'pending_review') && (
         <View style={styles.badgeRow}>
           {isPinned && (
-            <View style={[styles.statusBadge, { backgroundColor: '#fef3c7' }]}>
-              <Pin color="#d97706" size={12} />
-              <Text style={[styles.statusBadgeText, { color: '#b45309' }]}>سنجاق شده</Text>
+            <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(217,119,6,0.2)' : '#fef3c7' }]}>
+              <Pin color={isDark ? '#fbbf24' : '#d97706'} size={12} />
+              <Text style={[styles.statusBadgeText, { color: isDark ? '#fbbf24' : '#b45309' }]}>سنجاق شده</Text>
             </View>
           )}
           {question.status === 'pending_review' && (
-            <View style={[styles.statusBadge, { backgroundColor: '#fef3c7' }]}>
-              <Text style={[styles.statusBadgeText, { color: '#b45309' }]}>⏳ در حال بررسی توسط ناظر</Text>
+            <View style={[styles.statusBadge, { backgroundColor: isDark ? 'rgba(217,119,6,0.2)' : '#fef3c7' }]}>
+              <Text style={[styles.statusBadgeText, { color: isDark ? '#fbbf24' : '#b45309' }]}>⏳ در حال بررسی توسط ناظر</Text>
             </View>
           )}
         </View>

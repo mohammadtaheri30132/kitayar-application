@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, AuthContext } from './src/context/AuthContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { FeedbackProvider } from './src/components/feedback/FeedbackContext';
 
 import PhoneCheckScreen from './src/screens/auth/PhoneCheckScreen';
 import RegisterScreen from './src/screens/auth/RegisterScreen';
@@ -15,6 +16,7 @@ import MainTabNavigator from './src/navigation/MainTabNavigator';
 import ClassManagementScreen from './src/screens/classes/ClassManagementScreen';
 import CreateClassScreen from './src/screens/classes/CreateClassScreen';
 import ClassDetailsScreen from './src/screens/classes/ClassDetailsScreen';
+import ClassChatScreen from './src/screens/classes/ClassChatScreen';
 import ClassStudentsScreen from './src/screens/classes/ClassStudentsScreen';
 import ClassExamsScreen from './src/screens/classes/ClassExamsScreen';
 import ClassReportsScreen from './src/screens/classes/ClassReportsScreen';
@@ -40,6 +42,9 @@ import SettingsScreen from './src/screens/profile/SettingsScreen';
 import EditExamScreen from './src/screens/exams/EditExamScreen';
 import ToolsListScreen from './src/screens/tools/ToolsListScreen';
 import AddNoteScreen from './src/screens/planning/AddNoteScreen';
+import CreateHomeworkScreen from './src/screens/homework/CreateHomeworkScreen';
+import HomeworkListScreen from './src/screens/homework/HomeworkListScreen';
+import HomeworkDetailsScreen from './src/screens/homework/HomeworkDetailsScreen';
 import ExamSettingsScreen from './src/screens/exams/ExamSettingsScreen';
 import MobileQuestionBuilder from './src/screens/question/MobileQuestionBuilder';
 import PreviewExamScreen from './src/screens/question/PreviewExamScreen';
@@ -79,6 +84,28 @@ import IntervalTimerScreen from './src/screens/tools/sports/IntervalTimerScreen'
 import RepCounterScreen from './src/screens/tools/sports/RepCounterScreen';
 import RandomStudentScreen from './src/screens/tools/sports/RandomStudentScreen';
 import GroupDividerScreen from './src/screens/tools/sports/GroupDividerScreen';
+import PrayerTimesScreen from './src/screens/tools/PrayerTimesScreen';
+import InfiniteCanvasScreen from './src/screens/tools/canvas/InfiniteCanvasScreen';
+import { MusicPlayerProvider } from './src/context/MusicPlayerContext';
+import { MusicMainScreen } from './src/screens/tools/music/MusicMainScreen';
+import { MusicCategoryTracksScreen } from './src/screens/tools/music/MusicCategoryTracksScreen';
+import { MiniMusicPlayer } from './src/components/music/MiniMusicPlayer';
+import { MusicPlayerScreen } from './src/screens/tools/music/MusicPlayerScreen';
+import { BarcodeHubScreen } from './src/screens/tools/barcode/BarcodeHubScreen';
+import { BarcodeScannerScreen } from './src/screens/tools/barcode/BarcodeScannerScreen';
+import { BarcodeGeneratorScreen } from './src/screens/tools/barcode/BarcodeGeneratorScreen';
+import { QiblaCompassScreen } from './src/screens/tools/sensors/QiblaCompassScreen';
+import { CompassScreen } from './src/screens/tools/sensors/CompassScreen';
+import { SoundMeterScreen } from './src/screens/tools/sensors/SoundMeterScreen';
+import { LightMeterScreen } from './src/screens/tools/sensors/LightMeterScreen';
+import { ProtractorScreen } from './src/screens/tools/sensors/ProtractorScreen';
+import { SeismographScreen } from './src/screens/tools/sensors/SeismographScreen';
+import { QuranSurahListScreen } from './src/screens/tools/quran/QuranSurahListScreen';
+import { QuranReaderScreen } from './src/screens/tools/quran/QuranReaderScreen';
+import { PhonebookScreen } from './src/screens/tools/phonebook/PhonebookScreen';
+import { IrRemoteHubScreen } from './src/screens/tools/ir/IrRemoteHubScreen';
+import { IrSetupWizardScreen } from './src/screens/tools/ir/IrSetupWizardScreen';
+import { IrRemoteControlScreen } from './src/screens/tools/ir/IrRemoteControlScreen';
 // Planning Screens
 import CalendarScreen from './src/screens/main/CalendarScreen';
 import CreateEventScreen from './src/screens/main/CreateEventScreen';
@@ -87,15 +114,6 @@ import DailyNotesScreen from './src/screens/main/DailyNotesScreen';
 import WeeklyScheduleScreen from './src/screens/main/WeeklyScheduleScreen';
 import NotificationsScreen from './src/screens/main/NotificationsScreen';
 
-// Education Redesign Screens (V2)
-import EducationElementaryScreen from './src/screens/education/EducationElementaryScreen';
-import EducationSubjectScreen from './src/screens/education/EducationSubjectScreen';
-import EducationFieldScreen from './src/screens/education/EducationFieldScreen';
-import EducationGradeScreen from './src/screens/education/EducationGradeScreen';
-import EducationBooksScreen from './src/screens/education/EducationBooksScreen';
-import EducationChaptersScreen from './src/screens/education/EducationChaptersScreen';
-import EducationLessonsScreen from './src/screens/education/EducationLessonsScreen';
-import EducationLessonContentScreen from './src/screens/education/EducationLessonContentScreen';
 
 // Interaction Module
 import QuestionDetailScreen from './src/screens/interaction/details/QuestionDetailScreen';
@@ -114,6 +132,16 @@ import FormTemplateGalleryScreen from './src/screens/forms/FormTemplateGallerySc
 import CreateOrEditFormScreen from './src/screens/forms/CreateOrEditFormScreen';
 import FormPreviewScreen from './src/screens/forms/FormPreviewScreen';
 import FormResponsesScreen from './src/screens/forms/FormResponsesScreen';
+
+// Smart Exam Sheets Screens
+import SmartSheetHubScreen from './src/screens/smartsheet/SmartSheetHubScreen';
+import CreateSmartExamScreen from './src/screens/smartsheet/CreateSmartExamScreen';
+import GeneratedSheetsPreviewScreen from './src/screens/smartsheet/GeneratedSheetsPreviewScreen';
+import SmartSheetScannerScreen from './src/screens/smartsheet/SmartSheetScannerScreen';
+import GradingReviewScreen from './src/screens/smartsheet/GradingReviewScreen';
+import ManualGradingScreen from './src/screens/smartsheet/ManualGradingScreen';
+import ExamSheetsResultsScreen from './src/screens/smartsheet/ExamSheetsResultsScreen';
+import SupportTicketsScreen from './src/screens/support/SupportTicketsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -158,6 +186,7 @@ const AppContent = () => {
             <Stack.Screen name="DaysBetweenScreen" component={DaysBetweenScreen} />
             <Stack.Screen name="UnitConverterScreen" component={UnitConverterScreen} />
             <Stack.Screen name="DynamicCalculatorScreen" component={DynamicCalculatorScreen} />
+            <Stack.Screen name="PrayerTimesScreen" component={PrayerTimesScreen} />
             <Stack.Screen name="StopwatchScreen" component={StopwatchScreen} options={{ title: 'کرنومتر' }} />
             <Stack.Screen name="IntervalTimerScreen" component={IntervalTimerScreen} options={{ title: 'تایمر اینتروال' }} />
             <Stack.Screen name="RepCounterScreen" component={RepCounterScreen} options={{ title: 'شمارش ست و تکرار' }} />
@@ -171,6 +200,7 @@ const AppContent = () => {
             <Stack.Screen name="ClassReportsScreen" component={ClassReportsScreen} />
             <Stack.Screen name="ClassBirthdaysScreen" component={ClassBirthdaysScreen} />
             <Stack.Screen name="ClassAttendanceScreen" component={ClassAttendanceScreen} />
+            <Stack.Screen name="ClassChatScreen" component={ClassChatScreen} options={{ headerShown: false }} />
             <Stack.Screen name="TakeAttendanceScreen" component={TakeAttendanceScreen} />
             <Stack.Screen name="ClassSettingsScreen" component={ClassSettingsScreen} />
             <Stack.Screen name="ManageSchoolsScreen" component={ManageSchoolsScreen} />
@@ -189,6 +219,7 @@ const AppContent = () => {
             <Stack.Screen name="GradeStudentScreen" component={GradeStudentScreen} />
             <Stack.Screen name="ExamSettingsScreen" component={ExamSettingsScreen} />
             <Stack.Screen name="ProfileScreen" component={ProfileScreen} />
+            <Stack.Screen name="SupportTicketsScreen" component={SupportTicketsScreen} />
             <Stack.Screen name="SettingsScreen" component={SettingsScreen} />
             <Stack.Screen name="EditExamScreen" component={EditExamScreen} />
             <Stack.Screen name="MobileQuestionBuilder" component={MobileQuestionBuilder} />
@@ -219,12 +250,35 @@ const AppContent = () => {
             <Stack.Screen name="AudioToTextScreen" component={AudioToTextScreen} />
             <Stack.Screen name="AdvancedPdfScreen" component={AdvancedPdfScreen} />
             <Stack.Screen name="PdfReaderScreen" component={PdfReaderScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="InfiniteCanvasScreen" component={InfiniteCanvasScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MusicMainScreen" component={MusicMainScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="MusicCategoryTracksScreen" component={MusicCategoryTracksScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="BarcodeHubScreen" component={BarcodeHubScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="BarcodeScannerScreen" component={BarcodeScannerScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="BarcodeGeneratorScreen" component={BarcodeGeneratorScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="QiblaCompassScreen" component={QiblaCompassScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CompassScreen" component={CompassScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="SoundMeterScreen" component={SoundMeterScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="LightMeterScreen" component={LightMeterScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ProtractorScreen" component={ProtractorScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="SeismographScreen" component={SeismographScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="QuranSurahListScreen" component={QuranSurahListScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="QuranReaderScreen" component={QuranReaderScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="PhonebookScreen" component={PhonebookScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="IrRemoteHubScreen" component={IrRemoteHubScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="IrSetupWizardScreen" component={IrSetupWizardScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="IrRemoteControlScreen" component={IrRemoteControlScreen} options={{ headerShown: false }} />
             
             {/* Teacher Planning System Screens */}
             <Stack.Screen name="CreateEventScreen" component={CreateEventScreen} />
             <Stack.Screen name="TasksScreen" component={TasksScreen} />
             <Stack.Screen name="DailyNotesScreen" component={DailyNotesScreen} />
             <Stack.Screen name="WeeklyScheduleScreen" component={WeeklyScheduleScreen} />
+
+            {/* Homework Management Screens */}
+            <Stack.Screen name="CreateHomeworkScreen" component={CreateHomeworkScreen} />
+            <Stack.Screen name="HomeworkListScreen" component={HomeworkListScreen} />
+            <Stack.Screen name="HomeworkDetailsScreen" component={HomeworkDetailsScreen} />
 
             {/* Interaction Module Screens */}
             <Stack.Screen name="QuestionDetailScreen" component={QuestionDetailScreen} />
@@ -236,15 +290,6 @@ const AppContent = () => {
             <Stack.Screen name="NotificationsScreen" component={NotificationsScreen} />
             <Stack.Screen name="CalendarScreen" component={CalendarScreen} />
             
-            {/* Education Redesign Screens */}
-            <Stack.Screen name="EducationElementaryScreen" component={EducationElementaryScreen} />
-            <Stack.Screen name="EducationSubjectScreen" component={EducationSubjectScreen} />
-            <Stack.Screen name="EducationFieldScreen" component={EducationFieldScreen} />
-            <Stack.Screen name="EducationGradeScreen" component={EducationGradeScreen} />
-            <Stack.Screen name="EducationBooksScreen" component={EducationBooksScreen} />
-            <Stack.Screen name="EducationChaptersScreen" component={EducationChaptersScreen} />
-            <Stack.Screen name="EducationLessonsScreen" component={EducationLessonsScreen} />
-            <Stack.Screen name="EducationLessonContentScreen" component={EducationLessonContentScreen} />
 
             {/* Form Builder & Survey Platform Screens */}
             <Stack.Screen name="FormDashboardScreen" component={FormDashboardScreen} />
@@ -252,9 +297,26 @@ const AppContent = () => {
             <Stack.Screen name="CreateOrEditFormScreen" component={CreateOrEditFormScreen} />
             <Stack.Screen name="FormPreviewScreen" component={FormPreviewScreen} />
             <Stack.Screen name="FormResponsesScreen" component={FormResponsesScreen} />
+
+            {/* Smart Exam Sheets Screens */}
+            <Stack.Screen name="SmartSheetHubScreen" component={SmartSheetHubScreen} />
+            <Stack.Screen name="CreateSmartExamScreen" component={CreateSmartExamScreen} />
+            <Stack.Screen name="GeneratedSheetsPreviewScreen" component={GeneratedSheetsPreviewScreen} />
+            <Stack.Screen name="SmartSheetScannerScreen" component={SmartSheetScannerScreen} />
+            <Stack.Screen name="GradingReviewScreen" component={GradingReviewScreen} />
+            <Stack.Screen name="ManualGradingScreen" component={ManualGradingScreen} />
+            <Stack.Screen name="ExamSheetsResultsScreen" component={ExamSheetsResultsScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>
+
+      {/* Global Mini Music Player and Full Player Modal for continuous browsing */}
+      {userToken != null && (
+        <>
+          <MiniMusicPlayer />
+          <MusicPlayerScreen />
+        </>
+      )}
     </NavigationContainer>
   );
 };
@@ -263,9 +325,13 @@ const App = () => {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
+        <FeedbackProvider>
+          <AuthProvider>
+            <MusicPlayerProvider>
+              <AppContent />
+            </MusicPlayerProvider>
+          </AuthProvider>
+        </FeedbackProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

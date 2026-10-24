@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, UploadCloud, Mic, X } from 'lucide-react-native';
 import { api } from '../../api/axiosConfig';
@@ -16,12 +17,12 @@ const CreateTeacherQuestionScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!question.trim()) {
-      Alert.alert('خطا', 'متن سوال نمی‌تواند خالی باشد');
+      showWarning('متن سوال نمی‌تواند خالی باشد');
       return;
     }
 
     if (type === 'تستی' && options.some(opt => !opt.trim())) {
-      Alert.alert('خطا', 'لطفاً تمامی گزینه‌ها را پر کنید');
+      showWarning('لطفاً تمامی گزینه‌ها را پر کنید');
       return;
     }
 
@@ -38,13 +39,12 @@ const CreateTeacherQuestionScreen = ({ navigation }: any) => {
       });
 
       if (res.data.success) {
-        Alert.alert('موفقیت', 'سوال شما با موفقیت ثبت شد', [
-          { text: 'باشه', onPress: () => navigation.goBack() }
-        ]);
+        showSuccess('سوال شما با موفقیت ثبت شد');
+        navigation.goBack();
       }
     } catch (e: any) {
       console.warn(e);
-      Alert.alert('خطا', 'مشکلی در ثبت سوال رخ داد');
+      showError('مشکلی در ثبت سوال رخ داد');
     } finally {
       setIsSubmitting(false);
     }

@@ -24,9 +24,7 @@ const TeacherToolsScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <GlobalHeader 
-        onProfilePress={() => navigation.navigate('ProfileScreen')} 
-      />
+      <GlobalHeader title="ابزار معلم" subtitle="مجموعه ابزارها و دستیارهای کلاسی" />
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.listContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -79,7 +77,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   itemContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     padding: 16,
   },
@@ -89,13 +87,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 16,
+    marginLeft: 14,
   },
   itemTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontFamily: 'IRANSansX',
     fontWeight: '600',
-    textAlign: 'left',
+    textAlign: 'right',
   },
 });
 

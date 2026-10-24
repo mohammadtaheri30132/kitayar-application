@@ -1,16 +1,58 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { 
-  View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Share, TextInput, Switch, KeyboardAvoidingView, Platform, ScrollView
+  View, 
+  Text, 
+  FlatList, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  Share, 
+  TextInput, 
+  Switch, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView 
 } from 'react-native';
+import { showError, showSuccess, showConfirm } from '../../components/feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { Users, FileText, Settings, Share2, ChevronRight, PenSquare, Edit3, Trash2 } from 'lucide-react-native';
+import { 
+  Users, 
+  FileText, 
+  Settings, 
+  Share2, 
+  ArrowRight, 
+  Edit3, 
+  Trash2, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  GraduationCap,
+  Calendar,
+  Lock,
+  Sparkles
+} from 'lucide-react-native';
 import { api } from '../../api/axiosConfig';
-import { COLORS } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import * as jalaali from 'jalaali-js';
+
+const formatJalaliDateTime = (date: Date): string => {
+  try {
+    const { jy, jm, jd } = jalaali.toJalaali(date);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')} · ${hours}:${minutes}`;
+  } catch {
+    return 'نامشخص';
+  }
+};
 
 const ExamDashboardScreen = ({ route, navigation }: any) => {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { examId, examTitle } = route.params;
 
   const [participants, setParticipants] = useState<any[]>([]);
@@ -18,7 +60,7 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'participants' | 'questions' | 'settings'>('participants');
 
-  // استیت‌های تب تنظیمات
+  // Settings tab states
   const [title, setTitle] = useState(examTitle || '');
   const [totalScore, setTotalScore] = useState('');
   const [isUntimed, setIsUntimed] = useState(false);
@@ -61,12 +103,11 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
     try {
       const response = await api.get(`/teacher/exams/${examId}/dashboard`);
       if (response.data.success) {
-        setParticipants(response.data.data.participantsStatus);
+        setParticipants(response.data.data.participantsStatus || []);
         
         const questionsRes = await api.get(`/teacher/exams/${examId}`);
         if (questionsRes.data.success) {
-          setExamQuestions(questionsRes.data.data.questions);
-          // مقداردهی اولیه تنظیمات
+          setExamQuestions(questionsRes.data.data.questions || []);
           const examData = questionsRes.data.data;
           setTitle(examData.title || examTitle);
           setTotalScore(String(examData.totalScore || 20));
@@ -77,7 +118,7 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
         }
       }
     } catch (error: any) {
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات داشبورد رخ داد.');
+      showError('مشکلی در دریافت اطلاعات داشبورد رخ داد.');
     } finally {
       setIsLoading(false);
     }
@@ -87,11 +128,11 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
 
   const getStatusDisplay = (status: string, gradingStatus: string) => {
     if (status === 'تمام کرده') {
-      if (gradingStatus === 'graded') return { text: 'تصحیح شده', bg: '#dcfce7', color: '#166534' };
-      return { text: 'در انتظار تصحیح', bg: '#eff6ff', color: '#1e40af' };
+      if (gradingStatus === 'graded') return { text: 'تصحیح شده', bg: isDark ? '#064e3b33' : '#dcfce7', color: '#166534' };
+      return { text: 'در انتظار تصحیح', bg: isDark ? '#1e3a8a33' : '#eff6ff', color: '#1e40af' };
     }
-    if (status === 'در حال آزمون') return { text: 'در حال آزمون', bg: '#fef3c7', color: '#92400e' };
-    return { text: 'شروع نکرده', bg: '#f1f5f9', color: '#475569' };
+    if (status === 'در حال آزمون') return { text: 'در حال آزمون', bg: isDark ? '#78350f33' : '#fef3c7', color: '#b45309' };
+    return { text: 'شروع نکرده', bg: isDark ? '#33415533' : '#f1f5f9', color: colors.textLight };
   };
 
   const renderStudentItem = ({ item, index }: { item: any, index: number }) => {
@@ -103,7 +144,11 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
 
     return (
       <TouchableOpacity 
-        style={[styles.card, !isClickable && styles.cardDisabled]}
+        style={[
+          styles.studentCard, 
+          { backgroundColor: colors.surface, borderColor: colors.border },
+          !isClickable && { opacity: 0.85 }
+        ]}
         activeOpacity={isClickable ? 0.7 : 1}
         onPress={() => {
           if (isClickable) {
@@ -111,16 +156,21 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
           }
         }}
       >
-        <View style={styles.cardLeft}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{index + 1}</Text></View>
-          <View>
-            <Text style={[styles.studentPhone, { fontSize: 14, fontWeight: 'bold', color: COLORS.text }]}>{fullName}</Text>
-            <Text style={[styles.studentPhone, { marginTop: 2, fontSize: 12, color: COLORS.textLight }]}>شماره: {item.identifier}</Text>
-            {item.gradingStatus === 'graded' && <Text style={styles.scoreText}>نمره: {item.score}</Text>}
+        <View style={styles.studentCardRight}>
+          <View style={[styles.avatar, { backgroundColor: isDark ? '#1e293b' : '#eff6ff' }]}>
+            <Text style={[styles.avatarText, { color: colors.primary }]}>{index + 1}</Text>
+          </View>
+          <View style={{ marginRight: 10, flex: 1 }}>
+            <Text style={[styles.studentName, { color: colors.text }]} numberOfLines={1}>{fullName}</Text>
+            <Text style={[styles.studentMeta, { color: colors.textLight }]}>شماره دانش‌آموز: {item.identifier}</Text>
+            {item.gradingStatus === 'graded' && (
+              <Text style={styles.scoreText}>نمره کسب‌شده: {item.score}</Text>
+            )}
           </View>
         </View>
-        <View style={[styles.badge, { backgroundColor: statusDisplay.bg }]}>
-          <Text style={[styles.badgeText, { color: statusDisplay.color }]}>{statusDisplay.text}</Text>
+
+        <View style={[styles.statusBadge, { backgroundColor: statusDisplay.bg }]}>
+          <Text style={[styles.statusBadgeText, { color: statusDisplay.color }]}>{statusDisplay.text}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -158,111 +208,148 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
         endTime: isUntimed ? null : endTime.toISOString(),
       });
       if (response.data.success) {
-        Alert.alert('موفقیت', 'تنظیمات آزمون ذخیره شد');
+        showSuccess('تنظیمات آزمون ذخیره شد');
         fetchDashboardData();
       }
     } catch (error) {
-      Alert.alert('خطا', 'ویرایش تنظیمات امکان‌پذیر نیست.');
+      showError('ویرایش تنظیمات امکان‌پذیر نیست.');
     } finally {
       setIsSavingSettings(false);
     }
   };
 
-  const formatDate = (date: Date) => {
-    return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()} - ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
-  };
-
   const handleDeleteExam = () => {
-    Alert.alert(
-      'حذف آزمون',
-      'آیا از حذف این آزمون مطمئن هستید؟ این عملیات غیرقابل بازگشت است.',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        { 
-          text: 'حذف', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await api.delete(`/teacher/exams/${examId}`);
-              if (res.data.success) {
-                Alert.alert('موفقیت', 'آزمون حذف شد');
-                navigation.goBack();
-              }
-            } catch (err: any) {
-              Alert.alert('خطا', err.response?.data?.message || 'مشکلی در حذف آزمون رخ داد');
-            }
+    showConfirm({
+      title: 'حذف آزمون',
+      message: 'آیا از حذف این آزمون مطمئن هستید؟ این عملیات غیرقابل بازگشت است.',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          const res = await api.delete(`/teacher/exams/${examId}`);
+          if (res.data.success) {
+            showSuccess('آزمون با موفقیت حذف شد');
+            navigation.goBack();
           }
+        } catch (err: any) {
+          showError(err.response?.data?.message || 'مشکلی در حذف آزمون رخ داد');
         }
-      ]
-    );
+      },
+    });
   };
 
   const handleCloseExam = () => {
-    Alert.alert(
-      'بستن آزمون',
-      'آیا مطمئن هستید که می‌خواهید آزمون را هم‌اکنون ببندید؟ دانش‌آموزان دیگر قادر به ادامه یا ارسال پاسخ نخواهند بود.',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        { 
-          text: 'بستن آزمون', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const res = await api.patch(`/teacher/exams/${examId}/end`);
-              if (res.data.success) {
-                Alert.alert('موفقیت', 'آزمون بسته شد.');
-                setExamIsActive(false);
-                setTimeLeft(null);
-                fetchDashboardData();
-              }
-            } catch (err: any) {
-              Alert.alert('خطا', err.response?.data?.message || 'مشکلی رخ داد');
-            }
+    showConfirm({
+      title: 'بستن آزمون',
+      message: 'آیا مطمئن هستید که می‌خواهید آزمون را هم‌اکنون ببندید؟ دانش‌آموزان دیگر قادر به ادامه یا ارسال پاسخ نخواهند بود.',
+      confirmText: 'بستن آزمون',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'warning',
+      onConfirm: async () => {
+        try {
+          const res = await api.patch(`/teacher/exams/${examId}/end`);
+          if (res.data.success) {
+            showSuccess('آزمون بسته شد.');
+            setExamIsActive(false);
+            setTimeLeft(null);
+            fetchDashboardData();
           }
+        } catch (err: any) {
+          showError(err.response?.data?.message || 'مشکلی رخ داد');
         }
-      ]
-    );
+      },
+    });
   };
 
-  // استفاده از آدرس بیس تنظیم شده در کلاینت برای جلوگیری از مشکل لوکال هاست در گوشی
   const baseURL = api.defaults.baseURL || 'http://192.168.1.128:5001/api';
   const WEB_BASE_URL = baseURL.replace('/api', ''); 
   const examLink = `${WEB_BASE_URL}/exam/join/${examId}`;
 
+  const handleShareLink = () => {
+    Share.share({
+      title: examTitle,
+      message: `📚 لینک ورود به آزمون آنلاین: ${examTitle}\n\nجهت شرکت در آزمون، روی لینک زیر بزنید:\n${examLink}\n\n(بدون نیاز به نصب برنامه - قابل اجرا در مرورگر موبایل و رایانه)`
+    });
+  };
+
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Header with Safe Area Insets */}
+        <View style={[
+          styles.header, 
+          { 
+            backgroundColor: colors.surface, 
+            borderBottomColor: colors.border,
+            paddingTop: Math.max(insets.top, 12) + 8
+          }
+        ]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ChevronRight size={24} color={COLORS.textLight} />
-            <Text style={styles.backButtonText}>بازگشت</Text>
+            <ArrowRight size={22} color={colors.text} />
           </TouchableOpacity>
+
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle} numberOfLines={1}>{examTitle}</Text>
+            <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>{examTitle}</Text>
+            <Text style={[styles.headerSubtitle, { color: colors.primary }]}>مدیریت و وضعیت آزمون</Text>
           </View>
-          <TouchableOpacity style={{ width: 60, alignItems: 'flex-start', paddingLeft: 10 }} onPress={handleDeleteExam}>
+
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteExam}>
             <Trash2 size={20} color="#ef4444" />
           </TouchableOpacity>
         </View>
 
-        {/* نمایش لینک آزمون */}
-        <View style={styles.linkContainer}>
-          <Text style={styles.linkText} numberOfLines={1}>{examLink}</Text>
+        {/* Prominent Hero Share Card */}
+        <View style={[
+          styles.shareCard, 
+          { 
+            backgroundColor: isDark ? '#1e293b' : '#eff6ff', 
+            borderColor: isDark ? '#3b82f644' : '#bfdbfe' 
+          }
+        ]}>
+          <View style={styles.shareCardHeader}>
+            <View style={styles.shareCardTitleRow}>
+              <View style={[styles.shareIconCircle, { backgroundColor: colors.primary }]}>
+                <Share2 size={16} color="#ffffff" />
+              </View>
+              <View style={{ marginRight: 8, flex: 1 }}>
+                <Text style={[styles.shareCardTitle, { color: colors.text }]}>لینک اختصاصی شرکت در آزمون</Text>
+                <Text style={[styles.shareCardSubtitle, { color: colors.textLight }]}>
+                  اشتراک مستقیم با دانش‌آموزان کلاس در شاد، ایتا و بله
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <Text style={[styles.shareCardDescription, { color: isDark ? '#94a3b8' : '#475569' }]}>
+            دانش‌آموزان با لمس این پیوند در مرورگر گوشی یا کامپیوتر بدون نیاز به نصب هیچ برنامه‌ای وارد جلسه آزمون می‌شوند.
+          </Text>
+
+          {/* Link Container with Copy/Share button */}
+          <View style={[styles.linkBox, { backgroundColor: isDark ? '#0f172a' : '#ffffff', borderColor: colors.border }]}>
+            <Text style={[styles.linkUrlText, { color: colors.primary }]} numberOfLines={1} selectable>
+              {examLink}
+            </Text>
+          </View>
+
           <TouchableOpacity 
-            style={styles.shareButton} 
-            onPress={() => Share.share({ message: `لینک شرکت در آزمون ${examTitle}:\n${examLink}` })}
+            style={[styles.mainShareButton, { backgroundColor: colors.primary }]}
+            onPress={handleShareLink}
+            activeOpacity={0.8}
           >
-            <Share2 size={16} color="#fff" />
-            <Text style={styles.shareButtonText}>اشتراک</Text>
+            <Share2 size={16} color="#ffffff" />
+            <Text style={styles.mainShareButtonText}>ارسال لینک به دانش‌آموزان</Text>
           </TouchableOpacity>
         </View>
 
-        {/* وضعیت و دکمه بستن سریع آزمون */}
-        <View style={styles.statusContainer}>
+        {/* Quick Status Bar & Close Exam Action */}
+        <View style={[styles.statusContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.timerBox}>
-            <Text style={styles.timerLabel}>وضعیت:</Text>
+            <Text style={[styles.timerLabel, { color: colors.textLight }]}>وضعیت برگزاری:</Text>
             {isUntimed && examIsActive ? (
-              <Text style={styles.timerActiveText}>در حال برگزاری (بدون محدودیت)</Text>
+              <Text style={styles.timerActiveText}>در حال برگزاری (بدون محدودیت زمان)</Text>
             ) : timeLeft !== null ? (
               <Text style={styles.timerActiveText}>{formatTimeLeft(timeLeft)} مانده</Text>
             ) : !examIsActive ? (
@@ -282,104 +369,200 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
           )}
         </View>
 
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity style={[styles.tab, activeTab === 'participants' && styles.activeTab]} onPress={() => setActiveTab('participants')}>
-            <Users size={18} color={activeTab === 'participants' ? COLORS.primary : COLORS.textLight} />
-            <Text style={[styles.tabText, activeTab === 'participants' && styles.activeTabText]}>شرکت‌کنندگان</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, activeTab === 'questions' && styles.activeTab]} onPress={() => setActiveTab('questions')}>
-            <FileText size={18} color={activeTab === 'questions' ? COLORS.primary : COLORS.textLight} />
-            <Text style={[styles.tabText, activeTab === 'questions' && styles.activeTabText]}>سوالات</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, activeTab === 'settings' && styles.activeTab]} onPress={() => setActiveTab('settings')}>
-            <Settings size={18} color={activeTab === 'settings' ? COLORS.primary : COLORS.textLight} />
-            <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>تنظیمات</Text>
-          </TouchableOpacity>
+        {/* Horizontal Scrollable Tabs - Never Truncates Text */}
+        <View style={[styles.tabsWrapper, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabsScrollContent}
+          >
+            <TouchableOpacity 
+              style={[
+                styles.tabItem, 
+                activeTab === 'participants' && [styles.activeTabItem, { borderBottomColor: colors.primary }]
+              ]} 
+              onPress={() => setActiveTab('participants')}
+            >
+              <Users size={16} color={activeTab === 'participants' ? colors.primary : colors.textLight} />
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === 'participants' ? colors.primary : colors.textLight },
+                activeTab === 'participants' && styles.activeTabText
+              ]}>
+                شرکت‌کنندگان ({participants.length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.tabItem, 
+                activeTab === 'questions' && [styles.activeTabItem, { borderBottomColor: colors.primary }]
+              ]} 
+              onPress={() => setActiveTab('questions')}
+            >
+              <FileText size={16} color={activeTab === 'questions' ? colors.primary : colors.textLight} />
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === 'questions' ? colors.primary : colors.textLight },
+                activeTab === 'questions' && styles.activeTabText
+              ]}>
+                سوالات ({examQuestions.length})
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[
+                styles.tabItem, 
+                activeTab === 'settings' && [styles.activeTabItem, { borderBottomColor: colors.primary }]
+              ]} 
+              onPress={() => setActiveTab('settings')}
+            >
+              <Settings size={16} color={activeTab === 'settings' ? colors.primary : colors.textLight} />
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === 'settings' ? colors.primary : colors.textLight },
+                activeTab === 'settings' && styles.activeTabText
+              ]}>
+                تنظیمات آزمون
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
+        {/* Tab Content */}
         {isLoading ? (
-          <View style={styles.centerBox}><ActivityIndicator size="large" color={COLORS.primary} /></View>
+          <View style={styles.centerBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textLight }]}>در حال بارگذاری اطلاعات آزمون...</Text>
+          </View>
         ) : activeTab === 'participants' ? (
           <View style={{ flex: 1 }}>
-            <FlatList
-              data={participants}
-              keyExtractor={(item) => item.identifier}
-              renderItem={renderStudentItem}
-              contentContainerStyle={styles.listContainer}
-              showsVerticalScrollIndicator={false}
-            />
-            <View style={[styles.footerButtons, { bottom: Math.max(insets.bottom, 10) }]}>
-              <TouchableOpacity 
-                style={styles.finalizeBtn} 
-                onPress={() => navigation.navigate('FinalizeGradesScreen', { examId, examTitle })}
-              >
-                <Text style={styles.finalizeBtnText}>📋 ثبت نهایی در دفتر کلاسی</Text>
-              </TouchableOpacity>
-            </View>
+            {participants.length === 0 ? (
+              <View style={styles.centerBox}>
+                <Users size={48} color={colors.textLight} />
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>هنوز دانش‌آموزی در آزمون شرکت نکرده است.</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.textLight }]}>
+                  لینک آزمون را برای دانش‌آموزان کلاس ارسال کنید.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={participants}
+                keyExtractor={(item) => item.identifier}
+                renderItem={renderStudentItem}
+                contentContainerStyle={[styles.listContainer, { paddingBottom: 85 }]}
+                showsVerticalScrollIndicator={false}
+              />
+            )}
+            
+            {participants.length > 0 && (
+              <View style={[styles.footerButtons, { bottom: Math.max(insets.bottom, 12) }]}>
+                <TouchableOpacity 
+                  style={[styles.finalizeBtn, { backgroundColor: '#16a34a' }]} 
+                  onPress={() => navigation.navigate('FinalizeGradesScreen', { examId, examTitle })}
+                >
+                  <Text style={styles.finalizeBtnText}>📋 ثبت نهایی نمرات در دفتر کلاسی</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         ) : activeTab === 'questions' ? (
           <View style={{ flex: 1 }}>
-            <View style={styles.questionsHeader}>
-              <Text style={styles.questionsCountText}>تعداد سوالات: {examQuestions.length}</Text>
+            <View style={[styles.questionsHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.questionsCountText, { color: colors.text }]}>
+                تعداد کل سوالات: <Text style={{ color: colors.primary, fontWeight: 'bold' }}>{examQuestions.length}</Text>
+              </Text>
               <TouchableOpacity 
-                style={styles.editQuestionsBtn}
+                style={[styles.editQuestionsBtn, { backgroundColor: isDark ? '#1e293b' : '#eff6ff' }]}
                 onPress={() => navigation.navigate('EditExamScreen', { examId, examTitle })}
               >
-                <Edit3 size={14} color={COLORS.primary} style={{ marginRight: 4 }} />
-                <Text style={styles.editQuestionsBtnText}>ویرایش سوالات</Text>
+                <Edit3 size={14} color={colors.primary} style={{ marginLeft: 4 }} />
+                <Text style={[styles.editQuestionsBtnText, { color: colors.primary }]}>ویرایش سوالات</Text>
               </TouchableOpacity>
             </View>
             <FlatList
               data={examQuestions}
               keyExtractor={(item, index) => item._id || index.toString()}
               renderItem={({ item, index }) => (
-                <View style={styles.questionCard}>
-                  <Text style={styles.questionNumber}>سوال {index + 1}</Text>
-                  <Text style={styles.questionText}>{item.question}</Text>
+                <View style={[styles.questionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={styles.questionCardHeader}>
+                    <Text style={[styles.questionNumber, { color: colors.primary }]}>سوال {index + 1}</Text>
+                    {item.type && (
+                      <View style={[styles.typeBadge, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}>
+                        <Text style={[styles.typeBadgeText, { color: colors.textLight }]}>{item.type}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.questionText, { color: colors.text }]}>
+                    {item.question ? item.question.replace(/<[^>]+>/g, '').trim() : ''}
+                  </Text>
                 </View>
               )}
-              contentContainerStyle={[styles.listContainer, { paddingTop: 8 }]}
+              contentContainerStyle={[styles.listContainer, { paddingTop: 10, paddingBottom: 40 }]}
             />
           </View>
         ) : (
           <ScrollView contentContainerStyle={[styles.listContainer, { paddingBottom: Math.max(insets.bottom, 40) }]}>
-            <View style={styles.formCard}>
-              <Text style={styles.label}>عنوان آزمون</Text>
-              <TextInput style={styles.input} value={title} onChangeText={setTitle} textAlign="right" />
+            <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[styles.label, { color: colors.text }]}>عنوان آزمون</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', color: colors.text, borderColor: colors.border }]} 
+                value={title} 
+                onChangeText={setTitle} 
+                textAlign="right" 
+              />
 
-              <Text style={styles.label}>نمره کل</Text>
-              <TextInput style={styles.input} value={totalScore} onChangeText={setTotalScore} keyboardType="numeric" textAlign="center" />
+              <Text style={[styles.label, { color: colors.text }]}>نمره کل آزمون</Text>
+              <TextInput 
+                style={[styles.input, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', color: colors.text, borderColor: colors.border }]} 
+                value={totalScore} 
+                onChangeText={setTotalScore} 
+                keyboardType="numeric" 
+                textAlign="right" 
+              />
 
-              <View style={styles.switchRow}>
+              <View style={[styles.switchRow, { borderBottomColor: colors.border }]}>
                 <Switch
                   value={isUntimed}
                   onValueChange={setIsUntimed}
                   trackColor={{ false: '#cbd5e1', true: '#bbf7d0' }}
                   thumbColor={isUntimed ? '#16a34a' : '#f8fafc'}
                 />
-                <Text style={styles.switchLabel}>آزمون آزاد (بدون زمان)</Text>
+                <Text style={[styles.switchLabel, { color: colors.text }]}>آزمون آزاد (بدون محدودیت زمانی)</Text>
               </View>
 
               {!isUntimed && (
                 <>
-                  <Text style={styles.label}>زمان شروع آزمون</Text>
-                  <TouchableOpacity style={styles.datePickerBtn} onPress={() => showDateTimePicker('start')}>
-                    <Text style={styles.datePickerText}>{formatDate(startTime)}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>زمان شروع آزمون</Text>
+                  <TouchableOpacity 
+                    style={[styles.datePickerBtn, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]} 
+                    onPress={() => showDateTimePicker('start')}
+                  >
+                    <Calendar size={15} color={colors.primary} style={{ marginLeft: 6 }} />
+                    <Text style={[styles.datePickerText, { color: colors.text }]}>{formatJalaliDateTime(startTime)}</Text>
                   </TouchableOpacity>
 
-                  <Text style={styles.label}>زمان پایان آزمون</Text>
-                  <TouchableOpacity style={styles.datePickerBtn} onPress={() => showDateTimePicker('end')}>
-                    <Text style={styles.datePickerText}>{formatDate(endTime)}</Text>
+                  <Text style={[styles.label, { color: colors.text }]}>زمان پایان آزمون</Text>
+                  <TouchableOpacity 
+                    style={[styles.datePickerBtn, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]} 
+                    onPress={() => showDateTimePicker('end')}
+                  >
+                    <Clock size={15} color={colors.primary} style={{ marginLeft: 6 }} />
+                    <Text style={[styles.datePickerText, { color: colors.text }]}>{formatJalaliDateTime(endTime)}</Text>
                   </TouchableOpacity>
                 </>
               )}
 
               <TouchableOpacity 
-                style={styles.saveBtn} 
+                style={[styles.saveBtn, { backgroundColor: colors.primary }]} 
                 onPress={handleSaveSettings} 
                 disabled={isSavingSettings}
               >
-                {isSavingSettings ? <ActivityIndicator color={COLORS.surface} /> : <Text style={styles.saveBtnText}>ذخیره تنظیمات</Text>}
+                {isSavingSettings ? (
+                  <ActivityIndicator color="#ffffff" size="small" />
+                ) : (
+                  <Text style={styles.saveBtnText}>ذخیره تغییرات آزمون</Text>
+                )}
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -390,76 +573,393 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 40, paddingBottom: 16, backgroundColor: COLORS.surface, elevation: 2 },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text, textAlign: 'center' },
-  backButton: { flexDirection: 'row', alignItems: 'center', width: 60 },
-  backButtonText: { color: COLORS.textLight, fontSize: 13, marginRight: 4 },
-  
-  linkContainer: { 
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#eff6ff', margin: 12, marginBottom: 0, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#bfdbfe' 
+  container: { 
+    flex: 1 
   },
-  linkText: { flex: 1, textAlign: 'left', fontSize: 11, color: '#1e40af', marginRight: 8 },
-  shareButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3b82f6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
-  shareButtonText: { color: '#fff', fontSize: 11, fontWeight: 'bold', marginRight: 4 },
-  
+  header: { 
+    flexDirection: 'row-reverse', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingBottom: 14, 
+    borderBottomWidth: 1, 
+    elevation: 2, 
+    zIndex: 10 
+  },
+  headerCenter: { 
+    flex: 1, 
+    alignItems: 'center' 
+  },
+  headerTitle: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    textAlign: 'center' 
+  },
+  headerSubtitle: { 
+    fontSize: 12, 
+    marginTop: 2, 
+    textAlign: 'center' 
+  },
+  backButton: { 
+    padding: 8 
+  },
+  deleteButton: { 
+    padding: 8 
+  },
+
+  shareCard: {
+    margin: 14,
+    marginBottom: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+  },
+  shareCardHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  shareCardTitleRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    flex: 1,
+  },
+  shareIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shareCardTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'right',
+  },
+  shareCardSubtitle: {
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  shareCardDescription: {
+    fontSize: 12,
+    lineHeight: 19,
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  linkBox: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  linkUrlText: {
+    fontSize: 12,
+    textAlign: 'left',
+    fontWeight: '600',
+  },
+  mainShareButton: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 11,
+    borderRadius: 10,
+  },
+  mainShareButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+  },
+
   statusContainer: { 
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', 
-    marginHorizontal: 12, marginTop: 12, padding: 12, 
-    backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: COLORS.border 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginHorizontal: 14, 
+    marginBottom: 8, 
+    padding: 12, 
+    borderRadius: 12, 
+    borderWidth: 1, 
   },
-  timerBox: { flexDirection: 'row', alignItems: 'center' },
-  timerLabel: { fontSize: 12, color: COLORS.textLight, marginLeft: 6, fontWeight: 'bold' },
-  timerActiveText: { fontSize: 13, color: '#059669', fontWeight: 'bold' },
-  timerClosedText: { fontSize: 13, color: '#dc2626', fontWeight: 'bold' },
-  timerPendingText: { fontSize: 13, color: '#d97706', fontWeight: 'bold' },
-  
-  closeExamBtn: { backgroundColor: '#fee2e2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: '#fca5a5' },
-  closeExamBtnText: { color: '#dc2626', fontSize: 11, fontWeight: 'bold' },
+  timerBox: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center',
+    gap: 6,
+  },
+  timerLabel: { 
+    fontSize: 12, 
+    fontWeight: 'bold',
+    textAlign: 'right' 
+  },
+  timerActiveText: { 
+    fontSize: 12, 
+    color: '#059669', 
+    fontWeight: 'bold' 
+  },
+  timerClosedText: { 
+    fontSize: 12, 
+    color: '#dc2626', 
+    fontWeight: 'bold' 
+  },
+  timerPendingText: { 
+    fontSize: 12, 
+    color: '#d97706', 
+    fontWeight: 'bold' 
+  },
+  closeExamBtn: { 
+    backgroundColor: '#fee2e2', 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 8, 
+    borderWidth: 1, 
+    borderColor: '#fca5a5' 
+  },
+  closeExamBtnText: { 
+    color: '#dc2626', 
+    fontSize: 11, 
+    fontWeight: 'bold' 
+  },
 
-  tabsContainer: { flexDirection: 'row', backgroundColor: COLORS.surface, borderBottomWidth: 1, borderBottomColor: COLORS.border, marginTop: 12 },
-  tab: { flex: 1, flexDirection: 'row', paddingVertical: 12, alignItems: 'center', justifyContent: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent', gap: 6 },
-  activeTab: { borderBottomColor: COLORS.primary },
-  tabText: { fontSize: 13, color: COLORS.textLight, fontWeight: 'bold' },
-  activeTabText: { color: COLORS.primary },
-  
-  listContainer: { padding: 12, paddingBottom: 80 },
-  card: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 12, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
-  cardDisabled: { backgroundColor: '#fafafa' },
-  cardLeft: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#eff6ff', justifyContent: 'center', alignItems: 'center', marginLeft: 10 },
-  avatarText: { color: COLORS.primary, fontWeight: 'bold', fontSize: 12 },
-  studentPhone: { fontSize: 14, fontWeight: 'bold', color: COLORS.text },
-  scoreText: { fontSize: 11, color: '#166534', fontWeight: 'bold', marginTop: 2, textAlign: 'left' },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  badgeText: { fontSize: 10, fontWeight: 'bold' },
-  
-  centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  
-  finalizeBtn: { backgroundColor: '#16a34a', padding: 14, borderRadius: 10, alignItems: 'center', flex: 1 },
-  finalizeBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 13 },
-  footerButtons: { position: 'absolute', left: 16, right: 16 },
+  tabsWrapper: {
+    borderBottomWidth: 1,
+  },
+  tabsScrollContent: {
+    flexDirection: 'row-reverse',
+    paddingHorizontal: 12,
+  },
+  tabItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 2.5,
+    borderBottomColor: 'transparent',
+  },
+  activeTabItem: {},
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  activeTabText: {
+    fontWeight: 'bold',
+  },
 
-  questionsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  questionsCountText: { fontSize: 13, color: COLORS.textLight, fontWeight: 'bold' },
-  editQuestionsBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#eff6ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  editQuestionsBtnText: { fontSize: 12, color: COLORS.primary, fontWeight: 'bold' },
-  
-  questionCard: { backgroundColor: COLORS.surface, padding: 14, borderRadius: 10, marginBottom: 10, borderWidth: 1, borderColor: COLORS.border },
-  questionNumber: { fontSize: 13, fontWeight: 'bold', color: COLORS.primary, marginBottom: 6, textAlign: 'left' },
-  questionText: { fontSize: 14, color: COLORS.text, textAlign: 'left', lineHeight: 22 },
+  listContainer: { 
+    padding: 14 
+  },
+  studentCard: { 
+    flexDirection: 'row-reverse', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 12, 
+    borderRadius: 12, 
+    marginBottom: 10, 
+    borderWidth: 1, 
+  },
+  studentCardRight: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center',
+    flex: 1, 
+  },
+  avatar: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+  },
+  avatarText: { 
+    fontWeight: 'bold', 
+    fontSize: 12 
+  },
+  studentName: { 
+    fontSize: 13, 
+    fontWeight: 'bold',
+    textAlign: 'right' 
+  },
+  studentMeta: { 
+    fontSize: 11, 
+    marginTop: 2,
+    textAlign: 'right' 
+  },
+  scoreText: { 
+    fontSize: 11, 
+    color: '#166534', 
+    fontWeight: 'bold', 
+    marginTop: 3, 
+    textAlign: 'right' 
+  },
+  statusBadge: { 
+    paddingHorizontal: 8, 
+    paddingVertical: 4, 
+    borderRadius: 8 
+  },
+  statusBadgeText: { 
+    fontSize: 11, 
+    fontWeight: 'bold' 
+  },
 
-  formCard: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: COLORS.border, marginBottom: 20 },
-  label: { fontSize: 13, fontWeight: 'bold', color: COLORS.text, marginBottom: 6, textAlign: 'left' },
-  input: { borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, padding: 10, fontSize: 14, backgroundColor: '#f8fafc', marginBottom: 16 },
-  switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  switchLabel: { fontSize: 13, color: COLORS.text, fontWeight: '500' },
-  datePickerBtn: { backgroundColor: '#f8fafc', borderWidth: 1, borderColor: COLORS.border, padding: 12, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
-  datePickerText: { fontSize: 14, color: COLORS.text, letterSpacing: 1 },
-  saveBtn: { backgroundColor: COLORS.primary, padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 10 },
-  saveBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 14 },
+  centerBox: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    padding: 30 
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+  },
+  emptyTitle: {
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    marginTop: 6,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+
+  finalizeBtn: { 
+    paddingVertical: 14, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    flex: 1 
+  },
+  finalizeBtnText: { 
+    color: '#ffffff', 
+    fontWeight: 'bold', 
+    fontSize: 14 
+  },
+  footerButtons: { 
+    position: 'absolute', 
+    left: 16, 
+    right: 16 
+  },
+
+  questionsHeader: { 
+    flexDirection: 'row-reverse', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingTop: 12, 
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+  },
+  questionsCountText: { 
+    fontSize: 13, 
+    textAlign: 'right' 
+  },
+  editQuestionsBtn: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 8 
+  },
+  editQuestionsBtnText: { 
+    fontSize: 12, 
+    fontWeight: 'bold' 
+  },
+
+  questionCard: { 
+    padding: 14, 
+    borderRadius: 12, 
+    marginBottom: 10, 
+    borderWidth: 1, 
+  },
+  questionCardHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  questionNumber: { 
+    fontSize: 13, 
+    fontWeight: 'bold', 
+    textAlign: 'right' 
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  questionText: { 
+    fontSize: 13, 
+    textAlign: 'right', 
+    lineHeight: 22 
+  },
+
+  formCard: { 
+    padding: 16, 
+    borderRadius: 14, 
+    borderWidth: 1, 
+    marginBottom: 20 
+  },
+  label: { 
+    fontSize: 13, 
+    fontWeight: 'bold', 
+    marginBottom: 6, 
+    textAlign: 'right' 
+  },
+  input: { 
+    borderWidth: 1, 
+    borderRadius: 10, 
+    padding: 12, 
+    fontSize: 14, 
+    marginBottom: 16 
+  },
+  switchRow: { 
+    flexDirection: 'row-reverse', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 16, 
+    paddingVertical: 10, 
+    borderBottomWidth: 1, 
+  },
+  switchLabel: { 
+    fontSize: 13, 
+    fontWeight: '600',
+    textAlign: 'right' 
+  },
+  datePickerBtn: { 
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    borderWidth: 1, 
+    padding: 12, 
+    borderRadius: 10, 
+    marginBottom: 16, 
+    justifyContent: 'flex-start',
+  },
+  datePickerText: { 
+    fontSize: 13, 
+    fontWeight: '600' 
+  },
+  saveBtn: { 
+    padding: 14, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    marginTop: 8 
+  },
+  saveBtnText: { 
+    color: '#ffffff', 
+    fontWeight: 'bold', 
+    fontSize: 14 
+  },
 });
 
 export default ExamDashboardScreen;

@@ -111,13 +111,22 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate, initialClassId }:
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <TouchableOpacity 
+          style={{ flex: 1, width: '100%' }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={[styles.modalContainer, { backgroundColor: colors.background, paddingBottom: 80 }]}>
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.text }]}>یادداشت جدید</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <X color={colors.text} size={24} />
             </TouchableOpacity>
-            <Text style={[styles.title, { color: colors.text }]}>یادداشت جدید</Text>
-            <View style={{ width: 24 }} />
           </View>
 
           <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
@@ -265,7 +274,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
@@ -278,6 +287,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
+    textAlign: 'right',
   },
   form: {
     padding: 20,
@@ -288,6 +298,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
     marginTop: 16,
+    textAlign: 'right',
   },
   input: {
     borderWidth: 1,
@@ -296,9 +307,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 14,
     fontFamily: 'IRANSansX',
+    textAlign: 'right',
   },
   switchRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
@@ -340,7 +352,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold'
   },
   colorsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 12,
     marginTop: 8,
@@ -358,8 +370,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 16,
+    paddingBottom: 24,
     borderTopWidth: 1,
-    backgroundColor: '#fff',
   },
   saveBtn: {
     paddingVertical: 14,

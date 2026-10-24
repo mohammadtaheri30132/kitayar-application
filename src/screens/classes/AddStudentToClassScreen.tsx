@@ -6,11 +6,11 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showWarning, showSuccess, showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,7 +31,7 @@ const AddStudentToClassScreen = ({ route, navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!firstName.trim() || !lastName.trim() || !fatherName.trim()) {
-      Alert.alert('توجه', 'لطفاً نام، نام خانوادگی و نام پدر را وارد کنید.');
+      showWarning('لطفاً نام، نام خانوادگی و نام پدر را وارد کنید.');
       return;
     }
 
@@ -39,12 +39,12 @@ const AddStudentToClassScreen = ({ route, navigation }: any) => {
     if (!phoneToUse) {
       phoneToUse = `0900${Math.floor(1000000 + Math.random() * 9000000)}`;
     } else if (phoneToUse.length !== 11 || !phoneToUse.startsWith('09')) {
-      Alert.alert('خطا', 'شماره موبایل نامعتبر است (مثال: 09123456789)');
+      showWarning('شماره موبایل نامعتبر است (مثال: 09123456789)');
       return;
     }
 
     if (parentPhone.trim() && (parentPhone.trim().length !== 11 || !parentPhone.trim().startsWith('09'))) {
-      Alert.alert('خطا', 'شماره والدین نامعتبر است (مثال: 09123456789)');
+      showWarning('شماره والدین نامعتبر است (مثال: 09123456789)');
       return;
     }
 
@@ -65,15 +65,11 @@ const AddStudentToClassScreen = ({ route, navigation }: any) => {
       });
       
       if (response.data.success) {
-        Alert.alert('موفقیت', 'دانش‌آموز با موفقیت به کلاس اضافه شد.', [
-          { 
-            text: 'متوجه شدم', 
-            onPress: () => navigation.goBack() 
-          }
-        ]);
+        showSuccess('دانش‌آموز با موفقیت به کلاس اضافه شد.');
+        navigation.goBack();
       }
     } catch (error: any) {
-      Alert.alert('خطا', error.response?.data?.message || 'مشکلی در افزودن دانش‌آموز رخ داد.');
+      showError(error.response?.data?.message || 'مشکلی در افزودن دانش‌آموز رخ داد.');
     } finally {
       setIsSubmitting(false);
     }

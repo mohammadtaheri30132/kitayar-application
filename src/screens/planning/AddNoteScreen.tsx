@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, TextInput, 
-  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Switch, NativeModules, Image, Alert
+  ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform, Modal, Switch, NativeModules, Image
 } from 'react-native';
+import { showDialog, showSuccess, showError } from '../../components/feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronRight, Image as ImageIcon, Mic, X, Play, Type } from 'lucide-react-native';
 import { PlanningService } from '../../api/planningService';
@@ -70,15 +71,15 @@ const AddNoteScreen = ({ navigation, route }: any) => {
   };
 
   const addImageBlock = () => {
-    Alert.alert(
-      "انتخاب تصویر",
-      "از کجا می‌خواهید تصویر را انتخاب کنید؟",
-      [
-        { text: "دوربین", onPress: () => openCamera() },
-        { text: "گالری", onPress: () => openGallery() },
-        { text: "انصراف", style: "cancel" }
+    showDialog({
+      title: 'انتخاب تصویر',
+      message: 'از کجا می‌خواهید تصویر را انتخاب کنید؟',
+      buttons: [
+        { text: 'دوربین', onPress: () => openCamera() },
+        { text: 'گالری', onPress: () => openGallery() },
+        { text: 'انصراف', style: 'cancel' }
       ]
-    );
+    });
   };
 
   const openCamera = async () => {
@@ -155,10 +156,12 @@ const AddNoteScreen = ({ navigation, route }: any) => {
       } else {
         await PlanningService.createNote(payload);
       }
+      showSuccess(isEditing ? 'یادداشت با موفقیت ویرایش شد.' : 'یادداشت با موفقیت ذخیره شد.');
       setSaveModalVisible(false);
       navigation.goBack();
     } catch (e) {
       console.warn(e);
+      showError('خطا در ذخیره یادداشت.');
     } finally {
       setIsSaving(false);
     }

@@ -1,7 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { 
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView, Modal 
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Modal 
 } from 'react-native';
+import { showError, showSuccess } from '../../components/feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
@@ -37,7 +38,7 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
         setActions(initialActions);
       }
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات پیش‌نمایش رخ داد.');
+      showError('مشکلی در دریافت اطلاعات پیش‌نمایش رخ داد.');
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +54,7 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
         fetchPreview();
       }
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در ثبت تغییرات رخ داد.');
+      showError('مشکلی در ثبت تغییرات رخ داد.');
     }
   };
 
@@ -71,11 +72,10 @@ const FinalizeGradesScreen = ({ route, navigation }: any) => {
         await api.post(`/teacher/exams/${examId}/finalize`, { actions: pendingActions });
       }
       
-      Alert.alert('موفقیت', 'نمرات با موفقیت بررسی و در دفتر کلاسی ثبت شد.', [
-        { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-      ]);
+      showSuccess('نمرات با موفقیت بررسی و در دفتر کلاسی ثبت شد.');
+      navigation.goBack();
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در ثبت نهایی رخ داد.');
+      showError('مشکلی در ثبت نهایی رخ داد.');
     } finally {
       setIsFinalizing(false);
     }

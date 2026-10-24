@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     NativeModules,
-  View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  View, Text, TouchableOpacity, FlatList, StyleSheet, 
   ActivityIndicator, Image, Modal, TextInput 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import FilePickerModule from '../../native/FilePicker';
 import PdfConverterModule from '../../native/PdfConverter';
 import { saveToolHistory, getToolHistory, deleteToolHistory } from '../../services/ToolHistoryManager';
 import { COLORS } from '../../theme/colors';
+import { showSuccess, showError, showConfirm } from '../../components/feedback';
 
 const { FileShareModule, FileSaverModule } = NativeModules;
 
@@ -43,7 +44,7 @@ const ConverterScreen = ({ route, navigation }) => {
       setOutputFileName(`Sanad_${Date.now()}`);
       setIsImagesModalVisible(true);
     } catch (err) {
-      if (err.code !== 'CANCELLED') Alert.alert("خطا", err.message);
+      if (err.code !== 'CANCELLED') showError(err.message || 'خطا در انتخاب تصاویر');
     }
   };
 
@@ -64,7 +65,7 @@ const ConverterScreen = ({ route, navigation }) => {
   };
 
   const handleConfirmImagesToPdf = async () => {
-    if (selectedImages.length === 0) return Alert.alert("خطا", "عکسی انتخاب نشده است.");
+    if (selectedImages.length === 0) return showError("عکسی انتخاب نشده است.");
     setIsImagesModalVisible(false);
     setIsLoading(true);
     
@@ -78,8 +79,9 @@ const ConverterScreen = ({ route, navigation }) => {
       await saveToolHistory(toolType, `${finalName}.pdf`, resultPath, sizeStr, 'PDF');
       loadHistory();
       setSelectedImages([]);
+      showSuccess("فایل PDF با موفقیت ایجاد شد.");
     } catch (err) {
-      Alert.alert("خطا در ساخت PDF", err.message);
+      showError(err.message || "خطا در ساخت PDF");
     } finally {
       setIsLoading(false);
     }
@@ -104,20 +106,30 @@ const ConverterScreen = ({ route, navigation }) => {
           await saveToolHistory(toolType, fileName, path, sizeStr, 'PNG');
         }
         loadHistory();
-        Alert.alert("عملیات موفق", `${resultPaths.length} عکس استخراج شد.`);
+        showSuccess(`${resultPaths.length} عکس استخراج شد.`);
       }
     } catch (err) {
       if (err !== 'CANCELLED' && err?.message !== 'عملیات لغو شد') {
-        Alert.alert("خطا", err.message || JSON.stringify(err));
+        showError(err.message || "خطا در پردازش فایل");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    const updatedList = await deleteToolHistory(toolType, id);
-    setHistory(updatedList);
+  const handleDelete = (id) => {
+    showConfirm({
+      title: 'حذف از تاریخچه',
+      message: 'آیا از حذف این مورد از تاریخچه اطمینان دارید؟',
+      type: 'danger',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      onConfirm: async () => {
+        const updatedList = await deleteToolHistory(toolType, id);
+        setHistory(updatedList);
+        showSuccess('آیتم با موفقیت حذف شد.');
+      },
+    });
   };
 
   const handleShare = async (path, format) => {
@@ -125,7 +137,7 @@ const ConverterScreen = ({ route, navigation }) => {
       const mimeType = format === 'PDF' ? 'application/pdf' : 'image/png';
       await FileShareModule.shareFile(path, mimeType);
     } catch (err) {
-      Alert.alert("خطا", "امکان اشتراک‌گذاری این فایل وجود ندارد.");
+      showError("امکان اشتراک‌گذاری این فایل وجود ندارد.");
     }
   };
 
@@ -139,10 +151,10 @@ const ConverterScreen = ({ route, navigation }) => {
       setTimeout(() => {
         setSavedItems(prev => ({ ...prev, [item.id]: false }));
       }, 3000);
-      
+      showSuccess(isImage ? 'تصویر در گالری ذخیره شد.' : 'فایل PDF در حافظه دستگاه ذخیره شد.');
     } catch (err) {
       console.log('Error saving file:', err);
-      Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد. لطفاً دسترسی حافظه را بررسی کنید.");
+      showError("ذخیره فایل با مشکل مواجه شد. لطفاً دسترسی حافظه را بررسی کنید.");
     }
   };
 

@@ -8,9 +8,9 @@ import {
   ScrollView, 
   Image, 
   ActivityIndicator, 
-  Alert, 
   I18nManager 
 } from 'react-native';
+import { showError, showWarning, showSuccess } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ChevronRight, ChevronLeft, Image as ImageIcon, X } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
@@ -37,7 +37,7 @@ const NewPostScreen = ({ navigation }: any) => {
       });
 
       if (image.size && image.size > 10 * 1024 * 1024) {
-        Alert.alert('خطا', 'حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد.');
+        showWarning('حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد.');
         return;
       }
 
@@ -52,7 +52,7 @@ const NewPostScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!text.trim() && !localImageUri) {
-      Alert.alert('خطا', 'لطفاً متن پست یا یک تصویر اضافه کنید.');
+      showWarning('لطفاً متن پست یا یک تصویر اضافه کنید.');
       return;
     }
 
@@ -78,12 +78,11 @@ const NewPostScreen = ({ navigation }: any) => {
         images,
       });
 
-      Alert.alert('موفقیت', 'پست شما با موفقیت منتشر شد.', [
-        { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-      ]);
+      showSuccess('پست شما با موفقیت منتشر شد.');
+      navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'خطا در انتشار پست. لطفاً اتصال اینترنت را بررسی کنید.';
-      Alert.alert('خطا', msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
       setUploadProgressText('');

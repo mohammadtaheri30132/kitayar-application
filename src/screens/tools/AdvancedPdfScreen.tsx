@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, 
   ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Modal
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,6 +14,7 @@ import {
 import FilePickerModule from '../../native/FilePicker';
 import { saveToolHistory, getToolHistory, deleteToolHistory } from '../../services/ToolHistoryManager';
 import { COLORS } from '../../theme/colors';
+import { showSuccess, showError, showWarning, showConfirm } from '../../components/feedback';
 
 const { FileShareModule, FileSaverModule, AdvancedPdfModule } = NativeModules;
 
@@ -48,7 +49,7 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
 
   const handleProcessPdf = async () => {
     if (config.requiresParam && !toolParam.trim()) {
-      Alert.alert("خطا", `لطفاً ${config.paramPlaceholder} را وارد کنید.`);
+      showWarning(`لطفاً ${config.paramPlaceholder} را وارد کنید.`);
       return;
     }
 
@@ -68,7 +69,7 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
 
       if (!mainUri) return;
       if (isMerge && extraUris.length === 0) {
-        Alert.alert("توجه", "برای ترکیب، لطفاً حداقل دو فایل PDF انتخاب کنید.");
+        showWarning("برای ترکیب، لطفاً حداقل دو فایل PDF انتخاب کنید.");
         return;
       }
 
@@ -95,14 +96,14 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
       await saveToolHistory(toolId, outputFileName, resultPath, sizeStr, 'PDF');
       loadHistory();
       
-      Alert.alert("عملیات موفق", "پردازش فایل با موفقیت انجام شد.");
+      showSuccess("پردازش فایل با موفقیت انجام شد.");
       
       // اگر ابزار رمزگذاری بود، رمز را پاک نمی‌کنیم تا برای مشاهده کپی بگیریم یا در ذهن کاربر بماند
       if (toolId !== 'ENCRYPT_PDF') setToolParam('');
 
     } catch (err) {
       if (err !== 'CANCELLED' && err?.code !== 'CANCELLED') {
-        Alert.alert("خطا", err.message || "خطا در پردازش فایل PDF");
+        showError(err.message || "خطا در پردازش فایل PDF");
       }
     } finally {
       setIsLoading(false);
@@ -110,7 +111,6 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
   };
 
   // هندل کردن باز شدن نمایشگر PDF
-// هندل کردن باز شدن نمایشگر PDF
   const handleViewPdf = (item) => {
     if (toolId === 'ENCRYPT_PDF') {
       setSelectedHistoryItem(item);
@@ -124,7 +124,7 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
 
   const confirmViewPdf = () => {
     if (!pdfPassword.trim()) {
-      Alert.alert("توجه", "لطفاً رمز عبور را وارد کنید.");
+      showWarning("لطفاً رمز عبور را وارد کنید.");
       return;
     }
     setPasswordModalVisible(false);
@@ -135,18 +135,33 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
     });
   };
 
+  const handleDelete = (id) => {
+    showConfirm({
+      title: 'حذف از تاریخچه',
+      message: 'آیا از حذف این مورد از تاریخچه اطمینان دارید؟',
+      type: 'danger',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      onConfirm: async () => {
+        setHistory(await deleteToolHistory(toolId, id));
+        showSuccess('آیتم با موفقیت حذف شد.');
+      },
+    });
+  };
 
-
-  const handleDelete = async (id) => { setHistory(await deleteToolHistory(toolId, id)); };
   const handleShare = async (path) => {
     try { await FileShareModule.shareFile(path, 'application/pdf'); } catch (err) {}
   };
+
   const handleSaveToDevice = async (item) => {
     try {
       await FileSaverModule.saveFile(item.resultPath, false);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+      showSuccess('فایل با موفقیت ذخیره شد.');
+    } catch (err) { 
+      showError("ذخیره فایل با مشکل مواجه شد."); 
+    }
   };
 
   const IconComponent = config.Icon;

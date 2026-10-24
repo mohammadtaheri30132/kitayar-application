@@ -30,18 +30,7 @@ const InteractionHeader = ({ onSearchPress, navigation }: any) => {
 
       <Text style={[styles.title, { color: colors.text }]}>تعامل</Text>
 
-      <TouchableOpacity 
-        style={styles.profileBtn}
-        onPress={() => navigation?.navigate('ProfileScreen')}
-      >
-        <Text style={[styles.profileName, { color: colors.text }]}>{fullName}</Text>
-        <View style={[styles.avatarWrapper, { borderColor: '#bae6fd' }]}>
-          <Image 
-            source={{ uri: 'https://i.pravatar.cc/150?u=fake@pravatar.com' }} 
-            style={styles.avatar} 
-          />
-        </View>
-      </TouchableOpacity>
+      <View style={{ width: 40 }} />
     </View>
   );
 };

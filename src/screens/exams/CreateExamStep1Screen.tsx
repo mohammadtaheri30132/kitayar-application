@@ -6,21 +6,35 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showError, showWarning } from '../../components/feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
-import { COLORS } from '../../theme/colors';
 import * as jalaali from 'jalaali-js';
 import { PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
 import { CustomDropdown } from '../../components/common/CustomDropdown';
-import { School, BookOpen, Users, CheckCircle } from 'lucide-react-native';
+import { useTheme } from '../../context/ThemeContext';
+import { 
+  School, 
+  BookOpen, 
+  Users, 
+  CheckCircle, 
+  ArrowRight, 
+  ArrowLeft, 
+  FileText, 
+  Award, 
+  Calendar, 
+  Clock, 
+  Timer,
+  Sparkles
+} from 'lucide-react-native';
 
 const CreateExamStep1Screen = ({ route, navigation }: any) => {
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const passedClassId = route?.params?.classId || route?.params?.selectedClassroomId;
   const passedClassName = route?.params?.className;
   const passedClassroom = route?.params?.classroom;
@@ -83,7 +97,7 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
           }
         }
       } catch (error) {
-        Alert.alert('خطا', 'عدم موفقیت در دریافت لیست کلاس‌ها');
+        showError('عدم موفقیت در دریافت لیست کلاس‌ها');
       } finally {
         setIsLoadingClasses(false);
       }
@@ -93,7 +107,7 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
 
   const handleNextStep = async () => {
     if (!title.trim() || !selectedClassroomId) {
-      Alert.alert('توجه', 'نام آزمون و کلاس الزامی است.');
+      showWarning('نام آزمون و کلاس الزامی است.');
       return;
     }
 
@@ -105,7 +119,7 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
       const endDateTime = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd, parseInt(endHour), parseInt(endMinute));
 
       if (startDateTime < new Date()) {
-        Alert.alert('توجه', 'تاریخ و ساعت شروع آزمون نمی‌تواند در گذشته باشد.');
+        showWarning('تاریخ و ساعت شروع آزمون نمی‌تواند در گذشته باشد.');
         setIsSubmitting(false);
         return;
       }
@@ -119,12 +133,11 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
         allowedParticipants: [],
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
-        randomizeQuestions: true, // پیش‌فرض
+        randomizeQuestions: true,
         isUntimed: false
       });
 
       if (response.data.success) {
-        // دریافت examId از بک‌اند و هدایت به مرحله دوم (انتخاب سوالات)
         const newExamId = response.data.data.examId;
         navigation.navigate('CreateExamStep2Screen', { 
           examId: newExamId,
@@ -134,125 +147,203 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
     } catch (error: any) {
       console.log('Error creating exam:', error.response?.data || error.message);
       const errorMessage = error.response?.data?.message || 'خطا در ایجاد آزمون';
-      Alert.alert('خطا', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // رندر کردن کلاس‌ها به صورت افقی (Chips)
+  // رندر کردن دراپ‌دان انتخاب کلاس هدف
   const renderClassSelector = () => {
-    if (isLoadingClasses) return <ActivityIndicator color={COLORS.primary} />;
-    if (classes.length === 0) return <Text style={styles.errorText}>ابتدا باید یک کلاس بسازید</Text>;
+    if (isLoadingClasses) return <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />;
+    if (classes.length === 0) return <Text style={[styles.errorText, { color: colors.error }]}>ابتدا باید یک کلاس بسازید</Text>;
+
+    const classItems = classes.map((cls) => {
+      const gradeStr = cls.grade?.name ? ` · پایه ${cls.grade.name}` : (cls.grade ? ` · پایه ${cls.grade}` : '');
+      const courseStr = cls.course?.name || cls.subjectName || '';
+      const subLabel = [courseStr, gradeStr].filter(Boolean).join('');
+      return {
+        id: cls._id,
+        label: subLabel ? `${cls.name} (${subLabel})` : cls.name,
+        value: cls._id,
+      };
+    });
 
     return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipContainer}>
-        {classes.map((cls) => {
-          const isSelected = cls._id === selectedClassroomId;
-          return (
-            <TouchableOpacity
-              key={cls._id}
-              activeOpacity={0.7}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-              onPress={() => setSelectedClassroomId(cls._id)}
-            >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                {cls.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <CustomDropdown
+        items={classItems}
+        selectedValue={selectedClassroomId}
+        onSelect={(item) => setSelectedClassroomId(item.value)}
+        placeholder="کلاس هدف را انتخاب کنید..."
+      />
     );
   };
 
   const selectedClass = classes.find((c: any) => c._id === selectedClassroomId) || passedClassroom;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>🔙 انصراف</Text>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      {/* هدر مدرن سازگار با اینست‌ها و تم */}
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: colors.surface, 
+          borderBottomColor: colors.border,
+          paddingTop: Math.max(insets.top, 12) + 8
+        }
+      ]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+          <ArrowRight size={22} color={colors.text} />
         </TouchableOpacity>
+        
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>ساخت آزمون (مرحله ۱)</Text>
-          <Text style={styles.headerSubtitle}>تنظیمات اولیه و کلاس</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>ساخت آزمون آنلاین</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.primary }]}>مرحله اول: مشخصات و زمان‌بندی</Text>
         </View>
-        <View style={{ width: 60 }} />
+
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <View style={styles.formContainer}>
+      <ScrollView 
+        contentContainerStyle={[styles.scrollContainer, { backgroundColor: colors.background }]} 
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* مراحل ساخت آزمون (استپ بار) */}
+        <View style={styles.stepsContainer}>
+          <View style={[styles.stepPillActive, { backgroundColor: colors.primary }]}>
+            <View style={styles.stepNumberCircleActive}>
+              <Text style={styles.stepNumberTextActive}>۱</Text>
+            </View>
+            <Text style={styles.stepPillTextActive}>مشخصات و زمان</Text>
+          </View>
+
+          <View style={[styles.stepLine, { backgroundColor: colors.border }]} />
+
+          <View style={[styles.stepPillInactive, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.stepNumberCircleInactive, { backgroundColor: isDark ? '#334155' : '#e2e8f0' }]}>
+              <Text style={[styles.stepNumberTextInactive, { color: colors.textLight }]}>۲</Text>
+            </View>
+            <Text style={[styles.stepPillTextInactive, { color: colors.textLight }]}>انتخاب سوالات</Text>
+          </View>
+        </View>
+
+        {/* کارت فرم اصلی */}
+        <View style={[styles.formContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           
+          {/* فیلد کلاس هدف */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>کلاسِ هدف</Text>
+            <View style={styles.labelRow}>
+              <Users size={18} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>کلاسِ هدف</Text>
+            </View>
             {renderClassSelector()}
           </View>
 
+          {/* کارت نمایش اطلاعات کلاس انتخاب‌شده */}
           {selectedClass && (
-            <View style={styles.classInfoCard}>
-              <View style={styles.classInfoTitleRow}>
+            <View style={[
+              styles.classInfoCard, 
+              { 
+                backgroundColor: isDark ? '#1e293b' : '#eff6ff', 
+                borderColor: isDark ? '#334155' : '#bfdbfe' 
+              }
+            ]}>
+              <View style={[styles.classInfoTitleRow, { borderBottomColor: isDark ? '#334155' : '#dbeafe' }]}>
                 <CheckCircle size={16} color="#16a34a" />
-                <Text style={styles.classInfoTitle}>اطلاعات از قبل انتخاب‌شده برای این کلاس</Text>
-              </View>
-
-              <View style={styles.classInfoRow}>
-                <School size={16} color={COLORS.primary} />
-                <Text style={styles.classInfoValue}>
-                  {selectedClass.school?.name || passedClassroom?.school?.name || 'تعریف نشده'}
+                <Text style={[styles.classInfoTitle, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
+                  اطلاعات کلاس انتخابی
                 </Text>
-                <Text style={styles.classInfoLabel}>مدرسه:</Text>
               </View>
 
               <View style={styles.classInfoRow}>
-                <Users size={16} color={COLORS.primary} />
-                <Text style={styles.classInfoValue}>{selectedClass.name || passedClassName}</Text>
-                <Text style={styles.classInfoLabel}>نام کلاس:</Text>
+                <School size={15} color={colors.primary} />
+                <Text style={[styles.classInfoLabel, { color: colors.primary }]}>مدرسه:</Text>
+                <Text style={[styles.classInfoValue, { color: colors.text }]}>
+                  {selectedClass.school?.name || passedClassroom?.school?.name || 'عمومی'}
+                </Text>
               </View>
 
               <View style={styles.classInfoRow}>
-                <BookOpen size={16} color={COLORS.primary} />
-                <Text style={styles.classInfoValue}>
+                <Users size={15} color={colors.primary} />
+                <Text style={[styles.classInfoLabel, { color: colors.primary }]}>نام کلاس:</Text>
+                <Text style={[styles.classInfoValue, { color: colors.text }]}>
+                  {selectedClass.name || passedClassName}
+                </Text>
+              </View>
+
+              <View style={styles.classInfoRow}>
+                <BookOpen size={15} color={colors.primary} />
+                <Text style={[styles.classInfoLabel, { color: colors.primary }]}>درس و مقطع:</Text>
+                <Text style={[styles.classInfoValue, { color: colors.text }]}>
                   {selectedClass.course?.name || selectedClass.subjectName || passedClassroom?.course?.name || 'عمومی'}
                   {selectedClass.grade?.name || passedClassroom?.grade?.name ? ` · پایه ${selectedClass.grade?.name || passedClassroom?.grade?.name}` : ''}
                 </Text>
-                <Text style={styles.classInfoLabel}>درس و مقطع:</Text>
               </View>
             </View>
           )}
 
+          {/* فیلد عنوان آزمون */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>عنوان آزمون</Text>
+            <View style={styles.labelRow}>
+              <FileText size={18} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>عنوان آزمون</Text>
+            </View>
             <TextInput
-              style={styles.input}
-              placeholder="مثال: آزمون میان‌ترم ریاضی"
-              placeholderTextColor={COLORS.textLight}
+              style={[
+                styles.input, 
+                { 
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc', 
+                  color: colors.text, 
+                  borderColor: colors.border 
+                }
+              ]}
+              placeholder="مثال: آزمون میان‌ترم ریاضی فصل اول"
+              placeholderTextColor={colors.textLight}
               value={title}
               onChangeText={setTitle}
-              textAlign="left"
+              textAlign="right"
             />
           </View>
 
+          {/* فیلد نمره کل */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>نمره کل آزمون</Text>
+            <View style={styles.labelRow}>
+              <Award size={18} color={colors.primary} />
+              <Text style={[styles.label, { color: colors.text }]}>نمره کل آزمون</Text>
+            </View>
             <TextInput
-              style={styles.input}
+              style={[
+                styles.input, 
+                { 
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc', 
+                  color: colors.text, 
+                  borderColor: colors.border 
+                }
+              ]}
               placeholder="20"
-              placeholderTextColor={COLORS.textLight}
-              keyboardType="numeric"
+              placeholderTextColor={colors.textLight}
               value={totalScore}
               onChangeText={setTotalScore}
-              textAlign="center"
+              keyboardType="numeric"
+              textAlign="right"
             />
           </View>
 
-          {/* بخش زمان‌بندی (ساده‌شده برای نسخه سبک) */}
-          <View style={styles.timeSection}>
-            <Text style={styles.sectionLabel}>تاریخ و زمان برگزاری</Text>
+          {/* بخش زمان‌بندی و تاریخ برگزاری */}
+          <View style={[styles.timeSection, { borderTopColor: colors.border }]}>
+            <View style={styles.sectionHeaderRow}>
+              <Calendar size={18} color={colors.primary} />
+              <Text style={[styles.sectionLabel, { color: colors.text }]}>تاریخ و زمان برگزاری</Text>
+            </View>
             
-            <View style={{ marginBottom: 16 }}>
-              <Text style={styles.smallLabel}>تاریخ آزمون</Text>
-              <View style={[styles.timeRow, { marginTop: 4 }]}>
+            {/* انتخاب تاریخ */}
+            <View style={{ marginBottom: 18 }}>
+              <View style={styles.smallLabelRow}>
+                <Calendar size={14} color={colors.textLight} />
+                <Text style={[styles.smallLabel, { color: colors.textLight }]}>تاریخ آزمون (روز / ماه)</Text>
+              </View>
+              <View style={[styles.timeRow, { marginTop: 6 }]}>
                 <View style={styles.halfInput}>
                   <CustomDropdown
                     items={monthsList}
@@ -272,11 +363,15 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
               </View>
             </View>
 
+            {/* انتخاب ساعت شروع و مدت زمان */}
             <View style={styles.timeRow}>
               <View style={styles.halfInput}>
-                <Text style={styles.smallLabel}>ساعت شروع</Text>
-                <View style={[styles.timeRow, { marginTop: 4 }]}>
-                  <View style={{ flex: 0.48 }}>
+                <View style={styles.smallLabelRow}>
+                  <Clock size={14} color={colors.textLight} />
+                  <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت شروع</Text>
+                </View>
+                <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
+                  <View style={{ flex: 0.46 }}>
                     <CustomDropdown
                       items={minutesList}
                       selectedValue={startMinute}
@@ -284,8 +379,8 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
                       placeholder="دقیقه"
                     />
                   </View>
-                  <Text style={{ alignSelf: 'center' }}>:</Text>
-                  <View style={{ flex: 0.48 }}>
+                  <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
+                  <View style={{ flex: 0.46 }}>
                     <CustomDropdown
                       items={hoursList}
                       selectedValue={startHour}
@@ -297,15 +392,20 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
               </View>
 
               <View style={styles.halfInput}>
-                <Text style={styles.smallLabel}>مدت زمان آزمون</Text>
-                <View style={{ marginTop: 4 }}>
+                <View style={styles.smallLabelRow}>
+                  <Timer size={14} color={colors.textLight} />
+                  <Text style={[styles.smallLabel, { color: colors.textLight }]}>مدت زمان آزمون</Text>
+                </View>
+                <View style={{ marginTop: 6 }}>
                   <CustomDropdown
                     items={[
                       { id: '15m', label: '۱۵ دقیقه', value: 15 },
                       { id: '30m', label: '۳۰ دقیقه', value: 30 },
                       { id: '45m', label: '۴۵ دقیقه', value: 45 },
-                      { id: '90m', label: '۹۰ دقیقه', value: 90 },
-                      { id: 'custom', label: 'سایر (انتخاب دستی)', value: 'custom' },
+                      { id: '60m', label: '۶۰ دقیقه (۱ ساعت)', value: 60 },
+                      { id: '90m', label: '۹۰ دقیقه (۱.۵ ساعت)', value: 90 },
+                      { id: '120m', label: '۱۲۰ دقیقه (۲ ساعت)', value: 120 },
+                      { id: 'custom', label: 'سایر (انتخاب دستی ساعت پایان)', value: 'custom' },
                     ]}
                     selectedValue={examDuration}
                     onSelect={(item) => setExamDuration(item.value)}
@@ -315,12 +415,16 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
               </View>
             </View>
 
+            {/* ساعت پایان دستی اگر حالت سفارشی انتخاب شد */}
             {examDuration === 'custom' && (
               <View style={[styles.timeRow, { marginTop: 16 }]}>
                 <View style={styles.halfInput}>
-                  <Text style={styles.smallLabel}>ساعت پایان</Text>
-                  <View style={[styles.timeRow, { marginTop: 4 }]}>
-                    <View style={{ flex: 0.48 }}>
+                  <View style={styles.smallLabelRow}>
+                    <Clock size={14} color={colors.textLight} />
+                    <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت پایان آزمون</Text>
+                  </View>
+                  <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
+                    <View style={{ flex: 0.46 }}>
                       <CustomDropdown
                         items={minutesList}
                         selectedValue={endMinute}
@@ -328,8 +432,8 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
                         placeholder="دقیقه"
                       />
                     </View>
-                    <Text style={{ alignSelf: 'center' }}>:</Text>
-                    <View style={{ flex: 0.48 }}>
+                    <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
+                    <View style={{ flex: 0.46 }}>
                       <CustomDropdown
                         items={hoursList}
                         selectedValue={endHour}
@@ -348,16 +452,32 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
         </View>
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+      {/* فوتر با دکمه ادامه به مرحله بعد */}
+      <View style={[
+        styles.footer, 
+        { 
+          backgroundColor: colors.surface, 
+          borderTopColor: colors.border,
+          paddingBottom: Math.max(insets.bottom, 16) + 8
+        }
+      ]}>
         <TouchableOpacity 
-          style={[styles.button, isSubmitting && styles.buttonDisabled]} 
+          style={[
+            styles.button, 
+            { backgroundColor: colors.primary },
+            isSubmitting && styles.buttonDisabled
+          ]} 
           onPress={handleNextStep}
           disabled={isSubmitting}
+          activeOpacity={0.8}
         >
           {isSubmitting ? (
-            <ActivityIndicator color={COLORS.surface} size="small" />
+            <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text style={styles.buttonText}>ادامه و انتخاب سوالات ➡️</Text>
+            <View style={styles.buttonInner}>
+              <Text style={styles.buttonText}>ادامه و انتخاب سوالات</Text>
+              <ArrowLeft size={20} color="#ffffff" style={{ marginRight: 8 }} />
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -367,72 +487,188 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    backgroundColor: COLORS.surface,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
-  headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.primary },
-  headerSubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 2 },
-  backButton: { padding: 8 },
-  backButtonText: { color: COLORS.textLight, fontSize: 14 },
+  headerCenter: { 
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerTitle: { 
+    fontSize: 17, 
+    fontWeight: 'bold', 
+  },
+  headerSubtitle: { 
+    fontSize: 12, 
+    marginTop: 3, 
+    fontWeight: '600' 
+  },
+  backButton: { 
+    padding: 8,
+    borderRadius: 10,
+  },
+
+  // Steps indicator
+  stepsContainer: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 8,
+  },
+  stepPillActive: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+  },
+  stepNumberCircleActive: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  stepNumberTextActive: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#2563eb',
+  },
+  stepPillTextActive: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  stepLine: {
+    flex: 0.25,
+    height: 2,
+    marginHorizontal: 8,
+  },
+  stepPillInactive: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  stepNumberCircleInactive: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+  },
+  stepNumberTextInactive: {
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  stepPillTextInactive: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   
-  scrollContainer: { flexGrow: 1, backgroundColor: COLORS.background, padding: 20 },
-  formContainer: { backgroundColor: COLORS.surface, borderRadius: 20, padding: 20, elevation: 2 },
+  scrollContainer: { 
+    flexGrow: 1, 
+    padding: 16,
+    paddingTop: 14,
+  },
+  formContainer: { 
+    borderRadius: 18, 
+    padding: 18, 
+    borderWidth: 1,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
   
-  inputGroup: { marginBottom: 24 },
-  label: { fontSize: 15, color: COLORS.text, marginBottom: 12, textAlign: 'left', fontWeight: 'bold' },
+  inputGroup: { 
+    marginBottom: 20,
+  },
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  label: { 
+    fontSize: 14, 
+    fontWeight: 'bold', 
+    marginRight: 6,
+    textAlign: 'right',
+  },
   input: {
     borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-    color: COLORS.text,
-    backgroundColor: '#f8fafc',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
   },
-  errorText: { color: COLORS.error, textAlign: 'left', fontSize: 14 },
-  
-  chipContainer: { flexDirection: 'row', paddingVertical: 4 },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginLeft: 10,
+  errorText: { 
+    textAlign: 'right', 
+    fontSize: 13, 
+    marginVertical: 8 
   },
-  chipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText: { fontSize: 14, color: COLORS.textLight, fontWeight: '600' },
-  chipTextSelected: { color: COLORS.surface },
 
   timeSection: {
     marginTop: 10,
-    paddingTop: 20,
+    paddingTop: 18,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
   },
-  sectionLabel: { fontSize: 15, fontWeight: 'bold', color: COLORS.text, marginBottom: 16, textAlign: 'center' },
-  timeRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  halfInput: { flex: 0.48 },
-  smallLabel: { fontSize: 12, color: COLORS.textLight, marginBottom: 6, textAlign: 'center' },
+  sectionHeaderRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  sectionLabel: { 
+    fontSize: 15, 
+    fontWeight: 'bold', 
+    marginRight: 8,
+    textAlign: 'center',
+  },
+  subSectionRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  smallLabelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  smallLabel: { 
+    fontSize: 12, 
+    marginRight: 4,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  timeRow: { 
+    flexDirection: 'row-reverse', 
+    justifyContent: 'space-between' 
+  },
+  halfInput: { 
+    flex: 0.48 
+  },
+  colonSeparator: {
+    alignSelf: 'center',
+    fontSize: 18,
+    fontWeight: 'bold',
+    paddingHorizontal: 4,
+  },
 
-  footer: {
-    padding: 20,
-    backgroundColor: COLORS.surface,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
+  // Class info preview card
   classInfoCard: {
-    backgroundColor: '#eff6ff',
     borderWidth: 1,
-    borderColor: '#bfdbfe',
     borderRadius: 14,
     padding: 14,
     marginBottom: 20,
@@ -443,39 +679,62 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#dbeafe',
   },
   classInfoTitle: {
     fontSize: 13,
     fontWeight: 'bold',
-    color: '#1e40af',
     marginRight: 6,
   },
   classInfoRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    paddingVertical: 5,
+    paddingVertical: 4,
   },
   classInfoLabel: {
     fontSize: 12,
-    color: '#3b82f6',
     fontWeight: 'bold',
-    marginLeft: 6,
-    width: 75,
-    textAlign: 'left',
+    marginRight: 6,
+    width: 76,
+    textAlign: 'right',
   },
   classInfoValue: {
     fontSize: 13,
-    color: COLORS.text,
     fontWeight: '600',
     flex: 1,
-    textAlign: 'left',
+    textAlign: 'right',
     marginRight: 8,
   },
 
-  button: { backgroundColor: COLORS.primary, padding: 18, borderRadius: 14, alignItems: 'center' },
-  buttonDisabled: { backgroundColor: COLORS.secondary, opacity: 0.7 },
-  buttonText: { color: COLORS.surface, fontSize: 16, fontWeight: 'bold' },
+  // Footer & buttons
+  footer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  button: { 
+    paddingVertical: 15, 
+    borderRadius: 14, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  buttonDisabled: { 
+    opacity: 0.65 
+  },
+  buttonInner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonText: { 
+    color: '#ffffff', 
+    fontSize: 15, 
+    fontWeight: 'bold' 
+  },
 });
 
 export default CreateExamStep1Screen;

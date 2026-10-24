@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, TouchableOpacity, Text, StyleSheet, I18nManager } from 'react-native';
+import { FlatList, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
 export interface CategoryChipItem {
@@ -18,13 +18,15 @@ const CategoryChips = ({ categories, selectedCategoryId, onSelect }: Props) => {
   const { colors } = useTheme();
 
   return (
-    <ScrollView 
+    <FlatList 
       horizontal 
+      inverted
       showsHorizontalScrollIndicator={false}
       style={styles.container}
       contentContainerStyle={styles.content}
-    >
-      {categories.map((item) => {
+      data={categories}
+      keyExtractor={(item) => (typeof item === 'string' ? item : item.id)}
+      renderItem={({ item }) => {
         const id = typeof item === 'string' ? item : item.id;
         const name = typeof item === 'string' ? item : item.name;
         const isSelected = selectedCategoryId === id;
@@ -49,8 +51,8 @@ const CategoryChips = ({ categories, selectedCategoryId, onSelect }: Props) => {
             </Text>
           </TouchableOpacity>
         );
-      })}
-    </ScrollView>
+      }}
+    />
   );
 };
 
@@ -62,7 +64,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingVertical: 4,
-    flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',
     alignItems: 'center',
   },
   chip: {

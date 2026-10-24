@@ -5,32 +5,66 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
-  FlatList
+  FlatList,
+  Share
 } from 'react-native';
+import { showError, showWarning } from '../../components/feedback';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, UserPlus } from 'lucide-react-native';
+import { ChevronRight, UserPlus, Share2, BadgeCheck, Bell, Users } from 'lucide-react-native';
+import { JoinRequestsModal } from '../../components/classes/JoinRequestsModal';
 
 const ClassStudentsScreen = ({ route, navigation }: any) => {
-  const { currentClassId, currentClassName } = route.params;
+  const { currentClassId, currentClassName, classroom } = route.params;
   const insets = useSafeAreaInsets();
 
   const [memberships, setMemberships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [joinRequestsCount, setJoinRequestsCount] = useState(0);
+  const [isJoinRequestsModalVisible, setIsJoinRequestsModalVisible] = useState(false);
+
+  const handleShareInvite = async () => {
+    try {
+      let code = classroom?.code;
+      if (!code) {
+        const res = await api.get(`/teacher/classrooms/${currentClassId}`);
+        code = res.data?.data?.code;
+      }
+      if (!code) {
+        showWarning('شناسه کلاس هنوز تولید نشده است.');
+        return;
+      }
+      const serverBaseUrl = (api.defaults.baseURL || 'http://192.168.1.128:5001/api').replace(/\/api\/?$/, '');
+      const registrationUrl = `${serverBaseUrl}/c/${code}`;
+      const message = `دانش‌آموز گرامی،\nبرای ثبت‌نام در کلاس «${currentClassName}»، لطفاً از طریق لینک زیر مشخصات خود را تکمیل نمایید:\n\n🔗 لینک ثبت‌نام:\n${registrationUrl}\n\n🔢 کد اختصاصی کلاس: ${code}\n\nپس از ثبت‌نام، می‌توانید اپلیکیشن «نوکیتا» را برای دریافت تکالیف و نمرات دانلود کنید.`;
+      await Share.share({
+        title: `ثبت‌نام در کلاس ${currentClassName}`,
+        message,
+        url: registrationUrl,
+      });
+    } catch (e) {
+      console.warn(e);
+    }
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`/teacher/classrooms/${currentClassId}/students/list`);
-      if (response.data.success) {
-        setMemberships(response.data.data);
+      const [listRes, requestsRes] = await Promise.all([
+        api.get(`/teacher/classrooms/${currentClassId}/students/list`),
+        api.get(`/teacher/classrooms/${currentClassId}/join-requests`).catch(() => ({ data: { success: false, data: [] } }))
+      ]);
+      if (listRes.data.success) {
+        setMemberships(listRes.data.data);
+      }
+      if (requestsRes?.data?.success) {
+        setJoinRequestsCount(requestsRes.data.data?.length || 0);
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات دانش‌آموزان رخ داد.');
+      showError('مشکلی در دریافت اطلاعات دانش‌آموزان رخ داد.');
     } finally {
       setLoading(false);
     }
@@ -57,12 +91,18 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
           className: currentClassName,
           firstName: item.firstName,
           lastName: item.lastName,
-          fatherName: item.fatherName
+          fatherName: item.fatherName,
+          isVerified: item.isVerified
         })}
       >
         <Text style={styles.studentIndex}>{index + 1}</Text>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.studentName}>{displayName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.studentName}>{displayName}</Text>
+            {item.isVerified ? (
+              <BadgeCheck size={16} color="#0284c7" fill="#0284c7" style={{ marginRight: 6 }} />
+            ) : null}
+          </View>
           <Text style={styles.studentPhone}>{item.studentPhone}</Text>
         </View>
       </TouchableOpacity>
@@ -87,14 +127,50 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
           <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
         ) : (
           <>
-            <TouchableOpacity 
-              style={styles.addBtnContainer} 
-              onPress={() => navigation.navigate('AddStudentToClassScreen', { currentClassId, currentClassName })}
-              activeOpacity={0.8}
-            >
-              <UserPlus size={20} color={COLORS.primary} />
-              <Text style={styles.addBtnText}>افزودن دانش‌آموز جدید</Text>
-            </TouchableOpacity>
+            {joinRequestsCount > 0 ? (
+              <TouchableOpacity
+                style={styles.pendingBanner}
+                onPress={() => setIsJoinRequestsModalVisible(true)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.pendingBannerLeft}>
+                  <View style={styles.pendingBadgeIcon}>
+                    <Bell size={16} color="#ffffff" />
+                  </View>
+                  <View style={{ marginRight: 10, flex: 1 }}>
+                    <Text style={styles.pendingBannerTitle}>
+                      {joinRequestsCount} درخواست جدید عضویت
+                    </Text>
+                    <Text style={styles.pendingBannerSub}>
+                      دانش‌آموزان از طریق فرم وب ثبت‌نام کرده‌اند
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.reviewBtn}>
+                  <Text style={styles.reviewBtnText}>بررسی</Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
+
+            <View style={styles.topActionsRow}>
+              <TouchableOpacity 
+                style={styles.addBtnContainer} 
+                onPress={() => navigation.navigate('AddStudentToClassScreen', { currentClassId, currentClassName })}
+                activeOpacity={0.8}
+              >
+                <UserPlus size={18} color={COLORS.primary} />
+                <Text style={styles.addBtnText}>افزودن دستی</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.shareBtnContainer} 
+                onPress={handleShareInvite}
+                activeOpacity={0.8}
+              >
+                <Share2 size={18} color="#ffffff" />
+                <Text style={styles.shareBtnText}>ارسال لینک ثبت‌نام</Text>
+              </TouchableOpacity>
+            </View>
 
             {memberships.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -114,6 +190,14 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
           </>
         )}
       </View>
+
+      <JoinRequestsModal
+        visible={isJoinRequestsModalVisible}
+        onClose={() => setIsJoinRequestsModalVisible(false)}
+        classroomId={currentClassId}
+        classroomName={currentClassName}
+        onRequestsUpdated={fetchStudents}
+      />
     </View>
   );
 };
@@ -149,17 +233,42 @@ const styles = StyleSheet.create({
   },
   listContent: { paddingVertical: 8 },
   
+  topActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
   addBtnContainer: { 
-    backgroundColor: '#E8F0FE', 
-    flexDirection: 'row', 
+    flex: 1,
+    backgroundColor: '#eff6ff', 
+    flexDirection: 'row-reverse', 
     alignItems: 'center', 
     justifyContent: 'center', 
-    padding: 14, 
+    paddingVertical: 12, 
     borderRadius: 12, 
-    margin: 16, 
-    marginBottom: 16, 
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+    gap: 6,
   },
-  addBtnText: { color: COLORS.primary, fontSize: 14, fontFamily: 'IRANSansX', fontWeight: 'bold', marginLeft: 8 },
+  addBtnText: { color: COLORS.primary, fontSize: 13, fontFamily: 'IRANSansX', fontWeight: 'bold' },
+  shareBtnContainer: {
+    flex: 1.3,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    gap: 6,
+  },
+  shareBtnText: { color: '#ffffff', fontSize: 13, fontFamily: 'IRANSansX', fontWeight: 'bold' },
   
   card: { 
     flexDirection: 'row', 
@@ -183,6 +292,59 @@ const styles = StyleSheet.create({
   
   emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
   emptyText: { color: COLORS.textLight, fontSize: 14, fontFamily: 'IRANSansX' },
+
+  pendingBanner: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pendingBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  pendingBadgeIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  pendingBannerTitle: {
+    fontSize: 13.5,
+    fontFamily: 'IRANSansX',
+    fontWeight: '700',
+    color: '#1e3a8a',
+    textAlign: 'left',
+  },
+  pendingBannerSub: {
+    fontSize: 11.5,
+    fontFamily: 'IRANSansX',
+    color: '#3b82f6',
+    marginTop: 2,
+    textAlign: 'left',
+  },
+  reviewBtn: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  reviewBtnText: {
+    fontSize: 12,
+    fontFamily: 'IRANSansX',
+    fontWeight: '700',
+    color: '#ffffff',
+  },
 });
 
 export default ClassStudentsScreen;

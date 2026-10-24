@@ -7,12 +7,12 @@ import {
   FlatList,
   TextInput,
   ActivityIndicator,
-  Alert,
   Share,
   RefreshControl,
   Modal,
   Clipboard,
 } from 'react-native';
+import { showError, showSuccess, showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Plus,
@@ -59,7 +59,7 @@ export const FormDashboardScreen: React.FC<FormDashboardScreenProps> = ({ naviga
       });
       setForms(data);
     } catch (err: any) {
-      Alert.alert('خطا', err?.response?.data?.message || 'خطا در بارگذاری لیست فرم‌ها');
+      showError(err?.response?.data?.message || 'خطا در بارگذاری لیست فرم‌ها');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -78,7 +78,7 @@ export const FormDashboardScreen: React.FC<FormDashboardScreenProps> = ({ naviga
   const handleCopyLink = (form: FormDataModel) => {
     const url = formService.getPublicFormUrl(form.publicSlug);
     Clipboard.setString(url);
-    Alert.alert('لینک کپی شد', 'لینک عمومی فرم با موفقیت در حافظه کپی شد:\n' + url);
+    showSuccess('لینک عمومی فرم با موفقیت در حافظه کپی شد.');
     setActionMenuVisible(false);
   };
 
@@ -100,10 +100,10 @@ export const FormDashboardScreen: React.FC<FormDashboardScreenProps> = ({ naviga
       setLoading(true);
       await formService.duplicateForm(form._id);
       fetchForms();
-      Alert.alert('موفق', 'فرم با موفقیت کپی شد');
+      showSuccess('فرم با موفقیت کپی شد');
     } catch (err: any) {
       setLoading(false);
-      Alert.alert('خطا', 'کپی فرم با خطا مواجه شد');
+      showError('کپی فرم با خطا مواجه شد');
     }
   };
 
@@ -116,80 +116,75 @@ export const FormDashboardScreen: React.FC<FormDashboardScreenProps> = ({ naviga
       fetchForms();
     } catch (err) {
       setLoading(false);
-      Alert.alert('خطا', 'تغییر وضعیت فرم ناموفق بود');
+      showError('تغییر وضعیت فرم ناموفق بود');
     }
   };
 
   const confirmCloseForm = (form: FormDataModel) => {
-    Alert.alert(
-      'بستن فرم',
-      `آیا از بستن فرم «${form.title}» و متوقف کردن دریافت پاسخ اطمینان دارید؟\nپس از بستن، مخاطبان امکان ارسال پاسخ جدید نخواهند داشت.`,
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'بستن فرم',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await formService.updateStatus(form._id, 'closed');
-              fetchForms();
-            } catch (e) {
-              setLoading(false);
-              Alert.alert('خطا', 'خطا در بستن فرم');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'بستن فرم',
+      message: `آیا از بستن فرم «${form.title}» و متوقف کردن دریافت پاسخ اطمینان دارید؟ پس از بستن، مخاطبان امکان ارسال پاسخ جدید نخواهند داشت.`,
+      confirmText: 'بستن فرم',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'warning',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await formService.updateStatus(form._id, 'closed');
+          fetchForms();
+          showSuccess('فرم با موفقیت بسته شد.');
+        } catch (e) {
+          setLoading(false);
+          showError('خطا در بستن فرم');
+        }
+      },
+    });
   };
 
   const confirmReopenForm = (form: FormDataModel) => {
-    Alert.alert(
-      'بازگشایی فرم',
-      `آیا مایل به فعال‌سازی مجدد فرم «${form.title}» هستید؟`,
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'فعال‌سازی',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await formService.updateStatus(form._id, 'published');
-              fetchForms();
-            } catch (e) {
-              setLoading(false);
-              Alert.alert('خطا', 'خطا در فعال‌سازی فرم');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'بازگشایی فرم',
+      message: `آیا مایل به فعال‌سازی مجدد فرم «${form.title}» هستید؟`,
+      confirmText: 'فعال‌سازی',
+      cancelText: 'انصراف',
+      isDestructive: false,
+      icon: 'info',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await formService.updateStatus(form._id, 'published');
+          fetchForms();
+          showSuccess('فرم مجدداً فعال شد.');
+        } catch (e) {
+          setLoading(false);
+          showError('خطا در فعال‌سازی فرم');
+        }
+      },
+    });
   };
 
   const handleDelete = (form: FormDataModel) => {
     setActionMenuVisible(false);
-    Alert.alert(
-      'حذف فرم',
-      `آیا از حذف کامل فرم «${form.title}» و تمام پاسخ‌های آن اطمینان دارید؟`,
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'حذف دائمی',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              await formService.deleteForm(form._id);
-              fetchForms();
-            } catch (err) {
-              setLoading(false);
-              Alert.alert('خطا', 'حذف فرم با خطا مواجه شد');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'حذف فرم',
+      message: `آیا از حذف کامل فرم «${form.title}» و تمام پاسخ‌های آن اطمینان دارید؟`,
+      confirmText: 'حذف دائمی',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await formService.deleteForm(form._id);
+          fetchForms();
+          showSuccess('فرم با موفقیت حذف شد.');
+        } catch (err) {
+          setLoading(false);
+          showError('حذف فرم با خطا مواجه شد');
+        }
+      },
+    });
   };
 
   const openActionMenu = (form: FormDataModel) => {

@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, Alert, TouchableOpacity, Modal,
+  View, Text, StyleSheet, TouchableOpacity, Modal,
   TextInput, FlatList, ActivityIndicator, Share, ScrollView,
   PanResponder
 } from 'react-native';
+import { showError, showInfo, showSuccess, showConfirm } from '../feedback';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft, Moon, Sun, Columns, Rows, Search, X, List,
@@ -64,7 +65,7 @@ const PdfReaderScreen = ({ route, navigation }) => {
         let uri = initialPath || await PdfCore.getInitialUri();
         if (!uri) return navigation.goBack();
         setPdfPath(uri);
-      } catch (err) { Alert.alert("خطا", err.message); }
+      } catch (err: any) { showError(err?.message || 'خطا در بارگذاری فایل'); }
     };
     initializePdf();
   }, [initialPath]);
@@ -122,9 +123,9 @@ const PdfReaderScreen = ({ route, navigation }) => {
     try {
       const results = await PdfCore.searchTextInPdf(pdfPath, password, searchText);
       if (results.length > 0) setSearchResults(results);
-      else Alert.alert("نتیجه‌ای یافت نشد", `کلمه "${searchText}" وجود ندارد.`);
-    } catch (e) {
-      Alert.alert("خطا در جستجو", e.message);
+      else showInfo(`کلمه "${searchText}" وجود ندارد.`);
+    } catch (e: any) {
+      showError(e?.message || 'خطا در جستجو');
     } finally {
       setIsSearchingEngine(false);
     }
@@ -253,9 +254,14 @@ const PdfReaderScreen = ({ route, navigation }) => {
           if (AsyncStorage) {
             AsyncStorage.getItem(`last_page_${pdfPath}`).then(lastPage => {
               if (lastPage && parseInt(lastPage) > 1) {
-                Alert.alert("ادامه مطالعه", `می‌خواهید از صفحه ${lastPage} ادامه دهید؟`, [
-                  { text: "خیر", style: "cancel" }, { text: "بله", onPress: () => pdfViewRef.current?.jumpToPage(parseInt(lastPage) - 1) }
-                ]);
+                showConfirm({
+                  title: 'ادامه مطالعه',
+                  message: `می‌خواهید از صفحه ${lastPage} ادامه دهید؟`,
+                  confirmText: 'بله',
+                  cancelText: 'خیر',
+                  isDestructive: false,
+                  onConfirm: () => pdfViewRef.current?.jumpToPage(parseInt(lastPage) - 1),
+                });
               }
             });
           }
@@ -325,7 +331,15 @@ const PdfReaderScreen = ({ route, navigation }) => {
       {isControlsVisible && !isSearching && pageInfo.total > 0 && (
         <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom + 10 : 30 }]}>
           <View style={styles.pageIndicator}>
-            <TouchableOpacity onPress={() => { toggleBookmark(); Alert.alert("نشانک", myBookmarks.includes(pageInfo.current) ? "نشانک حذف شد." : "صفحه نشانک شد."); }}>
+            <TouchableOpacity onPress={() => { 
+              const isBm = myBookmarks.includes(pageInfo.current);
+              toggleBookmark(); 
+              if (isBm) {
+                showInfo('نشانک حذف شد.');
+              } else {
+                showSuccess('صفحه نشانک شد.');
+              }
+            }}>
               <Bookmark color={myBookmarks.includes(pageInfo.current) ? "#f1c40f" : "#fff"} fill={myBookmarks.includes(pageInfo.current) ? "#f1c40f" : "transparent"} size={16} style={{ marginLeft: 8 }} />
             </TouchableOpacity>
             <Text style={styles.pageText}>صفحه {pageInfo.current} از {pageInfo.total}</Text>

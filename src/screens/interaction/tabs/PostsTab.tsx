@@ -7,10 +7,10 @@ import {
   RefreshControl, 
   TouchableOpacity, 
   ActivityIndicator, 
-  Alert,
   I18nManager 
 } from 'react-native';
-import { Plus, Newspaper, MessageSquareDashed } from 'lucide-react-native';
+import { showError, showSuccess, showConfirm } from '../../../components/feedback';
+import { Plus, Newspaper, MessageSquareDashed, Trash2, Flag } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { getUserIdFromToken } from '../../../utils/storage';
 import PostCard from '../components/PostCard';
@@ -83,51 +83,47 @@ const PostsTab = ({ navigation }: any) => {
   };
 
   const handleDeletePost = (postId: string) => {
-    Alert.alert(
-      'حذف پست',
-      'آیا از حذف این پست اطمینان دارید؟',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'حذف',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await communityService.deletePost(postId);
-              setPosts(prev => prev.filter(p => p._id !== postId));
-            } catch (err) {
-              Alert.alert('خطا', 'امکان حذف پست وجود ندارد.');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'حذف پست',
+      message: 'آیا از حذف این پست اطمینان دارید؟',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: Trash2,
+      onConfirm: async () => {
+        try {
+          await communityService.deletePost(postId);
+          setPosts(prev => prev.filter(p => p._id !== postId));
+          showSuccess('پست با موفقیت حذف شد.');
+        } catch (err) {
+          showError('امکان حذف پست وجود ندارد.');
+        }
+      },
+    });
   };
 
   const handleReportPost = (postId: string) => {
-    Alert.alert(
-      'گزارش محتوا',
-      'آیا مایل به گزارش این پست به تیم مدیریت هستید؟',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'ارسال گزارش',
-          onPress: async () => {
-            try {
-              await communityService.reportContent({
-                targetType: 'post',
-                targetId: postId,
-                reason: 'inappropriate',
-                description: 'گزارش تخلف توسط کاربر',
-              });
-              Alert.alert('سپاس', 'گزارش شما ثبت شد و به زودی بررسی خواهد شد.');
-            } catch {
-              Alert.alert('خطا', 'ثبت گزارش ناموفق بود.');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'گزارش محتوا',
+      message: 'آیا مایل به گزارش این پست به تیم مدیریت هستید؟',
+      confirmText: 'ارسال گزارش',
+      cancelText: 'انصراف',
+      isDestructive: false,
+      icon: Flag,
+      onConfirm: async () => {
+        try {
+          await communityService.reportContent({
+            targetType: 'post',
+            targetId: postId,
+            reason: 'inappropriate',
+            description: 'گزارش تخلف توسط کاربر',
+          });
+          showSuccess('گزارش شما ثبت شد و به زودی بررسی خواهد شد.');
+        } catch {
+          showError('ثبت گزارش ناموفق بود.');
+        }
+      },
+    });
   };
 
   return (

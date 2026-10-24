@@ -46,6 +46,48 @@ export interface Announcement {
   active: boolean;
 }
 
+export interface HomeworkItem {
+  _id?: string;
+  title: string;
+  isDone?: boolean;
+}
+
+export interface StudentSubmission {
+  studentPhone: string;
+  studentName?: string;
+  status: 'PENDING' | 'SUBMITTED' | 'DONE' | 'NOT_DONE' | 'APPROVED' | 'REJECTED' | 'GRADED';
+  note?: string;
+  studentText?: string;
+  images?: string[];
+  voiceUrl?: string;
+  voiceDuration?: number;
+  submittedAt?: string;
+  teacherFeedback?: string;
+  score?: number;
+  recordInGradebook?: boolean;
+  reviewedAt?: string;
+  updatedAt?: string;
+}
+
+export interface Homework {
+  _id: string;
+  teacherId: string;
+  classId: any;
+  subject: string;
+  title: string;
+  description?: string;
+  items: HomeworkItem[];
+  assignedDate: string;
+  dueDate: string;
+  dueDateJalali: string;
+  isForAllStudents: boolean;
+  targetStudentPhones: string[];
+  studentSubmissions: StudentSubmission[];
+  color?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const PlanningService = {
   getEvents: async (startDate?: string, endDate?: string): Promise<{ success: boolean, data: TeacherEvent[] }> => {
     try {
@@ -167,15 +209,7 @@ export const PlanningService = {
     }
   },
 
-  getSystemEvents: async (startDate?: string, endDate?: string): Promise<{ success: boolean, data: any[] }> => {
-    try {
-      const response = await api.get('/teacher/system-events', { params: { startDate, endDate } });
-      return response.data;
-    } catch (error) {
-      console.warn('API getSystemEvents failed');
-      throw error;
-    }
-  },
+
 
   getSchedule: async (): Promise<{ success: boolean, data: any[] }> => {
     try {
@@ -217,12 +251,89 @@ export const PlanningService = {
     }
   },
 
-  createSchedule: async (data: any): Promise<{ success: boolean, data: any }> => {
+
+
+  // --- Homework Management API ---
+  getHomeworks: async (params?: { classId?: string; dueDate?: string; dueDateJalali?: string; studentPhone?: string }): Promise<{ success: boolean; data: Homework[] }> => {
     try {
-      const response = await api.post('/teacher/schedule', data);
+      const response = await api.get('/teacher/homeworks', { params });
       return response.data;
     } catch (error) {
-      console.warn('API createSchedule failed');
+      console.warn('API getHomeworks failed');
+      throw error;
+    }
+  },
+
+  getHomeworkById: async (id: string): Promise<{ success: boolean; data: Homework }> => {
+    try {
+      const response = await api.get(`/teacher/homeworks/${id}`);
+      return response.data;
+    } catch (error) {
+      console.warn('API getHomeworkById failed');
+      throw error;
+    }
+  },
+
+  createHomework: async (data: any): Promise<{ success: boolean; data: Homework }> => {
+    try {
+      const response = await api.post('/teacher/homeworks', data);
+      return response.data;
+    } catch (error) {
+      console.warn('API createHomework failed');
+      throw error;
+    }
+  },
+
+  updateHomework: async (id: string, data: any): Promise<{ success: boolean; data: Homework }> => {
+    try {
+      const response = await api.put(`/teacher/homeworks/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.warn('API updateHomework failed');
+      throw error;
+    }
+  },
+
+  deleteHomework: async (id: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await api.delete(`/teacher/homeworks/${id}`);
+      return response.data;
+    } catch (error) {
+      console.warn('API deleteHomework failed');
+      throw error;
+    }
+  },
+
+  updateStudentHomeworkStatus: async (
+    id: string,
+    phone: string,
+    status: 'DONE' | 'NOT_DONE' | 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'GRADED',
+    note?: string
+  ): Promise<{ success: boolean; data: Homework }> => {
+    try {
+      const response = await api.patch(`/teacher/homeworks/${id}/students/${phone}/status`, { status, note });
+      return response.data;
+    } catch (error) {
+      console.warn('API updateStudentHomeworkStatus failed');
+      throw error;
+    }
+  },
+
+  reviewStudentHomework: async (
+    id: string,
+    phone: string,
+    payload: {
+      status: 'APPROVED' | 'GRADED' | 'REJECTED' | 'DONE' | 'NOT_DONE';
+      teacherFeedback?: string;
+      score?: number;
+      recordInGradebook?: boolean;
+    }
+  ): Promise<{ success: boolean; data: Homework; message?: string }> => {
+    try {
+      const response = await api.post(`/teacher/homeworks/${id}/students/${phone}/review`, payload);
+      return response.data;
+    } catch (error) {
+      console.warn('API reviewStudentHomework failed');
       throw error;
     }
   }

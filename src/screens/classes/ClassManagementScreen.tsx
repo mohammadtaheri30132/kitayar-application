@@ -5,14 +5,15 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   ActivityIndicator, 
-  Alert,
   ScrollView,
   RefreshControl
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
 import GlobalHeader from '../../components/common/GlobalHeader';
 import { School, Plus, Users, BookOpen, ChevronLeft, GraduationCap } from 'lucide-react-native';
 
@@ -24,6 +25,7 @@ interface SchoolGroup {
 }
 
 const ClassManagementScreen = ({ navigation }: any) => {
+  const { colors, isDark } = useTheme();
   const [classes, setClasses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -39,7 +41,7 @@ const ClassManagementScreen = ({ navigation }: any) => {
         setClasses(response.data.data || []);
       }
     } catch (error: any) {
-      Alert.alert('خطا', 'مشکلی در دریافت لیست کلاس‌ها رخ داد.');
+      showError('مشکلی در دریافت لیست کلاس‌ها رخ داد.');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -60,7 +62,7 @@ const ClassManagementScreen = ({ navigation }: any) => {
     classes.forEach((cls) => {
       const schoolId = cls.school?._id || 'no-school';
       const schoolName = cls.school?.name || 'سایر کلاس‌ها';
-      const schoolColor = cls.school?.color || COLORS.primary;
+      const schoolColor = cls.school?.color || colors.primary;
 
       if (!map.has(schoolId)) {
         map.set(schoolId, {
@@ -74,16 +76,30 @@ const ClassManagementScreen = ({ navigation }: any) => {
     });
 
     return Array.from(map.values());
-  }, [classes]);
+  }, [classes, colors.primary]);
 
   // رندر کارت کلاس
+  const toPersianDigits = (str: string | number) => {
+    if (!str) return '';
+    const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    return str.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x, 10)]);
+  };
+
   const renderClassCard = (item: any, schoolColor: string) => {
     const studentCount = item.students?.length || 0;
 
     return (
       <TouchableOpacity 
         key={item._id}
-        style={[styles.classCard, { borderRightWidth: 5, borderRightColor: schoolColor }]}
+        style={[
+          styles.classCard,
+          { 
+            backgroundColor: colors.surface, 
+            borderColor: colors.border,
+            borderRightWidth: 5, 
+            borderRightColor: schoolColor 
+          }
+        ]}
         activeOpacity={0.7}
         onPress={() => navigation.navigate('ClassDetailsScreen', { 
           classroom: item, 
@@ -91,21 +107,39 @@ const ClassManagementScreen = ({ navigation }: any) => {
           className: item.name 
         })}
       >
-        <View style={styles.classCardHeader}>
-          <Text style={styles.className}>{item.name}</Text>
-          <View style={[styles.studentBadge, { backgroundColor: schoolColor + '15' }]}>
-            <Users size={14} color={schoolColor} style={{ marginLeft: 4 }} />
-            <Text style={[styles.studentBadgeText, { color: schoolColor }]}>
-              {studentCount} دانش‌آموز
-            </Text>
+        <View style={[styles.classCardHeader, { borderBottomColor: isDark ? '#334155' : '#f1f5f9' }]}>
+          <Text style={[styles.className, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+            {item.name}
+          </Text>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {item.code ? (
+              <View style={{ 
+                backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', 
+                paddingHorizontal: 7, 
+                paddingVertical: 2, 
+                borderRadius: 6, 
+                borderWidth: 1, 
+                borderColor: isDark ? '#2563eb' : '#bfdbfe' 
+              }}>
+                <Text style={{ fontSize: 11, color: isDark ? '#93c5fd' : '#1d4ed8', fontFamily: 'IRANSansX', fontWeight: 'bold' }}>
+                  کد: {toPersianDigits(item.code)}
+                </Text>
+              </View>
+            ) : null}
+            <View style={[styles.studentBadge, { backgroundColor: schoolColor + (isDark ? '25' : '15') }]}>
+              <Users size={14} color={schoolColor} style={{ marginLeft: 4 }} />
+              <Text style={[styles.studentBadgeText, { color: schoolColor }]}>
+                {studentCount} دانش‌آموز
+              </Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.classCardBody}>
           <View style={styles.classInfoCol}>
             <View style={styles.infoRow}>
-              <BookOpen size={14} color={COLORS.textLight} />
-              <Text style={styles.infoText}>
+              <BookOpen size={14} color={colors.textLight} />
+              <Text style={[styles.infoText, { color: colors.textLight }]} numberOfLines={1} ellipsizeMode="tail">
                 {item.course?.name || item.subjectName || 'دوره نامشخص'}
                 {item.grade?.name ? ` · پایه ${item.grade.name}` : ''}
               </Text>
@@ -121,25 +155,25 @@ const ClassManagementScreen = ({ navigation }: any) => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <GlobalHeader 
-        onProfilePress={() => navigation.navigate('ProfileScreen')} 
-      />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <GlobalHeader title="مدیریت کلاس" subtitle="لیست مدارس، کلاس‌ها و دانش‌آموزان" />
 
       {/* هدر بالایی: لیست مدارس و دکمه ایجاد کلاس روبه‌روی آن */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.topBarTitleWrapper}>
-          <School size={22} color={COLORS.primary} style={{ marginLeft: 8 }} />
-          <Text style={styles.topBarTitle}>لیست مدارس</Text>
+          <School size={22} color={colors.primary} style={{ marginLeft: 8 }} />
+          <Text style={[styles.topBarTitle, { color: colors.text }]}>لیست مدارس</Text>
           {classes.length > 0 && (
-            <View style={styles.schoolCountBadge}>
-              <Text style={styles.schoolCountBadgeText}>{groupedClasses.length} مدرسه</Text>
+            <View style={[styles.schoolCountBadge, { backgroundColor: isDark ? '#1e3a5f' : '#eff6ff' }]}>
+              <Text style={[styles.schoolCountBadgeText, { color: isDark ? '#93c5fd' : colors.primary }]}>
+                {groupedClasses.length} مدرسه
+              </Text>
             </View>
           )}
         </View>
 
         <TouchableOpacity 
-          style={styles.createClassBtn}
+          style={[styles.createClassBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
           activeOpacity={0.8}
           onPress={() => navigation.navigate('CreateClassScreen')}
         >
@@ -150,7 +184,7 @@ const ClassManagementScreen = ({ navigation }: any) => {
 
       {isLoading ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : classes.length === 0 ? (
         /* کادر حالت خالی بودن کلاس‌ها */
@@ -160,16 +194,16 @@ const ClassManagementScreen = ({ navigation }: any) => {
             <RefreshControl refreshing={isRefreshing} onRefresh={() => fetchClasses(false)} />
           }
         >
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconContainer}>
-              <GraduationCap size={44} color={COLORS.primary} />
+          <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: isDark ? '#334155' : '#cbd5e1' }]}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? '#1e293b' : '#eff6ff' }]}>
+              <GraduationCap size={44} color={colors.primary} />
             </View>
-            <Text style={styles.emptyTitle}>کلاسی وجود ندارد</Text>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>کلاسی وجود ندارد</Text>
+            <Text style={[styles.emptyText, { color: colors.textLight }]}>
               اولین کلاس خودتو ایجاد کن و کلاس خودتو مدیریت کن
             </Text>
             <TouchableOpacity 
-              style={styles.emptyActionBtn}
+              style={[styles.emptyActionBtn, { backgroundColor: colors.primary }]}
               activeOpacity={0.8}
               onPress={() => navigation.navigate('CreateClassScreen')}
             >
@@ -194,9 +228,11 @@ const ClassManagementScreen = ({ navigation }: any) => {
                 <View style={styles.schoolHeaderRight}>
                   <View style={[styles.schoolColorDot, { backgroundColor: group.schoolColor }]} />
                   <School size={18} color={group.schoolColor} style={{ marginLeft: 6 }} />
-                  <Text style={styles.schoolName}>{group.schoolName}</Text>
+                  <Text style={[styles.schoolName, { color: colors.text }]} numberOfLines={1} ellipsizeMode="tail">
+                    {group.schoolName}
+                  </Text>
                 </View>
-                <View style={[styles.schoolBadge, { backgroundColor: group.schoolColor + '18' }]}>
+                <View style={[styles.schoolBadge, { backgroundColor: group.schoolColor + '18', flexShrink: 0 }]}>
                   <Text style={[styles.schoolBadgeText, { color: group.schoolColor }]}>
                     {group.classes.length} کلاس
                   </Text>
@@ -215,7 +251,7 @@ const ClassManagementScreen = ({ navigation }: any) => {
       {/* دکمه شناور ایجاد کلاس برای دسترسی سریع */}
       {classes.length > 0 && (
         <TouchableOpacity 
-          style={styles.fab} 
+          style={[styles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]} 
           activeOpacity={0.8} 
           onPress={() => navigation.navigate('CreateClassScreen')}
         >
@@ -300,8 +336,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   schoolHeaderRight: {
+    flex: 1,
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    marginRight: 8,
   },
   schoolColorDot: {
     width: 8,
@@ -310,9 +348,11 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   schoolName: {
+    flex: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'right',
   },
   schoolBadge: {
     paddingHorizontal: 10,
@@ -345,15 +385,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f8fafc',
+    gap: 8,
   },
   className: {
+    flex: 1,
     fontSize: 16,
     fontWeight: 'bold',
     color: COLORS.text,
+    textAlign: 'right',
+    marginRight: 8,
   },
   studentBadge: {
     flexDirection: 'row-reverse',
@@ -373,6 +417,7 @@ const styles = StyleSheet.create({
   },
   classInfoCol: {
     flex: 1,
+    marginRight: 8,
   },
   infoRow: {
     flexDirection: 'row-reverse',
@@ -382,10 +427,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textLight,
     marginRight: 6,
+    textAlign: 'right',
+    flexShrink: 1,
   },
   enterClassAction: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    flexShrink: 0,
     paddingLeft: 4,
   },
   enterClassText: {

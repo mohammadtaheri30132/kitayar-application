@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { CalendarType, NormalizedDate } from '../../utils/date/types';
+import { NormalizedDate } from '../../utils/date/types';
+import { FONT_FAMILY } from '../../theme/typography';
+import { radius } from '../../theme/tokens';
 
 interface DateInputProps {
   value: NormalizedDate;
@@ -29,15 +31,21 @@ export const DateInput: React.FC<DateInputProps> = ({
   return (
     <View style={styles.container}>
       {label && <Text style={[styles.label, { color: colors.text }]}>{label}</Text>}
-      
-      <View style={[
-        styles.inputRow, 
-        { borderColor: error ? colors.error || '#ef4444' : colors.border }
-      ]}>
+
+      {/* Inputs laid out in Persian standard order: Year / Month / Day */}
+      <View
+        style={[
+          styles.inputRow,
+          {
+            backgroundColor: isDark ? colors.surfaceVariant : colors.surface,
+            borderColor: error ? colors.error : colors.border,
+          },
+        ]}
+      >
         <TextInput
           style={[styles.input, styles.yearInput, { color: colors.text }]}
           value={value.year ? value.year.toString() : ''}
-          onChangeText={(t) => updateField('year', t)}
+          onChangeText={t => updateField('year', t)}
           placeholder="سال"
           placeholderTextColor={colors.textLight}
           keyboardType="numeric"
@@ -47,7 +55,7 @@ export const DateInput: React.FC<DateInputProps> = ({
         <TextInput
           style={[styles.input, { color: colors.text }]}
           value={value.month ? value.month.toString() : ''}
-          onChangeText={(t) => updateField('month', t)}
+          onChangeText={t => updateField('month', t)}
           placeholder="ماه"
           placeholderTextColor={colors.textLight}
           keyboardType="numeric"
@@ -57,15 +65,15 @@ export const DateInput: React.FC<DateInputProps> = ({
         <TextInput
           style={[styles.input, { color: colors.text }]}
           value={value.day ? value.day.toString() : ''}
-          onChangeText={(t) => updateField('day', t)}
+          onChangeText={t => updateField('day', t)}
           placeholder="روز"
           placeholderTextColor={colors.textLight}
           keyboardType="numeric"
           maxLength={2}
         />
       </View>
-      
-      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {error && <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>}
     </View>
   );
 };
@@ -75,35 +83,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 14,
-    fontWeight: '600',
     marginBottom: 8,
-    textAlign: 'left',
+    textAlign: 'right',
   },
   inputRow: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: radius.md,
     paddingHorizontal: 12,
-    height: 56,
+    height: 52,
   },
   input: {
     flex: 1,
+    fontFamily: FONT_FAMILY.bold,
     fontSize: 16,
     textAlign: 'center',
+    paddingVertical: 8,
   },
   yearInput: {
-    flex: 2,
+    flex: 1.8,
   },
   separator: {
-    fontSize: 20,
-    marginHorizontal: 8,
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 18,
+    marginHorizontal: 4,
   },
   errorText: {
-    color: '#ef4444',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
-    marginTop: 4,
-    textAlign: 'left',
-  }
+    marginTop: 6,
+    textAlign: 'right',
+  },
 });

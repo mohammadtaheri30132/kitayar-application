@@ -5,9 +5,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   FlatList
 } from 'react-native';
+import { showError, showWarning, showSuccess } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
@@ -66,7 +66,7 @@ const EditExamScreen = ({ route, navigation }: any) => {
         setPage(pageNumber);
       }
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در دریافت بانک سوالات رخ داد.');
+      showError('مشکلی در دریافت بانک سوالات رخ داد.');
     } finally {
       setIsLoading(false);
       setIsFetchingMore(false);
@@ -86,17 +86,18 @@ const EditExamScreen = ({ route, navigation }: any) => {
 
   const handleSaveChanges = async () => {
     if (selectedQuestions.length === 0) {
-      Alert.alert('توجه', 'آزمون نمی‌تواند بدون سوال باشد.');
+      showWarning('آزمون نمی‌تواند بدون سوال باشد.');
       return;
     }
     setIsSubmitting(true);
     try {
       const response = await api.put(`/teacher/exams/${examId}/questions`, { questionIds: selectedQuestions });
       if (response.data.success) {
-        Alert.alert('موفقیت', 'تغییرات با موفقیت ذخیره شد!', [{ text: 'باشه', onPress: () => navigation.goBack() }]);
+        showSuccess('تغییرات با موفقیت ذخیره شد!');
+        navigation.goBack();
       }
     } catch (error: any) {
-      Alert.alert('خطا', 'خطا در ذخیره تغییرات.');
+      showError('خطا در ذخیره تغییرات.');
     } finally {
       setIsSubmitting(false);
     }

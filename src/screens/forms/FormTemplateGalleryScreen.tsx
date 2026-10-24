@@ -6,8 +6,8 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -42,7 +42,7 @@ export const FormTemplateGalleryScreen: React.FC<FormTemplateGalleryScreenProps>
       const data = await formService.getTemplates();
       setTemplates(data);
     } catch (err: any) {
-      Alert.alert('خطا', 'خطا در دریافت قالب‌ها');
+      showError('خطا در دریافت قالب‌ها');
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export const FormTemplateGalleryScreen: React.FC<FormTemplateGalleryScreenProps>
       navigation.replace('CreateOrEditFormScreen', { formId: created._id });
     } catch (err: any) {
       setCreating(false);
-      Alert.alert('خطا', 'ساخت فرم از قالب ناموفق بود');
+      showError('ساخت فرم از قالب ناموفق بود');
     }
   };
 

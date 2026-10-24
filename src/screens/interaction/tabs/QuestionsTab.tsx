@@ -42,7 +42,7 @@ const DEFAULT_POPULAR_CATEGORIES: CategoryChipItem[] = [
 ];
 
 const QuestionsTab = ({ navigation }: any) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   
   const [categories, setCategories] = useState<CategoryChipItem[]>(DEFAULT_POPULAR_CATEGORIES);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all');
@@ -229,6 +229,7 @@ const QuestionsTab = ({ navigation }: any) => {
           renderItem={({ item }) => (
             <NativeQuestionCard 
               question={item} 
+              isDarkMode={isDark}
               onPress={() => navigation.navigate('QuestionDetailScreen', { questionId: item._id })}
             />
           )}

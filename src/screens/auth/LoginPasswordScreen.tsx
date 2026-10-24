@@ -6,12 +6,12 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showWarning, showError, showInfo } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { AuthContext } from '../../context/AuthContext';
@@ -27,7 +27,7 @@ const LoginPasswordScreen = ({ route, navigation }: any) => {
   const handleLogin = async () => {
     Keyboard.dismiss();
     if (!password.trim()) {
-      Alert.alert('توجه', 'لطفاً رمز عبور خود را وارد کنید.');
+      showWarning('لطفاً رمز عبور خود را وارد کنید.');
       return;
     }
 
@@ -39,7 +39,7 @@ const LoginPasswordScreen = ({ route, navigation }: any) => {
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'خطای ارتباط با سرور';
-      Alert.alert('خطا در ورود', errorMessage);
+      showError(errorMessage, 'خطا در ورود');
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +99,7 @@ const LoginPasswordScreen = ({ route, navigation }: any) => {
                 <Text style={styles.linkText}>تغییر شماره</Text>
               </TouchableOpacity>
               <Text style={styles.dotSeparator}>•</Text>
-              <TouchableOpacity onPress={() => Alert.alert('توجه', 'بزودی اضافه می‌شود')}>
+              <TouchableOpacity onPress={() => showInfo('این قابلیت به زودی در دسترس قرار می‌گیرد.')}>
                 <Text style={styles.linkText}>فراموشی رمز</Text>
               </TouchableOpacity>
             </View>

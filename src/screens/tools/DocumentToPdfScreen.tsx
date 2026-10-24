@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, 
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, 
   ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { Share2, Trash2, Download, FileText, FileSpreadsheet, Presentation, File
 import FilePickerModule from '../../native/FilePicker';
 import { saveToolHistory, getToolHistory, deleteToolHistory } from '../../services/ToolHistoryManager';
 import { COLORS } from '../../theme/colors';
+import { showSuccess, showError, showInfo, showConfirm } from '../../components/feedback';
 
 const { FileShareModule, FileSaverModule, TextToPdfModule } = NativeModules;
 
@@ -79,7 +80,7 @@ const DocumentToPdfScreen = ({ route, navigation }) => {
         // شبیه‌سازی ارسال به بک‌اند Node.js برای فایل‌های آفیس
         // در اینجا باید متد fetch یا axios خود را برای ارسال فایل به API قرار دهید
         await new Promise(resolve => setTimeout(resolve, 2500)); 
-        Alert.alert("توجه", "در این بخش فایل باید به API بک‌اند شما ارسال شود تا فرمت و جداول حفظ شوند.");
+        showInfo("در این بخش فایل باید به API بک‌اند شما ارسال شود تا فرمت و جداول حفظ شوند.");
         setIsLoading(false);
         return;
       }
@@ -90,26 +91,43 @@ const DocumentToPdfScreen = ({ route, navigation }) => {
       
       await saveToolHistory(config.id, fileName, resultPath, sizeStr, 'PDF');
       loadHistory();
-      Alert.alert("عملیات موفق", "فایل شما با موفقیت به PDF تبدیل شد.");
+      showSuccess("فایل شما با موفقیت به PDF تبدیل شد.");
     } catch (err) {
       if (err !== 'CANCELLED' && err?.code !== 'CANCELLED') {
-        Alert.alert("خطا", err.message || "خطا در پردازش فایل");
+        showError(err.message || "خطا در پردازش فایل");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id) => { setHistory(await deleteToolHistory(config.id, id)); };
+  const handleDelete = (id) => {
+    showConfirm({
+      title: 'حذف از تاریخچه',
+      message: 'آیا از حذف این سند از تاریخچه اطمینان دارید؟',
+      type: 'danger',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      onConfirm: async () => {
+        setHistory(await deleteToolHistory(config.id, id));
+        showSuccess('سند با موفقیت حذف شد.');
+      },
+    });
+  };
+
   const handleShare = async (path) => {
     try { await FileShareModule.shareFile(path, 'application/pdf'); } catch (err) {}
   };
+
   const handleSaveToDevice = async (item) => {
     try {
       await FileSaverModule.saveFile(item.resultPath, false);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+      showSuccess('فایل با موفقیت ذخیره شد.');
+    } catch (err) { 
+      showError("ذخیره فایل با مشکل مواجه شد."); 
+    }
   };
 
   const IconComponent = config.Icon;

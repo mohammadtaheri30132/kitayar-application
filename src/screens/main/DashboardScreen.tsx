@@ -7,17 +7,18 @@ import {
 } from 'lucide-react-native';
 import GlobalHeader from '../../components/common/GlobalHeader';
 import { getTodayJalali, formatJalaliDate, formatJalaliStandard, toPersianNumbers, PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
-import { PlanningService, TeacherEvent, DailyNote, TeacherTask, Announcement } from '../../api/planningService';
+import { PlanningService, TeacherEvent, DailyNote, TeacherTask, Announcement, Homework } from '../../api/planningService';
 import MiniCalendar from '../../components/planning/MiniCalendar';
 import AddTaskModal from '../../components/planning/AddTaskModal';
-import FilterBottomSheet from '../../components/planning/FilterBottomSheet';
+import FilterBottomSheet, { FilterOptions } from '../../components/planning/FilterBottomSheet';
 import AddBottomSheet from '../../components/planning/AddBottomSheet';
+import PrayerTimesWidget from '../../components/prayertimes/PrayerTimesWidget';
 import * as jalaali from 'jalaali-js';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = ({ navigation }: any) => {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   
   // Data State
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -25,13 +26,14 @@ const DashboardScreen = ({ navigation }: any) => {
   const [classes, setClasses] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [notes, setNotes] = useState<DailyNote[]>([]);
+  const [homeworks, setHomeworks] = useState<Homework[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // UI State
   const { jy, jm, jd } = getTodayJalali();
   const [selectedDate, setSelectedDate] = useState({ jy, jm, jd });
   const [dateRange, setDateRange] = useState<'today' | 'tomorrow' | 'week' | 'month'>('today');
-  const [activeFilters, setActiveFilters] = useState({ classes: true, tasks: true, events: true, notes: true });
+  const [activeFilters, setActiveFilters] = useState<FilterOptions>({ classes: true, tasks: true, events: true, notes: true, homeworks: true });
   
   // Independent Calendar State
   const [selectedTag, setSelectedTag] = useState('همه');
@@ -137,6 +139,16 @@ const DashboardScreen = ({ navigation }: any) => {
       if (notesRes.success && notesRes.data) {
         setNotes(notesRes.data);
       }
+
+      // 6. Homeworks
+      try {
+        const hwRes = await PlanningService.getHomeworks();
+        if (hwRes.success && hwRes.data) {
+          setHomeworks(hwRes.data);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch homeworks in dashboard', e);
+      }
     } catch (err) {
       console.warn('Error fetching data:', err);
     } finally {
@@ -218,7 +230,24 @@ const DashboardScreen = ({ navigation }: any) => {
     ...events.map(e => ({ ...e, tagLabel: e.type || 'رویداد', isEvent: true })),
     ...tasks.filter(t => t.dueDate).map(t => ({ id: t._id, dateInt: parseInt(t.dueDate!.split('-')[2]), color: '#10b981', tagLabel: t.category || 'تسک', title: t.title, isTask: true })),
     ...classes.map(c => ({ id: c.id, dateInt: parseInt(c.date.split('-')[2]), color: '#3b82f6', tagLabel: 'کلاس', title: c.title })),
-    ...notes.map(n => ({ id: n._id, dateInt: parseInt(n.date.split('-')[2]), color: n.color || '#fef08a', tagLabel: 'یادداشت', title: n.title || 'یادداشت' }))
+    ...notes.map(n => ({ id: n._id, dateInt: parseInt(n.date.split('-')[2]), color: n.color || '#fef08a', tagLabel: 'یادداشت', title: n.title || 'یادداشت' })),
+    ...homeworks.map(h => {
+      const jalaliClean = (h.dueDateJalali || '').replace(/\//g, '-');
+      const parts = jalaliClean.split('-');
+      const dateInt = parts.length === 3 ? parseInt(parts[2]) : 0;
+      const cls = typeof h.classId === 'object' && h.classId ? (h.classId as any) : null;
+      return {
+        id: `hw-${h._id}`,
+        dateInt,
+        date: jalaliClean,
+        color: '#f97316',
+        tagLabel: 'تکلیف',
+        title: `تکلیف: ${h.title} (${h.subject})`,
+        school: cls ? [cls.schoolName, cls.name ? `کلاس ${cls.name}` : ''].filter(Boolean).join(' - ') : '',
+        isHomework: true,
+        raw: h
+      };
+    })
   ];
 
   const taskTags = Array.from(new Set(calendarEvents.filter(e => e.isTask).map(e => e.tagLabel)));
@@ -252,40 +281,41 @@ const DashboardScreen = ({ navigation }: any) => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#f8fafc' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <GlobalHeader 
-        fullName="معلم عزیز"
         dateInfo={persianDateStr} 
-        onProfilePress={() => navigation.navigate('ProfileScreen')}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
         {/* ADMIN ANNOUNCEMENTS */}
         {announcements.length > 0 && announcements.map(ann => (
-          <View key={ann._id} style={[styles.announcementCard, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}>
+          <View key={ann._id} style={[styles.announcementCard, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#fee2e2', borderColor: isDark ? '#b91c1c' : '#fca5a5' }]}>
             <View style={styles.announcementHeader}>
               <View style={styles.announcementTitleRow}>
                 <Megaphone color="#dc2626" size={20} />
-                <Text style={[styles.announcementTitle, { color: '#991b1b' }]}>⚠ {ann.title}</Text>
+                <Text style={[styles.announcementTitle, { color: isDark ? '#fca5a5' : '#991b1b' }]}>⚠ {ann.title}</Text>
               </View>
               <TouchableOpacity onPress={() => handleDismissAnnouncement(ann._id)}>
-                <X color="#991b1b" size={20} />
+                <X color={isDark ? '#fca5a5' : '#991b1b'} size={20} />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.announcementBody, { color: '#7f1d1d' }]}>{ann.shortMessage}</Text>
+            <Text style={[styles.announcementBody, { color: isDark ? '#fecaca' : '#7f1d1d' }]}>{ann.shortMessage}</Text>
           </View>
         ))}
 
+        {/* PRAYER TIMES MINI WIDGET */}
+        <PrayerTimesWidget navigation={navigation} />
+
         {/* UNIFIED TIMELINE WIDGET */}
-        <View style={styles.widgetCard}>
+        <View style={[styles.widgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.widgetHeader}>
              <Text style={[styles.widgetTitle, { color: colors.text }]}>برنامه‌های من</Text>
-             <View style={{ flexDirection: 'row', gap: 8 }}>
-               <TouchableOpacity style={[styles.filterBtnCompact, { borderColor: colors.border }]} onPress={() => setIsAddVisible(true)}>
+             <View style={{ flexDirection: 'row-reverse', gap: 8 }}>
+               <TouchableOpacity style={[styles.filterBtnCompact, { borderColor: colors.border, backgroundColor: isDark ? colors.background : '#f8fafc' }]} onPress={() => setIsAddVisible(true)}>
                  <Plus color={colors.text} size={16} />
                </TouchableOpacity>
-               <TouchableOpacity style={[styles.filterBtnCompact, { borderColor: colors.border }]} onPress={() => setIsFilterVisible(true)}>
+               <TouchableOpacity style={[styles.filterBtnCompact, { borderColor: colors.border, backgroundColor: isDark ? colors.background : '#f8fafc' }]} onPress={() => setIsFilterVisible(true)}>
                  <Filter color={colors.text} size={16} />
                </TouchableOpacity>
              </View>
@@ -293,7 +323,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
           <View style={styles.topBar}>
             <View style={styles.dateFilterContainer}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, flexDirection: 'row-reverse' }}>
                 {[
                   { id: 'today', label: 'امروز' },
                   { id: 'tomorrow', label: 'فردا' },
@@ -301,7 +331,7 @@ const DashboardScreen = ({ navigation }: any) => {
                 ].map(tab => (
                   <TouchableOpacity 
                     key={tab.id}
-                    style={[styles.dateFilterChip, dateRange === tab.id ? { backgroundColor: colors.primary, borderColor: colors.primary } : { borderColor: colors.border }]}
+                    style={[styles.dateFilterChip, dateRange === tab.id ? { backgroundColor: colors.primary, borderColor: colors.primary } : { borderColor: colors.border, backgroundColor: isDark ? colors.background : '#fff' }]}
                     onPress={() => setDateRange(tab.id as any)}
                   >
                     <Text style={[styles.dateFilterText, { color: dateRange === tab.id ? '#fff' : colors.textLight }]}>{tab.label}</Text>
@@ -315,20 +345,24 @@ const DashboardScreen = ({ navigation }: any) => {
           const dayTasks = activeFilters.tasks ? tasks.filter(t => t.dueDate === dateStr) : [];
           const dayEvents = activeFilters.events ? events.filter(e => e.date === dateStr) : [];
           const dayNotes = activeFilters.notes ? notes.filter(n => n.date === dateStr) : [];
+          const dayHomeworks = activeFilters.homeworks !== false ? homeworks.filter(h => {
+            const clean = (h.dueDateJalali || '').replace(/\//g, '-');
+            return clean === dateStr;
+          }) : [];
 
-          const hasAnyItems = dayClasses.length > 0 || dayTasks.length > 0 || dayEvents.length > 0 || dayNotes.length > 0;
+          const hasAnyItems = dayClasses.length > 0 || dayTasks.length > 0 || dayEvents.length > 0 || dayNotes.length > 0 || dayHomeworks.length > 0;
 
           if (!hasAnyItems) return null;
 
           return (
             <View key={dateStr} style={styles.dateGroup}>
-              <Text style={[styles.dateGroupTitle, { color: colors.primary }]}>{getDateLabel(dateStr)}</Text>
+              <Text style={[styles.dateGroupTitle, { color: colors.primary, borderBottomColor: colors.border }]}>{getDateLabel(dateStr)}</Text>
 
               {/* CLASSES */}
               {dayClasses.length > 0 && (
                 <View style={styles.categorySection}>
                   <Text style={[styles.categoryTitle, { color: colors.textLight }]}>برنامه کلاسی</Text>
-                  <View style={styles.timelineCard}>
+                  <View style={[styles.timelineCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }]}>
                     {dayClasses.map((cls, idx) => (
                       <View key={cls.id} style={styles.timelineItem}>
                         <View style={styles.timelineTimeCol}>
@@ -367,7 +401,7 @@ const DashboardScreen = ({ navigation }: any) => {
                         <View style={[styles.checkbox, isDone && { backgroundColor: colors.primary, borderColor: colors.primary }]}>
                           {isDone && <CheckSquare color="#fff" size={12} />}
                         </View>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, alignItems: 'flex-end' }}>
                           <Text style={[styles.taskText, { color: isDone ? colors.textLight : colors.text }, isDone && { textDecorationLine: 'line-through' }]}>
                             {task.title}
                           </Text>
@@ -387,9 +421,9 @@ const DashboardScreen = ({ navigation }: any) => {
                   <Text style={[styles.categoryTitle, { color: colors.textLight }]}>رویدادها</Text>
                   <View style={{ paddingHorizontal: 4 }}>
                     {dayEvents.map((ev, idx) => (
-                      <View key={ev.id || ev._id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                        <View style={[styles.eventSimpleDot, { backgroundColor: ev.color || colors.primary, width: 6, height: 6, marginRight: 6 }]} />
-                        <Text style={{ fontFamily: 'IRANSansX', fontSize: 13, color: colors.text, lineHeight: 22 }}>
+                      <View key={ev.id || ev._id || idx} style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 6 }}>
+                        <View style={[styles.eventSimpleDot, { backgroundColor: ev.color || colors.primary, width: 6, height: 6, marginLeft: 6, marginRight: 0 }]} />
+                        <Text style={{ fontFamily: 'IRANSansX', fontSize: 13, color: colors.text, lineHeight: 22, textAlign: 'right', flex: 1 }}>
                           <Text style={{ color: ev.color || colors.primary, fontWeight: 'bold' }}>({ev.type || ev.tagLabel || 'رویداد'})</Text> - {ev.title}
                         </Text>
                       </View>
@@ -405,10 +439,84 @@ const DashboardScreen = ({ navigation }: any) => {
                   <View style={styles.notesContainer}>
                     {dayNotes.map((note) => (
                       <View key={note._id} style={[styles.noteCard, { backgroundColor: note.color || '#fef08a', borderColor: '#cbd5e1' }]}>
-                        <FileText color="#333" size={16} style={{ marginRight: 8, marginTop: 2 }} />
+                        <FileText color="#333" size={16} style={{ marginLeft: 8, marginRight: 0, marginTop: 2 }} />
                         <Text style={[styles.noteText, { color: '#1e293b' }]}>{note.title ? `${note.title}: ` : ''}{note.content}</Text>
                       </View>
                     ))}
+                  </View>
+                </View>
+              )}
+
+              {/* HOMEWORKS */}
+              {dayHomeworks.length > 0 && (
+                <View style={styles.categorySection}>
+                  <Text style={[styles.categoryTitle, { color: '#ea580c' }]}>تکالیف موعد تحویل</Text>
+                  <View style={{ gap: 8 }}>
+                    {dayHomeworks.map((hw) => {
+                      const cls = typeof hw.classId === 'object' && hw.classId ? (hw.classId as any) : null;
+                      const className = cls ? cls.name : '';
+                      const schoolName = cls ? cls.schoolName : '';
+                      const classIdStr = cls ? cls._id : (hw.classId as string);
+                      const doneCount = (hw.studentSubmissions || []).filter(s => s.status === 'DONE').length;
+                      const totalCount = (hw.studentSubmissions || []).length;
+
+                      return (
+                        <TouchableOpacity
+                          key={hw._id}
+                          style={[styles.homeworkDashboardCard, { backgroundColor: '#fff7ed', borderColor: '#fed7aa' }]}
+                          onPress={() => navigation.navigate('HomeworkDetailsScreen', { homeworkId: hw._id, classId: classIdStr })}
+                          activeOpacity={0.8}
+                        >
+                          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                              <View style={[styles.homeworkBadgeDashboard, { flexDirection: 'row-reverse' }]}>
+                                <BookOpen size={12} color="#ea580c" />
+                                <Text style={styles.homeworkBadgeDashboardText}>تکلیف کلاسی</Text>
+                              </View>
+                              <Text style={[styles.homeworkDashboardSubject, { color: '#c2410c' }]}>{hw.subject}</Text>
+                            </View>
+                            <ChevronLeft size={16} color="#9a3412" style={{ transform: [{ scaleX: -1 }] }} />
+                          </View>
+
+                          <Text style={[styles.homeworkDashboardTitle, { color: '#431407' }]}>{hw.title}</Text>
+
+                          {(className || schoolName) && (
+                            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                              <MapPin size={12} color="#9a3412" />
+                              <Text style={[styles.homeworkDashboardMeta, { color: '#9a3412' }]}>
+                                {[schoolName, className ? `کلاس ${className}` : ''].filter(Boolean).join(' · ')}
+                              </Text>
+                            </View>
+                          )}
+
+                          {hw.items && hw.items.length > 0 && (
+                            <View style={{ marginTop: 6, gap: 3 }}>
+                              {hw.items.slice(0, 2).map((item, idx) => (
+                                <View key={item._id || idx} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#f97316' }} />
+                                  <Text style={{ fontFamily: 'IRANSansX', fontSize: 12, color: '#7c2d12', textAlign: 'right' }} numberOfLines={1}>
+                                    {item.title}
+                                  </Text>
+                                </View>
+                              ))}
+                              {hw.items.length > 2 && (
+                                <Text style={{ fontFamily: 'IRANSansX', fontSize: 11, color: '#ea580c', textAlign: 'right', fontWeight: 'bold' }}>
+                                  +{toPersianNumbers(hw.items.length - 2)} مورد دیگر...
+                                </Text>
+                              )}
+                            </View>
+                          )}
+
+                          {totalCount > 0 && (
+                            <View style={{ marginTop: 8, flexDirection: 'row-reverse', justifyContent: 'flex-start', alignItems: 'center', gap: 6 }}>
+                              <Text style={{ fontFamily: 'IRANSansX', fontSize: 11, color: '#9a3412', textAlign: 'right' }}>
+                                وضعیت بررسی: {toPersianNumbers(doneCount)} از {toPersianNumbers(totalCount)} دانش‌آموز انجام داده‌اند
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
               )}
@@ -421,9 +529,10 @@ const DashboardScreen = ({ navigation }: any) => {
           (activeFilters.classes && classes.some(c => c.date === dateStr)) ||
           (activeFilters.tasks && tasks.some(t => t.dueDate === dateStr)) ||
           (activeFilters.events && events.some(e => e.date === dateStr)) ||
-          (activeFilters.notes && notes.some(n => n.date === dateStr))
+          (activeFilters.notes && notes.some(n => n.date === dateStr)) ||
+          (activeFilters.homeworks !== false && homeworks.some(h => (h.dueDateJalali || '').replace(/\//g, '-') === dateStr))
         ) && (
-          <View style={[styles.emptyStateBox, { backgroundColor: '#f1f5f9', borderColor: colors.border, marginTop: 16 }]}>
+          <View style={[styles.emptyStateBox, { backgroundColor: isDark ? colors.surface : '#f1f5f9', borderColor: colors.border, marginTop: 16 }]}>
             <Text style={[styles.emptyStateTitle, { color: colors.text }]}>برنامه‌ای برای نمایش وجود ندارد 📅</Text>
             <Text style={[styles.emptyStateSub, { color: colors.textLight }]}>از دکمه + برای افزودن برنامه جدید استفاده کنید.</Text>
           </View>
@@ -434,7 +543,7 @@ const DashboardScreen = ({ navigation }: any) => {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>تقویم شمای کلی</Text>
         </View>
-        <View style={[styles.tasksCard, { backgroundColor: colors.surface, marginBottom: 80 }]}>
+        <View style={[styles.tasksCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, marginBottom: 80 }]}>
           <MiniCalendar 
             events={calendarEvents}
             selectedDate={selectedDate}
@@ -442,7 +551,7 @@ const DashboardScreen = ({ navigation }: any) => {
           />
           
           {/* Tags Row */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagsContainer} contentContainerStyle={{ flexDirection: 'row-reverse' }}>
             <TouchableOpacity
               style={[styles.tagPill, { borderColor: colors.primary, borderWidth: 1 }, selectedTag === 'همه' ? { backgroundColor: colors.primary } : { backgroundColor: 'transparent' }]}
               onPress={() => setSelectedTag('همه')}
@@ -494,7 +603,7 @@ const DashboardScreen = ({ navigation }: any) => {
           </ScrollView>
 
           {/* Event Tabs (Daily/Weekly/Monthly) */}
-          <View style={styles.eventTabsContainer}>
+          <View style={[styles.eventTabsContainer, { borderBottomColor: colors.border }]}>
             {['روزانه', 'هفتگی', 'ماهانه'].map(tab => (
               <TouchableOpacity
                 key={tab}
@@ -515,33 +624,49 @@ const DashboardScreen = ({ navigation }: any) => {
           </View>
 
           {/* Events List for independent calendar */}
-          <View style={styles.eventsList}>
+          <View style={[styles.eventsList, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }]}>
             {filteredCalendarEvents.length === 0 ? (
               <Text style={{ fontFamily: 'IRANSansX', color: colors.textLight, textAlign: 'center', marginVertical: 12 }}>
                 هیچ موردی برای این تاریخ وجود ندارد
               </Text>
             ) : (
               filteredCalendarEvents.map((ev, idx) => (
-                <View key={ev.id || ev._id || idx} style={styles.eventItemSimple}>
+                <TouchableOpacity 
+                  key={ev.id || ev._id || idx} 
+                  style={[styles.eventItemSimple, { borderBottomColor: colors.border }]}
+                  disabled={!ev.isHomework}
+                  onPress={() => {
+                    if (ev.isHomework && ev.raw) {
+                      const cls = typeof ev.raw.classId === 'object' && ev.raw.classId ? ev.raw.classId : null;
+                      navigation.navigate('HomeworkDetailsScreen', { 
+                        homeworkId: ev.raw._id, 
+                        classId: cls ? cls._id : ev.raw.classId 
+                      });
+                    }
+                  }}
+                  activeOpacity={ev.isHomework ? 0.7 : 1}
+                >
                   <View style={[styles.eventSimpleDot, { backgroundColor: ev.color || '#f59e0b' }]} />
                   <View style={styles.eventItemInfo}>
                     <Text style={[styles.eventItemTitle, { color: colors.text }]}>{ev.title}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 4 }}>
                       <MapPin color={colors.textLight} size={12} />
-                      <Text style={[styles.timelineDetailText, { color: colors.textLight }]}>
+                      <Text style={[styles.timelineDetailText, { color: colors.textLight, marginRight: 4 }]}>
                         {ev.location || ev.school || ev.forWhere || 'بدون مکان'}
                       </Text>
                     </View>
                   </View>
                   {(ev.time || ev.startTime) ? (
-                    <View style={styles.eventItemTimeBox}>
+                    <View style={[styles.eventItemTimeBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : '#f1f5f9' }]}>
                       <Clock color={colors.primary} size={14} />
                       <Text style={[styles.eventItemTimeText, { color: colors.primary }]}>
                         {toPersianNumbers(ev.time || ev.startTime)}
                       </Text>
                     </View>
+                  ) : ev.isHomework ? (
+                    <ChevronLeft size={16} color={colors.textLight} />
                   ) : null}
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>
@@ -556,17 +681,17 @@ const DashboardScreen = ({ navigation }: any) => {
                 <Text style={{ fontFamily: 'IRANSansX', fontSize: 12, color: colors.primary }}>مشاهده همه</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, flexDirection: 'row-reverse' }}>
               {notes.slice(0, 5).map(note => (
                 <TouchableOpacity 
                   key={note._id} 
-                  style={[styles.latestNoteCard, { backgroundColor: note.color || '#fef08a' }]}
+                  style={[styles.latestNoteCard, { backgroundColor: isDark ? colors.surface : (note.color || '#fef08a'), borderColor: colors.border }]}
                   onPress={() => navigation.navigate('DailyNotesScreen')}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.latestNoteDate}>{note.date}</Text>
-                  {note.title && <Text style={styles.latestNoteTitle} numberOfLines={1}>{note.title}</Text>}
-                  <Text style={styles.latestNoteContent} numberOfLines={2}>{note.content}</Text>
+                  <Text style={[styles.latestNoteDate, { color: colors.textLight }]}>{note.date}</Text>
+                  {note.title && <Text style={[styles.latestNoteTitle, { color: colors.text }]} numberOfLines={1}>{note.title}</Text>}
+                  <Text style={[styles.latestNoteContent, { color: colors.text }]} numberOfLines={2}>{note.content}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -574,45 +699,45 @@ const DashboardScreen = ({ navigation }: any) => {
         )}
 
         {/* MANAGEMENT WIDGET */}
-        <View style={styles.managementContainer}>
+        <View style={[styles.managementContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[styles.widgetTitle, { color: colors.text, marginBottom: 16 }]}>مدیریت</Text>
           <View style={styles.managementGrid}>
             <TouchableOpacity 
-              style={[styles.managementCard, { backgroundColor: colors.surface }]}
+              style={[styles.managementCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: colors.border }]}
               onPress={() => navigation.navigate('DailyNotesScreen')}
             >
-              <View style={[styles.managementIconWrapper, { backgroundColor: '#e0e7ff' }]}>
-                <FileText color="#4338ca" size={24} />
+              <View style={[styles.managementIconWrapper, { backgroundColor: isDark ? '#1e1b4b' : '#e0e7ff' }]}>
+                <FileText color={isDark ? '#818cf8' : '#4338ca'} size={24} />
               </View>
               <Text style={[styles.managementCardText, { color: colors.text }]}>مدیریت نوشته‌ها</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.managementCard, { backgroundColor: colors.surface }]}
+              style={[styles.managementCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: colors.border }]}
               onPress={() => navigation.navigate('ClassManagementScreen')}
             >
-              <View style={[styles.managementIconWrapper, { backgroundColor: '#dcfce7' }]}>
-                <BookOpen color="#15803d" size={24} />
+              <View style={[styles.managementIconWrapper, { backgroundColor: isDark ? '#064e3b' : '#dcfce7' }]}>
+                <BookOpen color={isDark ? '#34d399' : '#15803d'} size={24} />
               </View>
               <Text style={[styles.managementCardText, { color: colors.text }]}>مدیریت کلاس‌ها</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.managementCard, { backgroundColor: colors.surface }]}
+              style={[styles.managementCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: colors.border }]}
               onPress={() => navigation.navigate('TasksScreen')}
             >
-              <View style={[styles.managementIconWrapper, { backgroundColor: '#fef3c7' }]}>
-                <CheckSquare color="#b45309" size={24} />
+              <View style={[styles.managementIconWrapper, { backgroundColor: isDark ? '#78350f' : '#fef3c7' }]}>
+                <CheckSquare color={isDark ? '#fbbf24' : '#b45309'} size={24} />
               </View>
               <Text style={[styles.managementCardText, { color: colors.text }]}>مدیریت کارها</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.managementCard, { backgroundColor: colors.surface }]}
+              style={[styles.managementCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#fff', borderColor: colors.border }]}
               onPress={() => navigation.navigate('WeeklyScheduleScreen')}
             >
-              <View style={[styles.managementIconWrapper, { backgroundColor: '#f3e8ff' }]}>
-                <CalendarIcon color="#7e22ce" size={24} />
+              <View style={[styles.managementIconWrapper, { backgroundColor: isDark ? '#581c87' : '#f3e8ff' }]}>
+                <CalendarIcon color={isDark ? '#c084fc' : '#7e22ce'} size={24} />
               </View>
               <Text style={[styles.managementCardText, { color: colors.text }]}>برنامه کلاسی</Text>
             </TouchableOpacity>
@@ -663,7 +788,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   latestNotesHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
@@ -680,6 +805,7 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     color: '#475569',
     marginBottom: 4,
+    textAlign: 'right',
   },
   latestNoteTitle: {
     fontSize: 13,
@@ -687,12 +813,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#0f172a',
     marginBottom: 2,
+    textAlign: 'right',
   },
   latestNoteContent: {
     fontSize: 12,
     fontFamily: 'IRANSansX',
     color: '#1e293b',
     lineHeight: 18,
+    textAlign: 'right',
   },
 
   widgetCard: {
@@ -704,7 +832,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3,
   },
   widgetHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
@@ -713,6 +841,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
+    textAlign: 'right',
   },
   filterBtnCompact: {
     width: 32,
@@ -724,7 +853,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   topBar: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     marginBottom: 16,
   },
@@ -742,7 +871,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 100 },
   
   announcementCard: {
     padding: 16,
@@ -751,25 +880,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   announcementHeader: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
   announcementTitleRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
   },
   announcementTitle: {
     fontSize: 15,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
-    marginLeft: 8,
+    marginRight: 8,
+    textAlign: 'right',
   },
   announcementBody: {
     fontSize: 13,
     fontFamily: 'IRANSansX',
     lineHeight: 22,
+    textAlign: 'right',
   },
 
   dateGroup: {
@@ -783,6 +914,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
     paddingBottom: 4,
+    textAlign: 'right',
   },
   categorySection: {
     marginBottom: 12,
@@ -792,7 +924,8 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     marginBottom: 8,
-    marginLeft: 8,
+    marginRight: 8,
+    textAlign: 'right',
   },
 
   timelineCard: {
@@ -801,7 +934,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   timelineItem: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
   },
   timelineTimeCol: {
     width: 45,
@@ -832,7 +965,8 @@ const styles = StyleSheet.create({
   },
   timelineContentCol: {
     flex: 1,
-    paddingLeft: 8,
+    paddingRight: 8,
+    paddingLeft: 0,
     paddingBottom: 16,
   },
   timelineClassTitle: {
@@ -840,15 +974,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
     marginBottom: 4,
+    textAlign: 'right',
   },
   timelineDetailRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   timelineDetailText: {
     fontSize: 11,
     fontFamily: 'IRANSansX',
-    marginLeft: 4,
+    marginRight: 4,
+    textAlign: 'right',
   },
 
   tasksCard: {
@@ -856,7 +993,8 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   taskItem: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
@@ -867,7 +1005,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1.5,
     borderColor: '#cbd5e1',
-    marginRight: 10,
+    marginLeft: 10,
+    marginRight: 0,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 2,
@@ -877,11 +1016,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
     marginBottom: 2,
+    textAlign: 'right',
   },
   taskDesc: {
     fontSize: 11,
     fontFamily: 'IRANSansX',
     lineHeight: 18,
+    textAlign: 'right',
   },
 
   eventsList: {
@@ -890,7 +1031,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   eventItemSimple: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
@@ -900,7 +1041,8 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 12,
+    marginLeft: 12,
+    marginRight: 0,
   },
   eventItemInfo: {
     flex: 1,
@@ -909,9 +1051,10 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 15,
     fontWeight: 'bold',
+    textAlign: 'right',
   },
   eventItemTimeBox: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 8,
@@ -922,7 +1065,7 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 12,
     fontWeight: 'bold',
-    marginLeft: 4,
+    marginRight: 4,
   },
   
   tagsContainer: {
@@ -948,7 +1091,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   eventTabsContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
     marginBottom: 12,
@@ -970,7 +1113,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   noteCard: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
@@ -981,6 +1124,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'IRANSansX',
     lineHeight: 20,
+    textAlign: 'right',
   },
 
   emptyStateBox: {
@@ -1008,7 +1152,7 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginTop: 8,
     marginBottom: 16,
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center'
   },
@@ -1016,11 +1160,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'IRANSansX',
+    textAlign: 'right',
   },
 
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 85,
     right: 24,
     width: 60,
     height: 60,
@@ -1044,7 +1189,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   managementGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 12,
     justifyContent: 'space-between',
@@ -1077,6 +1222,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  homeworkDashboardCard: {
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  homeworkBadgeDashboard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ffedd5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  homeworkBadgeDashboardText: {
+    fontFamily: 'IRANSansX',
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#ea580c',
+  },
+  homeworkDashboardSubject: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'right',
+  },
+  homeworkDashboardTitle: {
+    fontFamily: 'IRANSansX',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  homeworkDashboardMeta: {
+    fontFamily: 'IRANSansX',
+    fontSize: 11,
+    textAlign: 'right',
   }
 });
 

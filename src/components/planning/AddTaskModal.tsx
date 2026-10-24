@@ -63,12 +63,23 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Backdrop Tap to Close */}
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <TouchableOpacity 
+          style={{ flex: 1, width: '100%' }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: 80 }]}>
           <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>افزودن کار جدید</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -128,7 +139,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
                 <View style={[styles.inputWithIcon, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   <CalendarIcon color={colors.textLight} size={16} />
                   <TextInput 
-                    style={[styles.inputText, { color: colors.text, textAlign: 'left' }]} 
+                    style={[styles.inputText, { color: colors.text, textAlign: 'right' }]} 
                     placeholder="1405-07-25"
                     placeholderTextColor={colors.textLight}
                     value={dueDate}
@@ -142,7 +153,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
                 <View style={[styles.inputWithIcon, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   <Clock color={colors.textLight} size={16} />
                   <TextInput 
-                    style={[styles.inputText, { color: colors.text, textAlign: 'left' }]} 
+                    style={[styles.inputText, { color: colors.text, textAlign: 'right' }]} 
                     placeholder="مثلاً 10:30"
                     placeholderTextColor={colors.textLight}
                     keyboardType="number-pad"
@@ -159,7 +170,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
                 <View style={[styles.inputWithIcon, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   <MapPin color={colors.textLight} size={16} />
                   <TextInput 
-                    style={[styles.inputText, { color: colors.text }]} 
+                    style={[styles.inputText, { color: colors.text, textAlign: 'right' }]} 
                     placeholder="مدرسه، کلاس..."
                     placeholderTextColor={colors.textLight}
                     value={forWhere}
@@ -175,7 +186,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
                 <View style={[styles.inputWithIcon, { borderColor: colors.border, backgroundColor: colors.surface }]}>
                   <User color={colors.textLight} size={16} />
                   <TextInput 
-                    style={[styles.inputText, { color: colors.text }]} 
+                    style={[styles.inputText, { color: colors.text, textAlign: 'right' }]} 
                     placeholder="دانش‌آموز، گروه..."
                     placeholderTextColor={colors.textLight}
                     value={forWhom}
@@ -188,15 +199,15 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
           </ScrollView>
           
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
-            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.saveBtn, { backgroundColor: title ? colors.primary : '#94a3b8' }]} 
               onPress={handleSave}
               disabled={!title || isLoading}
             >
               {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>ذخیره کار</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -217,7 +228,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -228,6 +239,7 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'right',
   },
   closeBtn: {
     padding: 4,
@@ -241,6 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 8,
     marginTop: 8,
+    textAlign: 'right',
   },
   input: {
     borderWidth: 1,
@@ -249,9 +262,10 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 14,
     marginBottom: 16,
+    textAlign: 'right',
   },
   inputWithIcon: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: 12,
@@ -263,10 +277,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'IRANSansX',
     fontSize: 14,
-    marginLeft: 8,
+    marginRight: 8,
+    textAlign: 'right',
   },
   typesGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
@@ -282,13 +297,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
   },
   flex1: {
     flex: 1,
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     padding: 20,
     borderTopWidth: 1,
   },

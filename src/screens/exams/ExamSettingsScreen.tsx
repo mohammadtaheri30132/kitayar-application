@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, 
-  Alert, KeyboardAvoidingView, Platform, ScrollView, Switch, Clipboard 
+  KeyboardAvoidingView, Platform, ScrollView, Switch, Clipboard 
 } from 'react-native';
+import { showError, showSuccess } from '../../components/feedback';
 import { DateTimePickerAndroid, DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
@@ -38,7 +39,7 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
           if (examData.endTime) setEndTime(new Date(examData.endTime));
         }
       } catch (error) {
-        Alert.alert('خطا', 'مشکلی در دریافت اطلاعات رخ داد');
+        showError('مشکلی در دریافت اطلاعات رخ داد');
       } finally {
         setIsLoading(false);
       }
@@ -48,7 +49,7 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
 
   const handleCopyLink = () => {
     Clipboard.setString(examLink);
-    Alert.alert('کپی شد', 'لینک لوکال آزمون در حافظه کپی شد.');
+    showSuccess('لینک لوکال آزمون در حافظه کپی شد.');
   };
   const showDateTimePicker = (target: 'start' | 'end') => {
     const currentValue = target === 'start' ? startTime : endTime;
@@ -90,10 +91,11 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
         endTime: isUntimed ? null : endTime.toISOString(),
       });
       if (response.data.success) {
-        Alert.alert('موفقیت', 'تنظیمات آزمون ذخیره شد', [{ text: 'باشه', onPress: () => navigation.goBack() }]);
+        showSuccess('تنظیمات آزمون ذخیره شد');
+        navigation.goBack();
       }
     } catch (error) {
-      Alert.alert('خطا', 'ویرایش تنظیمات امکان‌پذیر نیست.');
+      showError('ویرایش تنظیمات امکان‌پذیر نیست.');
     } finally {
       setIsSaving(false);
     }

@@ -7,10 +7,10 @@ import {
   PermissionsAndroid,
   Platform,
   ActivityIndicator,
-  Alert,
   StatusBar,
   Dimensions,
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -85,7 +85,7 @@ export const DocumentScannerScreen: React.FC<DocumentScannerScreenProps> = ({ ro
       const photoResult = await scannerService.captureCameraPhoto();
       await processRawPhoto(photoResult.uri);
     } catch (err: any) {
-      Alert.alert('خطا در عکاسی', err?.message || 'ثبت تصویر با خطا مواجه شد');
+      showError(err?.message || 'ثبت تصویر با خطا مواجه شد');
       setIsCapturing(false);
     }
   };
@@ -117,7 +117,7 @@ export const DocumentScannerScreen: React.FC<DocumentScannerScreenProps> = ({ ro
       await processRawPhoto(uri);
     } catch (err: any) {
       if (err?.code !== 'CANCELLED' && err !== 'CANCELLED') {
-        Alert.alert('خطا', err?.message || 'خطا در بارگذاری عکس از گالری');
+        showError(err?.message || 'خطا در بارگذاری عکس از گالری');
       }
       setIsCapturing(false);
     }
@@ -142,7 +142,7 @@ export const DocumentScannerScreen: React.FC<DocumentScannerScreenProps> = ({ ro
       });
     } catch (err: any) {
       setIsCapturing(false);
-      Alert.alert('خطا در بررسی سند', err?.message || 'امکان تحلیل لبه‌های مدرک وجود ندارد');
+      showError(err?.message || 'امکان تحلیل لبه‌های مدرک وجود ندارد');
     }
   };
 

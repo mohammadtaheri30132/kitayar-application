@@ -8,8 +8,8 @@ import {
   Dimensions,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { showError, showSuccess, showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ArrowRight,
@@ -84,7 +84,7 @@ export const ScannerPreviewScreen: React.FC<ScannerPreviewScreenProps> = ({ rout
       setCurrentUri(result.uri);
       setSavedSuccess(false);
     } catch (err: any) {
-      Alert.alert('خطا در اعمال فیلتر', err?.message || 'اعمال فیلتر با خطا مواجه شد');
+      showError(err?.message || 'اعمال فیلتر با خطا مواجه شد');
     } finally {
       setIsProcessing(false);
     }
@@ -108,7 +108,7 @@ export const ScannerPreviewScreen: React.FC<ScannerPreviewScreenProps> = ({ rout
       setCurrentUri(result.uri);
       setSavedSuccess(false);
     } catch (err: any) {
-      Alert.alert('خطا', 'چرخش تصویر با خطا مواجه شد');
+      showError('چرخش تصویر با خطا مواجه شد');
     } finally {
       setIsProcessing(false);
     }
@@ -137,9 +137,9 @@ export const ScannerPreviewScreen: React.FC<ScannerPreviewScreenProps> = ({ rout
       } catch (_) {}
 
       setSavedSuccess(true);
-      Alert.alert('ذخیره موفق', 'تصویر اسکن‌شده با کیفیت بالا در گالری ذخیره شد.');
+      showSuccess('تصویر اسکن‌شده با کیفیت بالا در گالری ذخیره شد.');
     } catch (err: any) {
-      Alert.alert('خطا در ذخیره', err?.message || 'امکان ذخیره فایل در گالری وجود ندارد');
+      showError(err?.message || 'امکان ذخیره فایل در گالری وجود ندارد');
     } finally {
       setIsExporting(false);
     }
@@ -156,25 +156,23 @@ export const ScannerPreviewScreen: React.FC<ScannerPreviewScreenProps> = ({ rout
         await saveToolHistory('تولید PDF از اسکن', pdfResult.uri);
       } catch (_) {}
 
-      Alert.alert(
-        'تولید فایل PDF',
-        `فایل PDF با موفقیت آماده شد:\n${pdfResult.fileName}`,
-        [
-          { text: 'بستن', style: 'cancel' },
-          {
-            text: 'اشتراک‌گذاری PDF',
-            onPress: () => {
-              Share.open({
-                url: pdfResult.uri,
-                type: 'application/pdf',
-                title: 'اشتراک‌گذاری سند اسکن‌شده',
-              }).catch(() => {});
-            },
-          },
-        ]
-      );
+      showConfirm({
+        title: 'تولید فایل PDF',
+        message: `فایل PDF با موفقیت آماده شد:\n${pdfResult.fileName}\nآیا مایل به اشتراک‌گذاری هستید؟`,
+        confirmText: 'اشتراک‌گذاری PDF',
+        cancelText: 'بستن',
+        isDestructive: false,
+        icon: Share2,
+        onConfirm: () => {
+          Share.open({
+            url: pdfResult.uri,
+            type: 'application/pdf',
+            title: 'اشتراک‌گذاری سند اسکن‌شده',
+          }).catch(() => {});
+        },
+      });
     } catch (err: any) {
-      Alert.alert('خطا در ساخت PDF', err?.message || 'تولید فایل PDF با مشکل مواجه شد');
+      showError(err?.message || 'تولید فایل PDF با مشکل مواجه شد');
     } finally {
       setIsExporting(false);
     }

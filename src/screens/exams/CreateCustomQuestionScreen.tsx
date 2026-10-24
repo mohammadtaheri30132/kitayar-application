@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  ScrollView, ActivityIndicator, Alert, Image, NativeModules, Platform, PermissionsAndroid 
+  ScrollView, ActivityIndicator, Image, NativeModules, Platform, PermissionsAndroid 
 } from 'react-native';
+import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Mic, Image as ImageIcon, X, Trash2, StopCircle, Play, Pause, RefreshCw } from 'lucide-react-native';
 import ImagePicker from 'react-native-image-crop-picker';
@@ -91,7 +92,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
 
   const toggleRecording = async () => {
     if (Platform.OS !== 'android' || !AudioRecorderModule) {
-      Alert.alert('توجه', 'ضبط صدا فقط در اندروید (نسخه نیتیو) فعال است.');
+      showWarning('ضبط صدا فقط در اندروید (نسخه نیتیو) فعال است.');
       return;
     }
 
@@ -107,7 +108,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
         }
       );
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert('توجه', 'برای ضبط صدا باید دسترسی میکروفون را بدهید.');
+        showWarning('برای ضبط صدا باید دسترسی میکروفون را بدهید.');
         return;
       }
     } catch (err) {
@@ -123,7 +124,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
         setIsPaused(false);
         if (recordInterval.current) clearInterval(recordInterval.current);
       } catch (e) {
-        Alert.alert('خطا', 'مشکلی در توقف ضبط پیش آمد.');
+        showError('مشکلی در توقف ضبط پیش آمد.');
         setIsRecording(false);
       }
     } else {
@@ -136,7 +137,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
           setRecordDuration(prev => prev + 1000);
         }, 1000);
       } catch (e) {
-        Alert.alert('خطا', 'مشکلی در شروع ضبط پیش آمد. لطفاً دسترسی میکروفون را تایید کنید.');
+        showError('مشکلی در شروع ضبط پیش آمد. لطفاً دسترسی میکروفون را تایید کنید.');
       }
     }
   };
@@ -237,14 +238,14 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!question.trim()) {
-      Alert.alert('توجه', 'متن سوال الزامی است.');
+      showWarning('متن سوال الزامی است.');
       return;
     }
 
     if (type === 'تستی') {
       const validOptions = options.filter(o => o.trim());
       if (validOptions.length < 2) {
-        Alert.alert('توجه', 'برای سوال تستی حداقل دو گزینه وارد کنید.');
+        showWarning('برای سوال تستی حداقل دو گزینه وارد کنید.');
         return;
       }
     }
@@ -276,9 +277,8 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
       if (editQuestion) {
         const res = await api.put(`/teacher/questions/${editQuestion._id}`, payload);
         if (res.data.success) {
-          Alert.alert('موفقیت', 'سوال با موفقیت ویرایش شد.', [
-            { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-          ]);
+          showSuccess('سوال با موفقیت ویرایش شد.');
+          navigation.goBack();
         }
       } else {
         const res = await api.post('/teacher/questions', payload);
@@ -289,15 +289,14 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
               questionIds: [newQuestionId]
             });
           }
-          Alert.alert('موفقیت', 'سوال شما ساخته و به آزمون اضافه شد.', [
-            { text: 'متوجه شدم', onPress: () => navigation.goBack() }
-          ]);
+          showSuccess('سوال شما ساخته و به آزمون اضافه شد.');
+          navigation.goBack();
         }
       }
     } catch (error: any) {
       console.log('Error saving custom question:', error.response?.data || error.message);
       const msg = error.response?.data?.message || 'در ثبت سوال خطایی رخ داد.';
-      Alert.alert('خطا', msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }

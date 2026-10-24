@@ -1,14 +1,15 @@
 import React from 'react';
+import { View, Image } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { Home, Users, Wrench, MessageCircle, BookOpen } from 'lucide-react-native';
+import { Home, Users, Wrench, MessageCircle } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/main/DashboardScreen';
 import TeacherToolsScreen from '../screens/tools/TeacherToolsScreen';
 import ClassManagementScreen from '../screens/classes/ClassManagementScreen';
 import InteractionScreen from '../screens/interaction/InteractionScreen';
-import EducationDashboardScreen from '../screens/education/EducationDashboardScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -36,15 +37,41 @@ const MainTabNavigator = () => {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textLight,
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: 'bold',
-          fontFamily: 'IRANSansMobile', // Fallback if available
+          fontSize: 11,
+          fontFamily: 'Estedad-FD-Bold',
+          marginTop: -2,
         },
         tabBarIcon: ({ focused, color, size }) => {
-          let IconComponent;
+          if (route.name === 'ProfileTab') {
+            return (
+              <View
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 13,
+                  borderWidth: focused ? 2 : 1.2,
+                  borderColor: focused ? colors.primary : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.2)'),
+                  overflow: 'hidden',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Image
+                  source={{ uri: 'https://i.pravatar.cc/150?u=kitayar@teacher.com' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    opacity: focused ? 1 : 0.75,
+                  }}
+                  resizeMode="cover"
+                />
+              </View>
+            );
+          }
+
+          let IconComponent: any = Home;
           
           if (route.name === 'HomeTab') IconComponent = Home;
-          else if (route.name === 'EducationTab') IconComponent = BookOpen;
           else if (route.name === 'InteractionTab') IconComponent = MessageCircle;
           else if (route.name === 'ToolsTab') IconComponent = Wrench;
           else if (route.name === 'ClassTab') IconComponent = Users;
@@ -54,19 +81,9 @@ const MainTabNavigator = () => {
       })}
     >
       <Tab.Screen 
-        name="HomeTab" 
-        component={DashboardScreen} 
-        options={{ title: 'خانه' }} 
-      />
-      <Tab.Screen 
-        name="EducationTab" 
-        component={EducationDashboardScreen} 
-        options={{ title: 'آموزشیار' }} 
-      />
-      <Tab.Screen 
-        name="InteractionTab" 
-        component={InteractionScreen} 
-        options={{ title: 'تعامل' }} 
+        name="ClassTab" 
+        component={ClassManagementScreen} 
+        options={{ title: 'مدیریت کلاس' }} 
       />
       <Tab.Screen 
         name="ToolsTab" 
@@ -74,9 +91,19 @@ const MainTabNavigator = () => {
         options={{ title: 'ابزار معلم' }} 
       />
       <Tab.Screen 
-        name="ClassTab" 
-        component={ClassManagementScreen} 
-        options={{ title: 'مدیریت کلاس' }} 
+        name="HomeTab" 
+        component={DashboardScreen} 
+        options={{ title: 'خانه' }} 
+      />
+      <Tab.Screen 
+        name="InteractionTab" 
+        component={InteractionScreen} 
+        options={{ title: 'تعامل' }} 
+      />
+      <Tab.Screen 
+        name="ProfileTab" 
+        component={ProfileScreen} 
+        options={{ title: 'پروفایل' }} 
       />
     </Tab.Navigator>
   );

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert,
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet,
   ActivityIndicator, Image, TextInput, Switch
 } from 'react-native';
+import { showError, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Share2, Eye, Trash2, Download, Maximize } from 'lucide-react-native';
@@ -41,9 +42,9 @@ const ImageResizeScreen = ({ navigation }) => {
       setNewWidth(dim.width.toString());
       setNewHeight(dim.height.toString());
       setIsLoading(false);
-    } catch (err) {
+    } catch (err: any) {
       setIsLoading(false);
-      if (err.code !== 'CANCELLED') Alert.alert("خطا", err.message);
+      if (err?.code !== 'CANCELLED') showError(err?.message || 'خطا در دریافت مشخصات عکس');
     }
   };
 
@@ -71,7 +72,7 @@ const ImageResizeScreen = ({ navigation }) => {
     const h = parseInt(newHeight);
     
     if (!w || !h || w <= 0 || h <= 0) {
-      Alert.alert("خطا", "ابعاد وارد شده نامعتبر است.");
+      showWarning('ابعاد وارد شده نامعتبر است.');
       return;
     }
 
@@ -85,8 +86,8 @@ const ImageResizeScreen = ({ navigation }) => {
       await saveToolHistory(TOOL_ID, fileName, resultPath, sizeStr, `${w}x${h}`);
       loadHistory();
       setSelectedImage(null);
-    } catch (err) {
-      Alert.alert("خطا در تغییر ابعاد", err.message);
+    } catch (err: any) {
+      showError(err?.message || 'خطا در تغییر ابعاد');
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +102,7 @@ const ImageResizeScreen = ({ navigation }) => {
       await FileSaverModule.saveFile(item.resultPath, true);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+    } catch (err) { showError('ذخیره فایل با مشکل مواجه شد.'); }
   };
 
   return (

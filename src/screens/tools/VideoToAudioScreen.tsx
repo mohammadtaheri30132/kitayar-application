@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, ActivityIndicator
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -8,6 +8,7 @@ import { Share2, Trash2, Download, Music, FileAudio, Eye } from 'lucide-react-na
 
 import { saveToolHistory, getToolHistory, deleteToolHistory } from '../../services/ToolHistoryManager';
 import { COLORS } from '../../theme/colors';
+import { showSuccess, showError, showConfirm } from '../../components/feedback';
 
 const { FileShareModule, FileSaverModule, VideoProcessorModule, VideoPickerModule } = NativeModules;
 const TOOL_ID = 'VIDEO_TO_AUDIO';
@@ -36,26 +37,43 @@ const VideoToAudioScreen = () => {
       
       await saveToolHistory(TOOL_ID, fileName, resultPath, sizeStr, 'M4A');
       loadHistory();
-      Alert.alert("عملیات موفق", "صوت ویدیو با موفقیت استخراج شد.");
+      showSuccess("صوت ویدیو با موفقیت استخراج شد.");
     } catch (err) {
       if (err !== 'CANCELLED' && err.code !== 'CANCELLED') {
-        Alert.alert("خطا", err.message || "خطا در استخراج صوت");
+        showError(err.message || "خطا در استخراج صوت");
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id) => { setHistory(await deleteToolHistory(TOOL_ID, id)); };
+  const handleDelete = (id) => {
+    showConfirm({
+      title: 'حذف از تاریخچه',
+      message: 'آیا از حذف این فایل صوتی از تاریخچه اطمینان دارید؟',
+      type: 'danger',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      onConfirm: async () => {
+        setHistory(await deleteToolHistory(TOOL_ID, id));
+        showSuccess('فایل با موفقیت حذف شد.');
+      },
+    });
+  };
+
   const handleShare = async (path) => {
     try { await FileShareModule.shareFile(path, 'audio/mp4'); } catch (err) {}
   };
+
   const handleSaveToDevice = async (item) => {
     try {
       await FileSaverModule.saveFile(item.resultPath, false);
       setSavedItems(prev => ({ ...prev, [item.id]: true }));
       setTimeout(() => setSavedItems(prev => ({ ...prev, [item.id]: false })), 3000);
-    } catch (err) { Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد."); }
+      showSuccess('فایل صوتی در حافظه ذخیره شد.');
+    } catch (err) { 
+      showError("ذخیره فایل با مشکل مواجه شد."); 
+    }
   };
 
   return (

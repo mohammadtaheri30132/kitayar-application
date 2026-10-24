@@ -1,8 +1,9 @@
 import React from 'react';
-import { Platform, requireNativeComponent, ViewStyle, StyleSheet, TouchableOpacity } from 'react-native';
+import { Platform, requireNativeComponent, ViewStyle, StyleSheet } from 'react-native';
 import QuestionCard from '../../screens/interaction/components/QuestionCard';
 import { CommunityQuestionItem } from '../../services/community/communityService';
 import { formatRelativeTime } from '../../utils/communityHelpers';
+import { useTheme } from '../../context/ThemeContext';
 
 interface NativeCardProps {
   questionId: string;
@@ -31,7 +32,10 @@ interface Props {
   style?: ViewStyle;
 }
 
-export const NativeQuestionCard: React.FC<Props> = ({ question, onPress, isDarkMode = false, style }) => {
+export const NativeQuestionCard: React.FC<Props> = ({ question, onPress, isDarkMode, style }) => {
+  const { isDark } = useTheme();
+  const effectiveDark = isDarkMode !== undefined ? isDarkMode : isDark;
+
   if (Platform.OS === 'android' && CommunityQnaNative) {
     const authorName = (question as any).authorName || question.author?.name || 'کاربر کیتایار';
     const authorRole = (question as any).authorRole || question.author?.role || 'معلم';
@@ -53,7 +57,7 @@ export const NativeQuestionCard: React.FC<Props> = ({ question, onPress, isDarkM
         categoryColor={categoryColor}
         answerCount={question.answerCount || 0}
         status={(question as any).status || 'active'}
-        isDarkMode={isDarkMode}
+        isDarkMode={effectiveDark}
         onCardPress={onPress}
       />
     );

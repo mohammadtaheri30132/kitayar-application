@@ -13,9 +13,7 @@ const InteractionScreen = ({ navigation }: any) => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      <GlobalHeader 
-        onProfilePress={() => navigation.navigate('ProfileScreen')} 
-      />
+      <GlobalHeader title="تعامل و هم‌اندیشی" subtitle="پرسش و پاسخ و گفتگو با همکاران" />
       <InteractionTabs activeTab={activeTab} onChangeTab={setActiveTab} />
       
       <View style={styles.content}>

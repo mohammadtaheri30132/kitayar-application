@@ -5,18 +5,19 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  FlatList,
-  Alert
+  FlatList
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { useFocusEffect } from '@react-navigation/native';
 import { api } from '../../api/axiosConfig';
-import { COLORS } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronRight, FileText, Plus } from 'lucide-react-native';
+import { ArrowRight, ChevronLeft, FileText, Plus, Users, Calendar } from 'lucide-react-native';
 
 const ClassExamsScreen = ({ route, navigation }: any) => {
   const { currentClassId, currentClassName, classroom } = route.params;
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
 
   const [classExams, setClassExams] = useState<any[]>([]);
   const [classroomData, setClassroomData] = useState<any>(classroom || null);
@@ -31,7 +32,7 @@ const ClassExamsScreen = ({ route, navigation }: any) => {
       }
     } catch (error) {
       console.warn(error);
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات آزمون‌ها رخ داد.');
+      showError('مشکلی در دریافت اطلاعات آزمون‌ها رخ داد.');
     } finally {
       setLoading(false);
     }
@@ -45,41 +46,56 @@ const ClassExamsScreen = ({ route, navigation }: any) => {
 
   const renderExamItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
-      style={styles.card}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => navigation.navigate('ExamDashboardScreen', { examId: item.id })}
       activeOpacity={0.7}
     >
       <View style={styles.cardInfo}>
-        <View style={[styles.avatar, { backgroundColor: '#e0e7ff' }]}>
-          <FileText size={20} color={COLORS.primary} />
+        <View style={[styles.avatar, { backgroundColor: isDark ? '#1e293b' : '#eff6ff' }]}>
+          <FileText size={20} color={colors.primary} />
         </View>
         <View style={styles.cardTextContainer}>
-          <Text style={styles.studentName}>{item.title}</Text>
-          <Text style={styles.studentPhone}>{item.participantsCount} شرکت‌کننده مجاز</Text>
-          <Text style={[styles.statusText, { color: COLORS.primary }]}>{item.status}</Text>
+          <Text style={[styles.examTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+          <View style={styles.metaRow}>
+            <Users size={13} color={colors.textLight} />
+            <Text style={[styles.metaText, { color: colors.textLight }]}>{item.participantsCount} شرکت‌کننده مجاز</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9' }]}>
+            <Text style={[styles.statusText, { color: colors.primary }]}>{item.status}</Text>
+          </View>
         </View>
       </View>
-      <ChevronRight size={20} color={COLORS.textLight} style={{ transform: [{ rotate: '180deg' }] }} />
+      <ChevronLeft size={20} color={colors.textLight} />
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 20) }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ChevronRight size={24} color={COLORS.textLight} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: colors.surface, 
+          borderBottomColor: colors.border,
+          paddingTop: Math.max(insets.top, 12) + 8
+        }
+      ]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+          <ArrowRight size={22} color={colors.text} />
         </TouchableOpacity>
+        
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>آزمون‌های کلاس</Text>
-          <Text style={styles.headerSubtitle}>{currentClassName}</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>آزمون‌های کلاس</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.primary }]}>{currentClassName}</Text>
         </View>
+
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
-        {/* دکمه ساخت آزمون برای این کلاس با حاشیه نقطه‌چین و پس‌زمینه شفاف */}
+        {/* دکمه ساخت آزمون برای این کلاس */}
         <TouchableOpacity 
-          style={styles.createExamDashedBtn}
+          style={[styles.createExamDashedBtn, { borderColor: colors.primary }]}
           onPress={() => navigation.navigate('CreateExamStep1Screen', {
             classId: currentClassId,
             className: currentClassName,
@@ -87,17 +103,17 @@ const ClassExamsScreen = ({ route, navigation }: any) => {
           })}
           activeOpacity={0.7}
         >
-          <Plus size={20} color="#2563eb" style={{ marginLeft: 8 }} />
-          <Text style={styles.createExamDashedText}>ساخت آزمون برای این کلاس</Text>
+          <Plus size={20} color={colors.primary} style={{ marginLeft: 8 }} />
+          <Text style={[styles.createExamDashedText, { color: colors.primary }]}>ساخت آزمون برای این کلاس</Text>
         </TouchableOpacity>
 
         {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
         ) : classExams.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <FileText size={48} color={COLORS.border} style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyText}>هیچ آزمونی برای این کلاس تعریف نشده است.</Text>
-            <Text style={styles.emptySubText}>با زدن دکمه بالا می‌توانید اولین آزمون این کلاس را تعریف کنید.</Text>
+            <FileText size={48} color={colors.border} style={{ marginBottom: 12 }} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>هیچ آزمونی برای این کلاس تعریف نشده است.</Text>
+            <Text style={[styles.emptySubText, { color: colors.textLight }]}>با زدن دکمه بالا می‌توانید اولین آزمون این کلاس را تعریف کنید.</Text>
           </View>
         ) : (
           <FlatList
@@ -114,21 +130,32 @@ const ClassExamsScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
   header: { 
-    flexDirection: 'row', 
+    flexDirection: 'row-reverse', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    padding: 16, 
-    backgroundColor: COLORS.surface, 
-    elevation: 2,
+    paddingHorizontal: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border
   },
-  backButton: { padding: 8 },
-  headerCenter: { alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
-  headerSubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 4 },
+  backButton: { 
+    padding: 8,
+    borderRadius: 10,
+  },
+  headerCenter: { 
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerTitle: { 
+    fontSize: 17, 
+    fontWeight: 'bold', 
+  },
+  headerSubtitle: { 
+    fontSize: 12, 
+    marginTop: 2, 
+    fontWeight: '600' 
+  },
   
   content: { flex: 1 },
 
@@ -136,7 +163,6 @@ const styles = StyleSheet.create({
   createExamDashedBtn: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#2563eb',
     backgroundColor: 'transparent',
     borderRadius: 14,
     paddingVertical: 14,
@@ -149,34 +175,93 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   createExamDashedText: {
-    color: '#2563eb',
     fontSize: 15,
     fontWeight: 'bold',
   },
 
-  listContent: { padding: 16, paddingTop: 8, paddingBottom: 100 },
+  listContent: { 
+    padding: 16, 
+    paddingTop: 8, 
+    paddingBottom: 100 
+  },
   
   card: { 
-    flexDirection: 'row', 
+    flexDirection: 'row-reverse', 
     justifyContent: 'space-between', 
     alignItems: 'center', 
-    backgroundColor: COLORS.surface, 
-    padding: 16, 
+    padding: 14, 
     borderRadius: 16, 
     marginBottom: 12, 
     borderWidth: 1, 
-    borderColor: COLORS.border 
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  cardInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#f1f5f9', justifyContent: 'center', alignItems: 'center', marginLeft: 12 },
-  cardTextContainer: { flex: 1, marginRight: 10 },
-  studentName: { fontSize: 15, fontWeight: 'bold', color: COLORS.text, marginBottom: 4, textAlign: 'left' },
-  studentPhone: { fontSize: 13, color: COLORS.textLight, marginBottom: 4, textAlign: 'left' },
-  statusText: { fontSize: 12, color: COLORS.textLight, textAlign: 'left' },
+  cardInfo: { 
+    flexDirection: 'row-reverse', 
+    alignItems: 'center', 
+    flex: 1 
+  },
+  avatar: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 22, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginLeft: 12 
+  },
+  cardTextContainer: { 
+    flex: 1, 
+    marginLeft: 8,
+    alignItems: 'flex-end',
+  },
+  examTitle: { 
+    fontSize: 15, 
+    fontWeight: 'bold', 
+    marginBottom: 4, 
+    textAlign: 'right' 
+  },
+  metaRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  metaText: { 
+    fontSize: 12, 
+    marginRight: 4, 
+    textAlign: 'right' 
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: 'flex-end',
+  },
+  statusText: { 
+    fontSize: 11, 
+    fontWeight: 'bold', 
+    textAlign: 'right' 
+  },
   
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingTop: 40, paddingHorizontal: 20 },
-  emptyText: { color: COLORS.text, fontSize: 15, fontWeight: 'bold', textAlign: 'center' },
-  emptySubText: { color: COLORS.textLight, fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  emptyContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingTop: 50, 
+    paddingHorizontal: 20 
+  },
+  emptyText: { 
+    fontSize: 15, 
+    fontWeight: 'bold', 
+    textAlign: 'center' 
+  },
+  emptySubText: { 
+    fontSize: 13, 
+    textAlign: 'center', 
+    marginTop: 8, 
+    lineHeight: 20 
+  },
 });
 
 export default ClassExamsScreen;

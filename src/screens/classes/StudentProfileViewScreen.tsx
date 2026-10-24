@@ -8,11 +8,11 @@ import {
   TouchableOpacity, 
   TextInput,
   ScrollView,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform
 } from 'react-native';
+import { showError, showSuccess } from '../../components/feedback';
 import { 
   ChevronRight, 
   User, 
@@ -24,9 +24,14 @@ import {
   Calendar,
   Save,
   Plus,
-  StickyNote
+  StickyNote,
+  BadgeCheck,
+  CheckSquare,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react-native';
 import { api } from '../../api/axiosConfig';
+import { PlanningService } from '../../api/planningService';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,7 +61,7 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
   const { studentPhone, classId, className, firstName, lastName, fatherName } = route.params;
   const insets = useSafeAreaInsets();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'attendance' | 'exams' | 'notes'>('attendance');
+  const [activeTab, setActiveTab] = useState<'general' | 'attendance' | 'exams' | 'notes' | 'homework'>('attendance');
   const [loading, setLoading] = useState(true);
 
   // Data states
@@ -64,6 +69,7 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
   const [attendance, setAttendance] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
+  const [studentHomeworks, setStudentHomeworks] = useState<any[]>([]);
 
   // Edit states for general tab
   const [editForm, setEditForm] = useState({
@@ -88,7 +94,10 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/teacher/classrooms/${classId}/students/${studentPhone}/profile`);
+      const [res, hwRes] = await Promise.all([
+        api.get(`/teacher/classrooms/${classId}/students/${studentPhone}/profile`),
+        PlanningService.getHomeworks({ classId, studentPhone }).catch(() => ({ success: false, data: [] }))
+      ]);
       if (res.data.success) {
         setMembership(res.data.data.membership);
         setAttendance(res.data.data.attendance || []);
@@ -102,9 +111,12 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
           parentPhone: m?.parentPhone || ''
         });
       }
+      if (hwRes?.success && hwRes.data) {
+        setStudentHomeworks(hwRes.data);
+      }
     } catch (error) {
       console.warn('Error fetching profile', error);
-      Alert.alert('خطا', 'مشکلی در دریافت اطلاعات پیش آمد.');
+      showError('مشکلی در دریافت اطلاعات پیش آمد.');
     } finally {
       setLoading(false);
     }
@@ -153,10 +165,10 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
       const res = await api.put(`/teacher/classrooms/${classId}/students/${studentPhone}/profile`, editForm);
       if (res.data.success) {
         setMembership({ ...membership, ...editForm });
-        Alert.alert('موفق', 'اطلاعات با موفقیت بروزرسانی شد.');
+        showSuccess('اطلاعات با موفقیت بروزرسانی شد.');
       }
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در ذخیره اطلاعات رخ داد.');
+      showError('مشکلی در ذخیره اطلاعات رخ داد.');
     } finally {
       setIsSavingGeneral(false);
     }
@@ -177,7 +189,7 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
         setNewNoteColor('neutral');
       }
     } catch (error) {
-      Alert.alert('خطا', 'مشکلی در ثبت یادداشت رخ داد.');
+      showError('مشکلی در ثبت یادداشت رخ داد.');
     } finally {
       setIsSavingNote(false);
     }
@@ -196,10 +208,30 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
 
   const stats = getAttendanceStats();
 
+  const handleUpdateStudentHwStatus = async (hwId: string, newStatus: 'DONE' | 'NOT_DONE' | 'PENDING') => {
+    try {
+      await PlanningService.updateStudentHomeworkStatus(hwId, studentPhone, newStatus);
+      setStudentHomeworks(prev => prev.map(hw => {
+        if (hw._id !== hwId) return hw;
+        const subIndex = (hw.studentSubmissions || []).findIndex((s: any) => s.studentPhone === studentPhone);
+        let newSubs = [...(hw.studentSubmissions || [])];
+        if (subIndex >= 0) {
+          newSubs[subIndex] = { ...newSubs[subIndex], status: newStatus };
+        } else {
+          newSubs.push({ studentPhone, status: newStatus });
+        }
+        return { ...hw, studentSubmissions: newSubs };
+      }));
+    } catch (e) {
+      showError('ثبت وضعیت با خطا مواجه شد');
+    }
+  };
+
   const renderTabHeader = () => (
     <View style={styles.tabsContainer}>
       {[
         { id: 'attendance', label: 'حضور و غیاب' },
+        { id: 'homework', label: 'تکالیف' },
         { id: 'exams', label: 'آزمون‌ها' },
         { id: 'notes', label: 'یادداشت‌ها' },
         { id: 'general', label: 'اطلاعات عمومی' },
@@ -222,9 +254,14 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
           <ChevronRight size={24} color={COLORS.textLight} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>
-            {editForm.firstName || editForm.lastName ? `${editForm.firstName} ${editForm.lastName}` : 'بدون نام'}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={styles.headerTitle}>
+              {editForm.firstName || editForm.lastName ? `${editForm.firstName} ${editForm.lastName}` : 'بدون نام'}
+            </Text>
+            {(membership?.isVerified || route.params?.isVerified) ? (
+              <BadgeCheck size={18} color="#0284c7" fill="#0284c7" style={{ marginRight: 6 }} />
+            ) : null}
+          </View>
           <Text style={styles.headerSubtitle}>{studentPhone}</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -273,6 +310,90 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
                     </View>
                   </View>
                 ))
+              )}
+            </ScrollView>
+          )}
+
+          {activeTab === 'homework' && (
+            <ScrollView contentContainerStyle={styles.tabContent}>
+              {studentHomeworks.length === 0 ? (
+                <Text style={styles.emptyText}>تکلیفی برای این دانش‌آموز ثبت نشده است.</Text>
+              ) : (
+                studentHomeworks.map((hw) => {
+                  const sub = hw.studentSubmissions?.find((s: any) => s.studentPhone === studentPhone);
+                  const currentSt = sub?.status || 'PENDING';
+                  const stLabel = currentSt === 'DONE' ? 'انجام شده است' : currentSt === 'NOT_DONE' ? 'انجام نشده' : 'در انتظار بررسی';
+                  const stColor = currentSt === 'DONE' ? '#166534' : currentSt === 'NOT_DONE' ? '#991b1b' : '#92400e';
+                  const stBg = currentSt === 'DONE' ? '#dcfce7' : currentSt === 'NOT_DONE' ? '#fee2e2' : '#fef3c7';
+
+                  return (
+                    <View key={hw._id} style={styles.card}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <Text style={styles.cardTitle}>{hw.title}</Text>
+                          <View style={{ backgroundColor: stBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 11, color: stColor, fontFamily: 'IRANSansX', fontWeight: 'bold' }}>
+                              {stLabel}
+                            </Text>
+                          </View>
+                        </View>
+                        <Text style={styles.cardSubtitle}>
+                          درس: {hw.subject} • موعد: {hw.dueDateJalali || hw.dueDate}
+                        </Text>
+
+                        {/* Items preview */}
+                        {hw.items && hw.items.length > 0 && (
+                          <View style={{ backgroundColor: '#f8fafc', padding: 8, borderRadius: 8, marginTop: 8 }}>
+                            {hw.items.slice(0, 3).map((it: any, i: number) => (
+                              <Text key={i} style={{ fontSize: 11.5, fontFamily: 'IRANSansX', color: '#475569', marginBottom: 2, textAlign: 'right' }}>
+                                • {it.title}
+                              </Text>
+                            ))}
+                          </View>
+                        )}
+
+                        {/* Quick Status Buttons */}
+                        <View style={{ flexDirection: 'row-reverse', gap: 6, marginTop: 10 }}>
+                          <TouchableOpacity
+                            style={[
+                              styles.hwQuickBtn,
+                              currentSt === 'DONE' && { backgroundColor: '#16a34a', borderColor: '#16a34a' }
+                            ]}
+                            onPress={() => handleUpdateStudentHwStatus(hw._id, 'DONE')}
+                          >
+                            <Text style={[styles.hwQuickBtnText, { color: currentSt === 'DONE' ? '#fff' : '#166534' }]}>
+                              انجام شده
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.hwQuickBtn,
+                              currentSt === 'NOT_DONE' && { backgroundColor: '#dc2626', borderColor: '#dc2626' }
+                            ]}
+                            onPress={() => handleUpdateStudentHwStatus(hw._id, 'NOT_DONE')}
+                          >
+                            <Text style={[styles.hwQuickBtnText, { color: currentSt === 'NOT_DONE' ? '#fff' : '#991b1b' }]}>
+                              انجام نشده
+                            </Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.hwQuickBtn,
+                              currentSt === 'PENDING' && { backgroundColor: '#d97706', borderColor: '#d97706' }
+                            ]}
+                            onPress={() => handleUpdateStudentHwStatus(hw._id, 'PENDING')}
+                          >
+                            <Text style={[styles.hwQuickBtnText, { color: currentSt === 'PENDING' ? '#fff' : '#92400e' }]}>
+                              در انتظار
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })
               )}
             </ScrollView>
           )}
@@ -328,6 +449,28 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
 
           {activeTab === 'general' && (
             <ScrollView contentContainerStyle={styles.tabContent}>
+              {(membership?.isVerified || route.params?.isVerified) ? (
+                <View style={styles.verifiedStatusCard}>
+                  <BadgeCheck size={22} color="#0284c7" fill="#0284c7" style={{ marginLeft: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.verifiedStatusTitle}>عضویت معتبر (دارای نشان تیک آبی)</Text>
+                    <Text style={styles.verifiedStatusDesc}>
+                      مشخصات این دانش‌آموز از طریق فرم ثبت‌نام اینترنتی احراز هویت شده و تایید معلم را داراست.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.manualStatusCard}>
+                  <User size={20} color="#64748b" style={{ marginLeft: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.manualStatusTitle}>ثبت دستی توسط معلم (فاقد تیک آبی)</Text>
+                    <Text style={styles.manualStatusDesc}>
+                      این پرونده به صورت دستی ایجاد شده و هنوز احراز هویت پیامکی نشده است.
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>نام</Text>
                 <TextInput 
@@ -575,6 +718,58 @@ const styles = StyleSheet.create({
     shadowRadius: 8
   },
 
+  // Status Cards
+  verifiedStatusCard: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1.5,
+    borderColor: '#bfdbfe',
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  verifiedStatusTitle: {
+    fontSize: 13.5,
+    fontFamily: 'IRANSansX',
+    fontWeight: '700',
+    color: '#0369a1',
+    textAlign: 'left',
+  },
+  verifiedStatusDesc: {
+    fontSize: 11.5,
+    fontFamily: 'IRANSansX',
+    color: '#0284c7',
+    marginTop: 2,
+    lineHeight: 18,
+    textAlign: 'left',
+  },
+  manualStatusCard: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  manualStatusTitle: {
+    fontSize: 13.5,
+    fontFamily: 'IRANSansX',
+    fontWeight: '700',
+    color: '#475569',
+    textAlign: 'left',
+  },
+  manualStatusDesc: {
+    fontSize: 11.5,
+    fontFamily: 'IRANSansX',
+    color: '#64748b',
+    marginTop: 2,
+    lineHeight: 18,
+    textAlign: 'left',
+  },
+
   // General Form
   inputGroup: { marginBottom: 16 },
   label: { fontSize: 13, fontFamily: 'IRANSansX', color: COLORS.textLight, marginBottom: 8, textAlign: 'right' },
@@ -607,6 +802,20 @@ const styles = StyleSheet.create({
   colorsRow: { flexDirection: 'row-reverse', justifyContent: 'flex-start', marginBottom: 24, gap: 12 },
   colorCircle: { width: 40, height: 40, borderRadius: 20 },
 
+  hwQuickBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+  },
+  hwQuickBtnText: {
+    fontSize: 11,
+    fontFamily: 'IRANSansX',
+    fontWeight: '700',
+  },
   emptyText: { textAlign: 'center', color: COLORS.textLight, fontFamily: 'IRANSansX', marginTop: 40, fontSize: 14 }
 });
 

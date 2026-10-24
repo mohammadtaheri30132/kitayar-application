@@ -6,12 +6,12 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image
 } from 'react-native';
+import { showError, showWarning, showSuccess } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { Play, Pause } from 'lucide-react-native';
@@ -39,7 +39,7 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
           }
         }
       } catch (error: any) {
-        Alert.alert('خطا', 'مشکلی در دریافت پاسخ‌برگ دانش‌آموز رخ داد.');
+        showError('مشکلی در دریافت پاسخ‌برگ دانش‌آموز رخ داد.');
         navigation.goBack();
       } finally {
         setIsLoading(false);
@@ -51,7 +51,7 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
   // ثبت نمره نهایی
   const handleSubmitGrade = async () => {
     if (!finalScore.trim()) {
-      Alert.alert('توجه', 'لطفاً نمره نهایی را وارد کنید.');
+      showWarning('لطفاً نمره نهایی را وارد کنید.');
       return;
     }
 
@@ -62,13 +62,12 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
       });
 
       if (response.data.success) {
-        Alert.alert('موفقیت', 'نمره دانش‌آموز با موفقیت ثبت شد!', [
-          { text: 'بازگشت', onPress: () => navigation.goBack() }
-        ]);
+        showSuccess('نمره دانش‌آموز با موفقیت ثبت شد!');
+        navigation.goBack();
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'خطا در ثبت نمره';
-      Alert.alert('خطا', errorMessage);
+      showError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

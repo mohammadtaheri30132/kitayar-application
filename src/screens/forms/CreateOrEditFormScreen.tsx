@@ -8,7 +8,6 @@ import {
   TextInput,
   Switch,
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   NativeModules,
@@ -16,6 +15,7 @@ import {
   Image,
   PermissionsAndroid,
 } from 'react-native';
+import { showError, showWarning, showSuccess, showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import {
@@ -204,7 +204,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         setQuestions(qList);
       }
     } catch (err: any) {
-      Alert.alert('خطا', 'خطا در بارگذاری اطلاعات فرم.');
+      showError('خطا در بارگذاری اطلاعات فرم.');
     } finally {
       setLoading(false);
     }
@@ -362,25 +362,22 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       return;
     }
 
-    Alert.alert(
-      'لغو سوال',
-      'آیا از لغو این سوال و بازگشت به لیست سوالات اطمینان دارید؟',
-      [
-        { text: 'ادامه ویرایش', style: 'cancel' },
-        {
-          text: 'بله، لغو شود',
-          style: 'destructive',
-          onPress: () => {
-            resetQuestionEditor();
-            if (questions.length > 0) {
-              setCurrentStep(3);
-            } else {
-              setCurrentStep(1);
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'لغو سوال',
+      message: 'آیا از لغو این سوال و بازگشت به لیست سوالات اطمینان دارید؟',
+      confirmText: 'بله، لغو شود',
+      cancelText: 'ادامه ویرایش',
+      isDestructive: true,
+      icon: 'warning',
+      onConfirm: () => {
+        resetQuestionEditor();
+        if (questions.length > 0) {
+          setCurrentStep(3);
+        } else {
+          setCurrentStep(1);
+        }
+      },
+    });
   };
 
   const handlePickPromptImageFromGallery = async () => {
@@ -392,7 +389,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         if (uri) setQPromptImage(uri);
       }
     } catch (err: any) {
-      if (err?.code !== 'CANCELLED') Alert.alert('خطا', 'خطا در انتخاب عکس از گالری');
+      if (err?.code !== 'CANCELLED') showError('خطا در انتخاب عکس از گالری');
     }
   };
 
@@ -408,7 +405,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
   // --------------------------------------------------------------------------
   const startAudioRecording = async () => {
     if (Platform.OS !== 'android' || !AudioRecorderModule) {
-      Alert.alert('توجه', 'قابلیت ضبط صدای نیتیو در این دستگاه پشتیبانی نمی‌شود.');
+      showWarning('قابلیت ضبط صدای نیتیو در این دستگاه پشتیبانی نمی‌شود.');
       return;
     }
 
@@ -424,7 +421,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       );
 
       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-        Alert.alert('توجه', 'دسترسی به میکروفون داده نشد.');
+        showWarning('دسترسی به میکروفون داده نشد.');
         return;
       }
 
@@ -435,7 +432,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         setRecordSeconds((prev) => prev + 1);
       }, 1000);
     } catch (err: any) {
-      Alert.alert('خطا در شروع ضبط', err?.message || 'مشکلی در شروع ضبط صدا پیش آمد.');
+      showError(err?.message || 'مشکلی در شروع ضبط صدا پیش آمد.', 'خطا در شروع ضبط');
       setIsRecordingAudio(false);
     }
   };
@@ -456,11 +453,11 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         if (uploadedUrl) {
           setQPromptAudio(uploadedUrl);
         } else {
-          Alert.alert('خطا', 'خطا در بارگذاری فایل صوتی به سرور.');
+          showError('خطا در بارگذاری فایل صوتی به سرور.');
         }
       }
     } catch (err: any) {
-      Alert.alert('خطا در توقف ضبط', err?.message || 'خطا در ذخیره فایل صوتی.');
+      showError(err?.message || 'خطا در ذخیره فایل صوتی.', 'خطا در توقف ضبط');
     } finally {
       setIsUploadingAudio(false);
     }
@@ -510,7 +507,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
     }
 
     if (!qTitle.trim()) {
-      Alert.alert('توجه', 'لطفاً صورت سوال را وارد کنید.');
+      showWarning('لطفاً صورت سوال را وارد کنید.');
       return;
     }
 
@@ -529,7 +526,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
 
     if (['single_choice', 'multiple_choice'].includes(qType)) {
       if (qOptions.length < 2) {
-        Alert.alert('توجه', 'حداقل دو گزینه برای سوال تستی تعریف کنید.');
+        showWarning('حداقل دو گزینه برای سوال تستی تعریف کنید.');
         return;
       }
       questionItem.options = qOptions.map((opt, i) => ({
@@ -550,7 +547,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
 
     if (andGoToNext) {
       resetQuestionEditor();
-      Alert.alert('ثبت شد', `سوال ${toPersianNumbers(updatedList.length)} ذخیره شد. اکنون مشخصات سوال بعدی را وارد نمایید.`);
+      showSuccess(`سوال ${toPersianNumbers(updatedList.length)} ذخیره شد. اکنون مشخصات سوال بعدی را وارد نمایید.`, 'ثبت شد');
     } else {
       resetQuestionEditor();
       setCurrentStep(3);
@@ -569,18 +566,19 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
   };
 
   const deleteQuestion = (index: number) => {
-    Alert.alert('حذف سوال', 'آیا از حذف این سوال اطمینان دارید؟', [
-      { text: 'انصراف', style: 'cancel' },
-      {
-        text: 'حذف',
-        style: 'destructive',
-        onPress: () => {
-          const newList = questions.filter((_, i) => i !== index);
-          newList.forEach((q, i) => (q.order = i + 1));
-          setQuestions(newList);
-        },
+    showConfirm({
+      title: 'حذف سوال',
+      message: 'آیا از حذف این سوال اطمینان دارید؟',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: () => {
+        const newList = questions.filter((_, i) => i !== index);
+        newList.forEach((q, i) => (q.order = i + 1));
+        setQuestions(newList);
       },
-    ]);
+    });
   };
 
   // --------------------------------------------------------------------------
@@ -588,12 +586,12 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
   // --------------------------------------------------------------------------
   const handleFinalSave = async (isDraftMode: boolean) => {
     if (!title.trim()) {
-      Alert.alert('خطا', 'عنوان فرم نمی‌تواند خالی باشد.');
+      showWarning('عنوان فرم نمی‌تواند خالی باشد.');
       setCurrentStep(1);
       return;
     }
     if (questions.length === 0) {
-      Alert.alert('خطا', 'فرم باید حداقل دارای ۱ سوال باشد.');
+      showWarning('فرم باید حداقل دارای ۱ سوال باشد.');
       setCurrentStep(2);
       return;
     }
@@ -644,23 +642,18 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       }
 
       if (res && res._id) {
-        Alert.alert(
-          isDraftMode ? 'ذخیره شد ✅' : 'فرم منتشر شد 🎉',
+        showSuccess(
           isDraftMode
             ? 'فرم به عنوان پیش‌نویس ذخیره گردید.'
-            : 'فرم شما با موفقیت ذخیره و منتشر شد. اکنون آماده دریافت پاسخ از مخاطبان است.',
-          [
-            {
-              text: 'مشاهده در داشبورد',
-              onPress: () => navigation.navigate('FormDashboardScreen'),
-            },
-          ]
+            : 'فرم شما با موفقیت ذخیره و منتشر شد.',
+          isDraftMode ? 'ذخیره شد' : 'فرم منتشر شد'
         );
+        navigation.navigate('FormDashboardScreen');
       } else {
-        Alert.alert('خطا', 'خطا در ثبت اطلاعات فرم.');
+        showError('خطا در ثبت اطلاعات فرم.');
       }
     } catch (err: any) {
-      Alert.alert('خطا', err.message || 'خطا در برقراری ارتباط با سرور.');
+      showError(err.message || 'خطا در برقراری ارتباط با سرور.');
     } finally {
       setSaving(false);
     }
@@ -791,7 +784,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         style={styles.primaryActionButton}
         onPress={() => {
           if (!title.trim()) {
-            Alert.alert('توجه', 'لطفاً ابتدا عنوان فرم را وارد نمایید.');
+            showWarning('لطفاً ابتدا عنوان فرم را وارد نمایید.');
             return;
           }
           setCurrentStep(2);
@@ -1288,7 +1281,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
           style={styles.primaryActionButton}
           onPress={() => {
             if (questions.length === 0) {
-              Alert.alert('توجه', 'حداقل ۱ سوال باید ایجاد شود.');
+              showWarning('حداقل ۱ سوال باید ایجاد شود.');
               return;
             }
             setCurrentStep(4);
@@ -1507,7 +1500,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
                 style={styles.wizardStepItem}
                 onPress={() => {
                   if (item.step === 2 && !title.trim()) {
-                    Alert.alert('توجه', 'ابتدا عنوان فرم را وارد کنید.');
+                    showWarning('ابتدا عنوان فرم را وارد کنید.');
                     return;
                   }
                   setCurrentStep(item.step as any);

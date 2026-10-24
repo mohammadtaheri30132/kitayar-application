@@ -26,6 +26,13 @@ import com.kitayar.audiorecorder.AudioRecorderPackage
 import com.kitayar.modules.persiandatepicker.PersianDatePickerPackage
 import com.kitayar.modules.scanner.DocumentScannerPackage
 import com.kitayar.modules.community.CommunityQnaPackage
+import com.kitayar.modules.prayertimes.bridge.PrayerTimesPackage
+import com.kitayar.modules.canvas.bridge.InfiniteCanvasPackage
+import com.kitayar.modules.music.KitayarMusicPlayerPackage
+import com.kitayar.modules.barcode.BarcodePackage
+import com.kitayar.modules.sensors.SensorsPackage
+import com.kitayar.modules.ir.KitayarIrPackage
+import com.kitayar.modules.smartsheet.SmartSheetPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -56,6 +63,13 @@ class MainApplication : Application(), ReactApplication {
           add(PersianDatePickerPackage())
           add(DocumentScannerPackage())
           add(CommunityQnaPackage())
+          add(PrayerTimesPackage())
+          add(InfiniteCanvasPackage())
+          add(KitayarMusicPlayerPackage())
+          add(BarcodePackage())
+          add(SensorsPackage())
+          add(KitayarIrPackage())
+          add(SmartSheetPackage())
         },
     )
   }

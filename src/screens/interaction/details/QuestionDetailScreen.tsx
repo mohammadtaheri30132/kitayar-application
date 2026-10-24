@@ -9,9 +9,9 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ActivityIndicator, 
-  Alert,
   I18nManager 
 } from 'react-native';
+import { showError, showSuccess, showWarning, showInfo, showConfirm } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Send, ChevronRight, ChevronLeft, MoreVertical, Flag, Trash2, Heart, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
@@ -84,11 +84,15 @@ const QuestionDetailScreen = ({ route, navigation }: any) => {
       setReplyTo(null);
 
       if (res.message) {
-        Alert.alert(res.isPending ? 'در انتظار بررسی' : 'موفقیت', res.message);
+        if (res.isPending) {
+          showInfo(res.message);
+        } else {
+          showSuccess(res.message);
+        }
       }
     } catch (err: any) {
       const msg = err.response?.data?.message || 'خطا در ثبت پاسخ';
-      Alert.alert('خطا', msg);
+      showError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -110,81 +114,58 @@ const QuestionDetailScreen = ({ route, navigation }: any) => {
         });
       }
     } catch (err: any) {
-      Alert.alert('خطا', err.response?.data?.message || 'خطا در تغییر وضعیت پاسخ تاییدشده');
+      showError(err.response?.data?.message || 'خطا در تغییر وضعیت پاسخ تاییدشده');
     }
   };
 
   const handleDeleteAnswer = (answerId: string) => {
-    Alert.alert(
-      'حذف پاسخ',
-      'آیا از حذف این پاسخ اطمینان دارید؟',
-      [
-        { text: 'انصراف', style: 'cancel' },
-        {
-          text: 'حذف',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await communityService.deleteAnswer(answerId);
-              setAnswers(prev => prev.filter(a => a._id !== answerId));
-              if (question) {
-                setQuestion({
-                  ...question,
-                  answerCount: Math.max(0, (question.answerCount || 1) - 1),
-                });
-              }
-            } catch (err: any) {
-              Alert.alert('خطا', 'حذف پاسخ ناموفق بود.');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'حذف پاسخ',
+      message: 'آیا از حذف این پاسخ اطمینان دارید؟',
+      confirmText: 'حذف',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: Trash2,
+      onConfirm: async () => {
+        try {
+          await communityService.deleteAnswer(answerId);
+          setAnswers(prev => prev.filter(a => a._id !== answerId));
+          if (question) {
+            setQuestion({
+              ...question,
+              answerCount: Math.max(0, (question.answerCount || 1) - 1),
+            });
+          }
+          showSuccess('پاسخ با موفقیت حذف شد.');
+        } catch (err: any) {
+          showError('حذف پاسخ ناموفق بود.');
+        }
+      },
+    });
   };
 
   const handleReport = (targetType: 'question' | 'answer', targetId: string) => {
-    Alert.prompt
-      ? Alert.prompt(
-          'گزارش محتوا',
-          'علت گزارش را وارد کنید (اسپم، نامناسب، و ...):',
-          async (reasonText) => {
-            if (!reasonText) return;
-            try {
-              await communityService.reportContent({
-                targetType,
-                targetId,
-                reason: 'inappropriate',
-                description: reasonText,
-              });
-              Alert.alert('سپاس', 'گزارش شما برای مدیران ارسال شد و بررسی خواهد شد.');
-            } catch {
-              Alert.alert('خطا', 'ثبت گزارش ناموفق بود.');
-            }
-          }
-        )
-      : Alert.alert(
-          'گزارش تخلف',
-          'آیا مایل به گزارش این محتوا به مدیران هستید؟',
-          [
-            { text: 'انصراف', style: 'cancel' },
-            {
-              text: 'ارسال گزارش',
-              onPress: async () => {
-                try {
-                  await communityService.reportContent({
-                    targetType,
-                    targetId,
-                    reason: 'inappropriate',
-                    description: 'گزارش تخلف توسط کاربر',
-                  });
-                  Alert.alert('سپاس', 'گزارش شما برای مدیران ارسال شد.');
-                } catch {
-                  Alert.alert('خطا', 'ثبت گزارش ناموفق بود.');
-                }
-              },
-            },
-          ]
-        );
+    showConfirm({
+      title: 'گزارش تخلف',
+      message: 'آیا مایل به گزارش این محتوا به مدیران هستید؟',
+      confirmText: 'ارسال گزارش',
+      cancelText: 'انصراف',
+      isDestructive: false,
+      icon: Flag,
+      onConfirm: async () => {
+        try {
+          await communityService.reportContent({
+            targetType,
+            targetId,
+            reason: 'inappropriate',
+            description: 'گزارش تخلف توسط کاربر',
+          });
+          showSuccess('گزارش شما برای مدیران ارسال شد و بررسی خواهد شد.');
+        } catch {
+          showError('ثبت گزارش ناموفق بود.');
+        }
+      },
+    });
   };
 
   const isQuestionAuthor = question && currentUserId && (

@@ -1,27 +1,27 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { X, Calendar as CalendarIcon } from 'lucide-react-native';
-import { formatJalaliDate, toPersianNumbers } from '../../utils/date/jalaliHelper';
+import { useTheme } from '../../context/ThemeContext';
+import { X, Calendar as CalendarIcon, Clock, MapPin } from 'lucide-react-native';
+import { toPersianNumbers, formatJalaliStandard } from '../../utils/date/jalaliHelper';
 
 interface AddEventModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (eventData: any) => Promise<void>;
-  selectedJd: number;
-  selectedJm: number;
-  selectedJy: number;
+  selectedDateStr?: string; // YYYY-MM-DD
 }
 
-export default function AddEventModal({ visible, onClose, onSave, selectedJd, selectedJm, selectedJy }: AddEventModalProps) {
+export default function AddEventModal({ visible, onClose, onSave, selectedDateStr }: AddEventModalProps) {
   const { colors } = useTheme();
+  
   const [title, setTitle] = useState('');
-  const [type, setType] = useState('general');
-  const [startTime, setStartTime] = useState('');
+  const [type, setType] = useState('meeting');
+  const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const displayDate = formatJalaliDate(selectedJy, selectedJm, selectedJd, true);
+  const displayDate = selectedDateStr || 'امروز';
 
   const handleSave = async () => {
     if (!title) return;
@@ -30,13 +30,16 @@ export default function AddEventModal({ visible, onClose, onSave, selectedJd, se
       await onSave({
         title,
         type,
-        startTime: startTime || undefined,
+        date: selectedDateStr,
+        time: time || undefined,
         location: location || undefined,
+        description: description || undefined,
       });
       setTitle('');
-      setType('general');
-      setStartTime('');
+      setType('meeting');
+      setTime('');
       setLocation('');
+      setDescription('');
       onClose();
     } catch (e) {
       console.warn('Failed to save event', e);
@@ -46,7 +49,6 @@ export default function AddEventModal({ visible, onClose, onSave, selectedJd, se
   };
 
   const types = [
-    { value: 'general', label: 'عمومی' },
     { value: 'meeting', label: 'جلسه' },
     { value: 'exam', label: 'امتحان' },
     { value: 'workshop', label: 'کارگاه' },
@@ -55,12 +57,23 @@ export default function AddEventModal({ visible, onClose, onSave, selectedJd, se
   ];
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Backdrop Tap to Close */}
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <TouchableOpacity 
+          style={{ flex: 1, width: '100%' }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: 80 }]}>
           <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>افزودن رویداد جدید</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -102,22 +115,22 @@ export default function AddEventModal({ visible, onClose, onSave, selectedJd, se
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>ساعت شروع</Text>
+                <Text style={[styles.label, { color: colors.text }]}>ساعت (اختیاری)</Text>
                 <TextInput 
-                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, textAlign: 'left' }]} 
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
                   placeholder="مثلاً 10:30"
                   placeholderTextColor={colors.textLight}
                   keyboardType="number-pad"
-                  value={startTime}
-                  onChangeText={setStartTime}
+                  value={time}
+                  onChangeText={setTime}
                 />
               </View>
               <View style={{ width: 16 }} />
               <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>مکان</Text>
+                <Text style={[styles.label, { color: colors.text }]}>مکان (اختیاری)</Text>
                 <TextInput 
                   style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
-                  placeholder="مثلاً دفتر مدیر"
+                  placeholder="اتاق جلسات"
                   placeholderTextColor={colors.textLight}
                   value={location}
                   onChangeText={setLocation}
@@ -125,18 +138,28 @@ export default function AddEventModal({ visible, onClose, onSave, selectedJd, se
               </View>
             </View>
 
+            <Text style={[styles.label, { color: colors.text }]}>توضیحات (اختیاری)</Text>
+            <TextInput 
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 80, textAlignVertical: 'top' }]} 
+              placeholder="توضیحات تکمیلی..."
+              placeholderTextColor={colors.textLight}
+              multiline
+              value={description}
+              onChangeText={setDescription}
+            />
+
           </ScrollView>
           
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
-            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.saveBtn, { backgroundColor: title ? colors.primary : '#94a3b8' }]} 
               onPress={handleSave}
               disabled={!title || isLoading}
             >
               {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>ذخیره رویداد</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -157,7 +180,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -168,6 +191,7 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'right',
   },
   closeBtn: {
     padding: 4,
@@ -176,7 +200,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   dateBox: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
@@ -187,14 +211,16 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     color: '#1e3a8a',
-    marginLeft: 8,
+    marginRight: 8,
     fontSize: 14,
+    textAlign: 'right',
   },
   label: {
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     fontSize: 14,
     marginBottom: 8,
+    textAlign: 'right',
   },
   input: {
     borderWidth: 1,
@@ -203,9 +229,10 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 14,
     marginBottom: 20,
+    textAlign: 'right',
   },
   typesGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 20,
@@ -221,13 +248,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
   },
   flex1: {
     flex: 1,
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     padding: 20,
     borderTopWidth: 1,
   },

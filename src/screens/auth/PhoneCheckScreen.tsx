@@ -6,9 +6,9 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   Keyboard
 } from 'react-native';
+import { showWarning, showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 
@@ -21,31 +21,26 @@ const PhoneCheckScreen = ({ navigation }: any) => {
 
     // اعتبارسنجی اولیه فرمت شماره موبایل
     if (!phoneNumber || phoneNumber.length !== 11 || !phoneNumber.startsWith('09')) {
-      Alert.alert('خطا', 'لطفاً یک شماره موبایل معتبر وارد کنید (مثال: 09123456789)');
+      showWarning('لطفاً یک شماره موبایل معتبر وارد کنید (مثال: 09123456789)');
       return;
     }
 
     setIsLoading(true);
     try {
-      // استفاده از فایل تنظیمات Axios که قبلا ساختیم
       const response = await api.post('/teacher/auth/check-phone', { phoneNumber });
       
       const data = response.data;
 
       if (data.success) {
         if (data.data.isRegistered) {
-          // کاربر قبلاً ثبت‌نام کرده است -> هدایت به صفحه ورود با رمز
           navigation.navigate('LoginPasswordScreen', { phoneNumber });
-          Alert.alert('وضعیت', 'شما قبلاً ثبت‌نام کرده‌اید. (هدایت به صفحه رمز)');
         } else {
-          // کاربر جدید است -> هدایت به صفحه ثبت‌نام
           navigation.navigate('RegisterScreen', { phoneNumber });
-          Alert.alert('وضعیت', 'شما کاربر جدید هستید. (هدایت به صفحه ثبت‌نام)');
         }
       }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'خطای ارتباط با سرور. لطفاً اتصال اینترنت را بررسی کنید.';
-      Alert.alert('خطا', errorMessage);
+      showError(errorMessage);
       console.log(error);
     } finally {
       setIsLoading(false);

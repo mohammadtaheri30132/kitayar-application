@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Alert, Linking, Animated, PanResponder, ActivityIndicator
+  Linking, Animated, PanResponder, ActivityIndicator
 } from 'react-native';
+import { showError, showInfo, showConfirm } from '../../components/feedback';
 import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -131,7 +132,7 @@ const PreviewExamScreen = ({ route, navigation }: any) => {
   const handleRequestPdfLink = async () => {
     if (!webViewRef.current) return;
     const token = await getToken();
-    Alert.alert('در حال پردازش', 'لطفا چند لحظه صبر کنید...');
+    showInfo('در حال پردازش، لطفاً چند لحظه صبر کنید...');
     const payloadObj = { type: 'REQUEST_PDF_LINK', token };
     webViewRef.current.injectJavaScript(`window.postMessage(${JSON.stringify(JSON.stringify(payloadObj))}, '*'); true;`);
   };
@@ -173,12 +174,17 @@ const PreviewExamScreen = ({ route, navigation }: any) => {
         collapseSheet();
       }
 
-      if (data.type === 'ERROR') Alert.alert('خطا', data.message || 'مشکلی پیش آمد.');
+      if (data.type === 'ERROR') showError(data.message || 'مشکلی پیش آمد.');
       if (data.type === 'PDF_LINK_READY') {
-        Alert.alert('فایل آماده است!', 'فایل شما ساخته شد.', [
-          { text: 'انصراف', style: 'cancel' },
-          { text: 'دانلود', onPress: () => Linking.openURL(data.link) }
-        ]);
+        showConfirm({
+          title: 'فایل آماده است!',
+          message: 'فایل شما با موفقیت ساخته شد. آیا مایل به دانلود هستید؟',
+          confirmText: 'دانلود',
+          cancelText: 'انصراف',
+          isDestructive: false,
+          icon: Download,
+          onConfirm: () => Linking.openURL(data.link),
+        });
       }
     } catch (error) {}
   };

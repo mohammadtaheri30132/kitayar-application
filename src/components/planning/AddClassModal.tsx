@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
 import { X } from 'lucide-react-native';
 import { PERSIAN_WEEKDAYS } from '../../utils/date/jalaliHelper';
 
@@ -57,12 +57,23 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Backdrop Tap to Close */}
+        <TouchableOpacity 
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <TouchableOpacity 
+          style={{ flex: 1, width: '100%' }}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+        <View style={[styles.container, { backgroundColor: colors.background, paddingBottom: 80 }]}>
           <View style={styles.header}>
             <Text style={[styles.headerTitle, { color: colors.text }]}>افزودن برنامه کلاسی</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -74,7 +85,7 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
             
             <View style={{ marginBottom: 20 }}>
               <Text style={[styles.label, { color: colors.text }]}>روز هفته</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}>
                 {PERSIAN_WEEKDAYS.map((day, idx) => (
                   <TouchableOpacity 
                     key={idx}
@@ -102,33 +113,9 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
 
             <View style={styles.row}>
               <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>نام مدرسه</Text>
+                <Text style={[styles.label, { color: colors.text }]}>ساعت شروع (الزامی)</Text>
                 <TextInput 
                   style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
-                  placeholder="مثال: شهید مطهری"
-                  placeholderTextColor={colors.textLight}
-                  value={schoolName}
-                  onChangeText={setSchoolName}
-                />
-              </View>
-              <View style={{ width: 12 }} />
-              <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>کلاس</Text>
-                <TextInput 
-                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
-                  placeholder="مثال: هفتم ۱"
-                  placeholderTextColor={colors.textLight}
-                  value={className}
-                  onChangeText={setClassName}
-                />
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>شروع (الزامی)</Text>
-                <TextInput 
-                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, textAlign: 'left' }]} 
                   placeholder="08:00"
                   placeholderTextColor={colors.textLight}
                   keyboardType="number-pad"
@@ -138,14 +125,36 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
               </View>
               <View style={{ width: 12 }} />
               <View style={styles.flex1}>
-                <Text style={[styles.label, { color: colors.text }]}>پایان (الزامی)</Text>
+                <Text style={[styles.label, { color: colors.text }]}>ساعت پایان (الزامی)</Text>
                 <TextInput 
-                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface, textAlign: 'left' }]} 
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
                   placeholder="09:30"
                   placeholderTextColor={colors.textLight}
                   keyboardType="number-pad"
                   value={endTime}
                   onChangeText={setEndTime}
+                />
+              </View>
+            </View>
+
+            <Text style={[styles.label, { color: colors.text }]}>نام مدرسه / آموزشگاه</Text>
+            <TextInput 
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
+              placeholder="دبیرستان علامه حلی"
+              placeholderTextColor={colors.textLight}
+              value={schoolName}
+              onChangeText={setSchoolName}
+            />
+
+            <View style={styles.row}>
+              <View style={styles.flex1}>
+                <Text style={[styles.label, { color: colors.text }]}>پایه و نام کلاس</Text>
+                <TextInput 
+                  style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
+                  placeholder="دهم ۱"
+                  placeholderTextColor={colors.textLight}
+                  value={className}
+                  onChangeText={setClassName}
                 />
               </View>
               <View style={{ width: 12 }} />
@@ -165,7 +174,7 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
             <View style={styles.colorsGrid}>
               {COLORS.map(c => (
                 <TouchableOpacity 
-                  key={c}
+                  key={c} 
                   style={[
                     styles.colorCircle, 
                     { backgroundColor: c },
@@ -179,15 +188,15 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
           </ScrollView>
           
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
-            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.saveBtn, { backgroundColor: (subject && startTime && endTime) ? colors.primary : '#94a3b8' }]} 
               onPress={handleSave}
               disabled={!subject || !startTime || !endTime || isLoading}
             >
               {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>ذخیره برنامه</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+              <Text style={[styles.cancelBtnText, { color: colors.textLight }]}>انصراف</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -208,7 +217,7 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
   },
   header: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
@@ -219,6 +228,7 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontWeight: 'bold',
     fontSize: 16,
+    textAlign: 'right',
   },
   closeBtn: {
     padding: 4,
@@ -231,6 +241,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     marginBottom: 8,
+    textAlign: 'right',
   },
   input: {
     borderWidth: 1,
@@ -239,9 +250,10 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 14,
     marginBottom: 20,
+    textAlign: 'right',
   },
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
   },
   flex1: {
     flex: 1,
@@ -257,7 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   colorsGrid: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     gap: 12,
     marginBottom: 20,
   },
@@ -276,7 +288,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   footer: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     padding: 20,
     borderTopWidth: 1,
   },

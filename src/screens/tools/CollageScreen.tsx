@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, Alert,
+  NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet,
   Image
 } from 'react-native';
+import { showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Share2, Eye, Trash2, Download, LayoutTemplate } from 'lucide-react-native';
@@ -41,9 +42,9 @@ const CollageScreen = ({ navigation }) => {
         await saveToolHistory(TOOL_ID, fileName, resultPath, sizeStr, 'JPEG');
         loadHistory();
       }
-    } catch (err) {
+    } catch (err: any) {
       if (err !== 'CANCEL' && err !== 'CANCELLED' && err?.message !== 'کاربر لغو کرد') {
-        Alert.alert("خطا", err.message || JSON.stringify(err));
+        showError(err?.message || 'خطا در ساخت کلاژ');
       }
     }
   };
@@ -57,7 +58,7 @@ const CollageScreen = ({ navigation }) => {
     try {
       await FileShareModule.shareFile(path, 'image/jpeg');
     } catch (err) {
-      Alert.alert("خطا", "امکان اشتراک‌گذاری این فایل وجود ندارد.");
+      showError('امکان اشتراک‌گذاری این فایل وجود ندارد.');
     }
   };
 
@@ -72,7 +73,7 @@ const CollageScreen = ({ navigation }) => {
       }, 3000);
     } catch (err) {
       console.log('Error saving file:', err);
-      Alert.alert("خطا", "ذخیره فایل با مشکل مواجه شد. لطفاً دسترسی‌ها را بررسی کنید.");
+      showError('ذخیره فایل با مشکل مواجه شد. لطفاً دسترسی‌ها را بررسی کنید.');
     }
   };
 

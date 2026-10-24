@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, 
-  Modal, ActivityIndicator, TextInput, Alert 
+  Modal, ActivityIndicator, TextInput 
 } from 'react-native';
+import { showError, showWarning } from '../../components/feedback';
 import { X, ChevronDown, Settings2, Check } from 'lucide-react-native'; // 👈 Check اضافه شد
 import { api } from '../../api/axiosConfig';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -72,14 +73,14 @@ const MobileQuestionBuilder = ({ route, navigation }: any) => {
             if (foundCourse) setSelectedCourse(foundCourse);
           }
         } else {
-          Alert.alert('خطا', 'سرور لیستی ارسال نکرد.');
+          showError('سرور لیستی ارسال نکرد.');
         }
       } catch (e: any) {
-        Alert.alert(
-          'خطای ارتباط با سرور', 
+        showError(
           e?.response?.status === 401 
             ? 'نشست شما منقضی شده، لطفا دوباره لاگین کنید.' 
-            : e.message || 'ارتباط با سرور برقرار نشد.'
+            : e.message || 'ارتباط با سرور برقرار نشد.',
+          'خطای ارتباط با سرور'
         );
         console.log('Fetch Courses Error:', e);
       }
@@ -170,7 +171,7 @@ const MobileQuestionBuilder = ({ route, navigation }: any) => {
 
   const handleGenerate = async () => {
     if (!selectedBook) {
-      Alert.alert('خطا', 'لطفا ابتدا یک درس را انتخاب کنید.');
+      showWarning('لطفا ابتدا یک درس را انتخاب کنید.');
       return;
     }
     setLoading(true);
@@ -187,7 +188,7 @@ const MobileQuestionBuilder = ({ route, navigation }: any) => {
         });
       }
     } catch (e) {
-      Alert.alert('خطا', 'مشکلی در دریافت سوالات پیش آمد.');
+      showError('مشکلی در دریافت سوالات پیش آمد.');
     } finally {
       setLoading(false);
     }

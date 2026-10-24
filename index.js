@@ -2,33 +2,34 @@
  * @format
  */
 
-import { AppRegistry, I18nManager, Text, TextInput } from 'react-native';
+import { AppRegistry, I18nManager, Text, TextInput, Platform } from 'react-native';
 import React from 'react';
 import App from './App';
+import { FONT_FAMILY } from './src/theme/typography';
 
-I18nManager.allowRTL(true);
-I18nManager.forceRTL(true);
+// Enforce standard LTR view coordinate system so Android React Native doesn't flip icons/containers
+I18nManager.allowRTL(false);
+I18nManager.forceRTL(false);
 
-// Global Text alignment patch
-if (Text.render) {
-  const oldTextRender = Text.render;
-  Text.render = function(...args) {
-    const origin = oldTextRender.call(this, ...args);
-    return React.cloneElement(origin, {
-      style: [{ textAlign: 'left' }, origin.props.style]
-    });
-  };
+const DEFAULT_FONT = FONT_FAMILY.regular;
+
+// Default Persian typography and natural right-aligned text
+if (Text.defaultProps == null) {
+  Text.defaultProps = {};
 }
+Text.defaultProps.style = [
+  { fontFamily: DEFAULT_FONT, textAlign: 'right', writingDirection: 'rtl' },
+  Text.defaultProps.style,
+];
 
-if (TextInput.render) {
-  const oldTextInputRender = TextInput.render;
-  TextInput.render = function(...args) {
-    const origin = oldTextInputRender.call(this, ...args);
-    return React.cloneElement(origin, {
-      style: [{ textAlign: 'left' }, origin.props.style]
-    });
-  };
+if (TextInput.defaultProps == null) {
+  TextInput.defaultProps = {};
 }
+TextInput.defaultProps.style = [
+  { fontFamily: DEFAULT_FONT, textAlign: 'right', writingDirection: 'rtl' },
+  TextInput.defaultProps.style,
+];
+
 import { name as appName } from './app.json';
 
 AppRegistry.registerComponent(appName, () => App);

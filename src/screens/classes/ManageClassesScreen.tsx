@@ -28,12 +28,27 @@ const ManageClassesScreen = ({ navigation }: any) => {
     }, [])
   );
 
+  const toPersianDigits = (str: string | number) => {
+    if (!str) return '';
+    const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+    return str.toString().replace(/\d/g, (x) => farsiDigits[parseInt(x, 10)]);
+  };
+
   const renderClass = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={[styles.classCard, { backgroundColor: colors.surface }]}
       onPress={() => navigation.navigate('ClassDetailsScreen', { classroom: item, classId: item._id, className: item.name })}
     >
-      <Text style={[styles.className, { color: colors.text }]}>{item.name}</Text>
+      <View style={{ flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <Text style={[styles.className, { color: colors.text, marginBottom: 0 }]}>{item.name}</Text>
+        {item.code ? (
+          <View style={{ backgroundColor: '#eff6ff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#bfdbfe' }}>
+            <Text style={{ fontSize: 11, color: '#1d4ed8', fontFamily: 'IRANSansX', fontWeight: 'bold' }}>
+              کد: {toPersianDigits(item.code)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
       <View style={styles.detailRow}>
         <Users color={colors.textLight} size={14} />
         <Text style={[styles.detailText, { color: colors.textLight }]}>

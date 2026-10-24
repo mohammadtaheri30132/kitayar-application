@@ -6,11 +6,11 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView
 } from 'react-native';
+import { showWarning, showSuccess, showError } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
 import { COLORS } from '../../theme/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,7 +35,7 @@ const CreateSchoolScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert('توجه', 'لطفاً نام مدرسه را وارد کنید.');
+      showWarning('لطفاً نام مدرسه را وارد کنید.');
       return;
     }
 
@@ -53,15 +53,11 @@ const CreateSchoolScreen = ({ navigation }: any) => {
 
       const res = await api.post('/teacher/schools', payload);
       if (res.data.success) {
-        Alert.alert('موفقیت', 'مدرسه با موفقیت ثبت شد.', [
-          {
-            text: 'باشه',
-            onPress: () => navigation.goBack()
-          }
-        ]);
+        showSuccess('مدرسه با موفقیت ثبت شد.');
+        navigation.goBack();
       }
     } catch (error: any) {
-      Alert.alert('خطا', error.response?.data?.message || 'مشکلی در ثبت مدرسه رخ داد.');
+      showError(error.response?.data?.message || 'مشکلی در ثبت مدرسه رخ داد.');
     } finally {
       setIsSubmitting(false);
     }
