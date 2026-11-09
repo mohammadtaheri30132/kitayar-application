@@ -36,11 +36,10 @@ const ClassStudentsScreen = ({ route, navigation }: any) => {
         showWarning('شناسه کلاس هنوز تولید نشده است.');
         return;
       }
-      const serverBaseUrl = (api.defaults.baseURL || 'http://192.168.1.128:5001/api').replace(/\/api\/?$/, '');
-      const registrationUrl = `${serverBaseUrl}/c/${code}`;
-      const message = `دانش‌آموز گرامی،\nبرای ثبت‌نام در کلاس «${currentClassName}»، لطفاً از طریق لینک زیر مشخصات خود را تکمیل نمایید:\n\n🔗 لینک ثبت‌نام:\n${registrationUrl}\n\n🔢 کد اختصاصی کلاس: ${code}\n\nپس از ثبت‌نام، می‌توانید اپلیکیشن «نوکیتا» را برای دریافت تکالیف و نمرات دانلود کنید.`;
+      const registrationUrl = `https://nokita.kitayar.ir/join/${code}`;
+      const message = `دانش‌آموز گرامی،\nبرای عضویت در کلاس «${currentClassName}»، لطفاً از طریق لینک زیر وارد سامانه نوکیتا شوید:\n\n🔗 لینک کلاس در نوکیتا:\n${registrationUrl}\n\n🔢 کد اختصاصی کلاس: ${code}\n\nپس از ورود یا ثبت‌نام در نوکیتا، مستقیماً به کلاس متصل خواهید شد.`;
       await Share.share({
-        title: `ثبت‌نام در کلاس ${currentClassName}`,
+        title: `عضویت در کلاس ${currentClassName}`,
         message,
         url: registrationUrl,
       });

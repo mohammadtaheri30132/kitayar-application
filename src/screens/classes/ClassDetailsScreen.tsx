@@ -96,8 +96,7 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
   };
 
   const classCode = classData?.code || classroom?.code || '';
-  const serverBaseUrl = (api.defaults.baseURL || 'http://192.168.1.128:5001/api').replace(/\/api\/?$/, '');
-  const registrationUrl = classCode ? `${serverBaseUrl}/c/${classCode}` : '';
+  const registrationUrl = classCode ? `https://nokita.kitayar.ir/join/${classCode}` : '';
 
   const handleCopyCode = () => {
     if (!classCode) return;
@@ -108,15 +107,15 @@ const ClassDetailsScreen = ({ route, navigation }: any) => {
   const handleCopyLink = () => {
     if (!registrationUrl) return;
     Clipboard.setString(registrationUrl);
-    showSuccess('لینک فرم ثبت‌نام دانش‌آموز در کلیپ‌بورد کپی شد.');
+    showSuccess('لینک عضویت دانش‌آموز در نوکیتا در حافظه کپی شد.');
   };
 
   const handleShareLink = async () => {
     if (!registrationUrl || !classCode) return;
     try {
-      const shareMessage = `دانش‌آموز گرامی،\nبرای ثبت‌نام و عضویت در کلاس «${currentClassName}»، لطفاً از طریق لینک زیر مشخصات خود را تکمیل نمایید:\n\n🔗 لینک ثبت‌نام:\n${registrationUrl}\n\n🔢 کد اختصاصی کلاس: ${classCode}\n\nپس از تکمیل ثبت‌نام، می‌توانید اپلیکیشن «نوکیتا» را برای دریافت تکالیف و نمرات دانلود کنید.`;
+      const shareMessage = `دانش‌آموز گرامی،\nبرای عضویت در کلاس «${currentClassName}»، لطفاً از طریق لینک زیر وارد سامانه نوکیتا شوید:\n\n🔗 لینک کلاس در نوکیتا:\n${registrationUrl}\n\n🔢 کد اختصاصی کلاس: ${classCode}\n\nپس از ورود یا ثبت‌نام در نوکیتا، مستقیماً به کلاس متصل خواهید شد.`;
       await Share.share({
-        title: `ثبت‌نام در کلاس ${currentClassName}`,
+        title: `عضویت در کلاس ${currentClassName}`,
         message: shareMessage,
         url: registrationUrl,
       });
