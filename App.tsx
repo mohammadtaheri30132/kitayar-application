@@ -160,6 +160,9 @@ import OnlineClassSettingsScreen from './src/screens/teacherCenter/OnlineClassSe
 import LiveClassroomScreen from './src/screens/classroom/LiveClassroomScreen';
 import TeacherWalletScreen from './src/screens/teacherCenter/TeacherWalletScreen';
 import TeacherReviewsScreen from './src/screens/teacherCenter/TeacherReviewsScreen';
+import TeacherScheduleScreen from './src/screens/teacherCenter/TeacherScheduleScreen';
+import CreateVirtualClassScreen from './src/screens/teacherCenter/CreateVirtualClassScreen';
+import TeacherProfileSettingsScreen from './src/screens/teacherCenter/TeacherProfileSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -355,6 +358,9 @@ const AppContent = () => {
             <Stack.Screen name="LiveClassroomScreen" component={LiveClassroomScreen} />
             <Stack.Screen name="TeacherWalletScreen" component={TeacherWalletScreen} />
             <Stack.Screen name="TeacherReviewsScreen" component={TeacherReviewsScreen} />
+            <Stack.Screen name="TeacherScheduleScreen" component={TeacherScheduleScreen} />
+            <Stack.Screen name="CreateVirtualClassScreen" component={CreateVirtualClassScreen} />
+            <Stack.Screen name="TeacherProfileSettingsScreen" component={TeacherProfileSettingsScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>
