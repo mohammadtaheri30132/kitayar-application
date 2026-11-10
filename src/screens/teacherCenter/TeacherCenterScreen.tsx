@@ -43,6 +43,7 @@ import {
   X,
   GraduationCap,
   CheckCircle2,
+  AlertCircle,
   Calendar,
   Trash2,
   Settings,
@@ -170,6 +171,19 @@ export const TeacherCenterScreen: React.FC = () => {
   const [teacherAvatar, setTeacherAvatar] = useState<string | null>('https://i.pravatar.cc/150?u=kitayar@teacher.com');
   const [walletBalance, setWalletBalance] = useState<number>(0);
 
+  // Onboarding & Requirement checklist status
+  const [onboardingStatus, setOnboardingStatus] = useState<{
+    hasResume: boolean;
+    hasPosts: boolean;
+    hasSchedule: boolean;
+    hasEducation: boolean;
+  }>({
+    hasResume: false,
+    hasPosts: false,
+    hasSchedule: false,
+    hasEducation: false,
+  });
+
   const handlePrevMonth = () => {
     if (calJm === 1) {
       setCalJm(12);
@@ -194,23 +208,59 @@ export const TeacherCenterScreen: React.FC = () => {
   const fetchServerData = async () => {
     try {
       setRefreshing(true);
-      const [ovRes, convRes, reqRes, wallRes, clsRes, profRes] = await Promise.allSettled([
+      const [ovRes, convRes, reqRes, wallRes, clsRes, profRes, schedRes] = await Promise.allSettled([
         api.get('/teacher/center/overview'),
         api.get('/chat/conversations'),
         api.get('/teacher/center/requests?tab=pending&limit=5'),
         api.get('/teacher/center/wallet'),
         api.get('/teacher/center/classes'),
         api.get('/teacher/profile'),
+        api.get('/teacher/schedule'),
       ]);
+
+      let hasResume = false;
+      let hasPosts = false;
+      let hasEducation = false;
+      let hasSchedule = false;
 
       // Always sync profile photo & full name directly from main profile
       if (profRes.status === 'fulfilled' && profRes.value.data?.success) {
         const pd = profRes.value.data.data;
+        const ps = profRes.value.data.stats;
         if (pd.user?.fullName) setTeacherName(pd.user.fullName);
         else if (pd.fullName) setTeacherName(pd.fullName);
         const resolved = pd.avatar || pd.user?.avatar || (pd.user?._id ? `https://i.pravatar.cc/150?u=${pd.user._id}` : null);
         if (resolved) setTeacherAvatar(resolved);
+
+        hasResume = Boolean(
+          (pd.bio && pd.bio.trim().length > 0) ||
+          (pd.resume?.experiences && pd.resume.experiences.length > 0) ||
+          (pd.resume?.skills && pd.resume.skills.length > 0) ||
+          (pd.resume?.education && pd.resume.education.length > 0) ||
+          (pd.schools && pd.schools.length > 0)
+        );
+
+        hasPosts = Boolean(ps?.postsCount && ps.postsCount > 0);
+
+        hasEducation = Boolean(
+          pd.educationLevel &&
+          Array.isArray(pd.teachingSubjects) &&
+          pd.teachingSubjects.length > 0
+        );
       }
+
+      if (schedRes.status === 'fulfilled' && schedRes.value.data?.success && Array.isArray(schedRes.value.data.data)) {
+        hasSchedule = schedRes.value.data.data.length > 0;
+      } else if (profRes.status === 'fulfilled' && Array.isArray(profRes.value.data?.data?.availableSchedule)) {
+        hasSchedule = profRes.value.data.data.availableSchedule.length > 0;
+      }
+
+      setOnboardingStatus({
+        hasResume,
+        hasPosts,
+        hasSchedule,
+        hasEducation,
+      });
 
       if (ovRes.status === 'fulfilled' && ovRes.value.data?.success) {
         const d = ovRes.value.data.data;
@@ -304,6 +354,13 @@ export const TeacherCenterScreen: React.FC = () => {
     return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
   };
 
+  const completedStepsCount = [
+    onboardingStatus.hasResume,
+    onboardingStatus.hasPosts,
+    onboardingStatus.hasSchedule,
+    onboardingStatus.hasEducation,
+  ].filter(Boolean).length;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* 1. TOP APP BAR (Complete Profile button on left & Profile info on right) */}
@@ -358,7 +415,158 @@ export const TeacherCenterScreen: React.FC = () => {
           />
         </TouchableOpacity>
 
-        {/* 3. TUTORIAL VIDEO BOX */}
+        {/* 3. ONBOARDING & EARNING REQUIREMENTS CARD */}
+        <View style={[styles.onboardingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* Top Banner Row with 3D Character Illustration */}
+          <View style={styles.onboardingHeaderRow}>
+            <View style={styles.onboardingHeaderInfo}>
+              <View style={[styles.onboardingBadge, { backgroundColor: isDark ? '#1e3a8a30' : '#eff6ff', borderColor: isDark ? '#1e40af' : '#bfdbfe' }]}>
+                <Sparkles size={12} color="#2563eb" style={{ marginLeft: 4 }} />
+                <Text style={styles.onboardingBadgeText}>راهنمای شروع درآمدزایی</Text>
+              </View>
+              <Text style={[styles.onboardingTitle, { color: colors.text }]}>
+                برای شروع درآمدزایی باید این موارد را تکمیل کنید:
+              </Text>
+              <Text style={[styles.onboardingProgressText, { color: completedStepsCount === 4 ? '#16a34a' : colors.textLight }]}>
+                {completedStepsCount === 4
+                  ? 'تمامی ۴ مرحله تکمیل شدند ✓'
+                  : `${toPersianNumbers(completedStepsCount)} از ۴ مرحله تکمیل شده است`}
+              </Text>
+            </View>
+
+            <Image
+              source={require('../../assets/image/activecarecter.png')}
+              style={styles.onboardingCharacterImg}
+              resizeMode="contain"
+            />
+          </View>
+
+          {/* Progress Bar */}
+          <View style={[styles.progressBarTrack, { backgroundColor: isDark ? '#334155' : '#e2e8f0' }]}>
+            <View
+              style={[
+                styles.progressBarFill,
+                {
+                  width: `${(completedStepsCount / 4) * 100}%`,
+                  backgroundColor: completedStepsCount === 4 ? '#16a34a' : '#2563eb',
+                },
+              ]}
+            />
+          </View>
+
+          {/* 4 Interactive Checklist Steps */}
+          <View style={styles.checklistWrap}>
+            {/* ۱- تکمیل رزومه */}
+            <TouchableOpacity
+              style={[styles.checklistItem, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}
+              onPress={() => navigation.navigate('ProfileScreen', { activeTab: 'resume' })}
+              activeOpacity={0.75}
+            >
+              <View style={styles.checklistLeft}>
+                <ChevronLeft size={16} color={colors.textLight} />
+                <Text style={[styles.checklistStatusBadgeText, { color: onboardingStatus.hasResume ? '#16a34a' : '#ea580c' }]}>
+                  {onboardingStatus.hasResume ? 'تکمیل شده' : 'اقدام کنید'}
+                </Text>
+              </View>
+              <View style={styles.checklistRight}>
+                <View style={styles.checklistTextCol}>
+                  <Text style={[styles.checklistTitle, { color: colors.text }]}>۱. تکمیل رزومه</Text>
+                  <Text style={[styles.checklistDesc, { color: colors.textLight }]}>سوابق تحصیلی، شغلی و بیوگرافی</Text>
+                </View>
+                <View style={[styles.checkIconCircle, { backgroundColor: onboardingStatus.hasResume ? '#dcfce7' : '#ffedd5' }]}>
+                  {onboardingStatus.hasResume ? (
+                    <CheckCircle2 size={18} color="#16a34a" />
+                  ) : (
+                    <AlertCircle size={18} color="#ea580c" />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* ۲- افزودن پست و نمونه کار */}
+            <TouchableOpacity
+              style={[styles.checklistItem, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}
+              onPress={() => navigation.navigate('NewPostScreen')}
+              activeOpacity={0.75}
+            >
+              <View style={styles.checklistLeft}>
+                <ChevronLeft size={16} color={colors.textLight} />
+                <Text style={[styles.checklistStatusBadgeText, { color: onboardingStatus.hasPosts ? '#16a34a' : '#ea580c' }]}>
+                  {onboardingStatus.hasPosts ? 'تکمیل شده' : 'اقدام کنید'}
+                </Text>
+              </View>
+              <View style={styles.checklistRight}>
+                <View style={styles.checklistTextCol}>
+                  <Text style={[styles.checklistTitle, { color: colors.text }]}>۲. افزودن پست و نمونه کار</Text>
+                  <Text style={[styles.checklistDesc, { color: colors.textLight }]}>معرفی تدریس و انتشار محتوا در تعامل</Text>
+                </View>
+                <View style={[styles.checkIconCircle, { backgroundColor: onboardingStatus.hasPosts ? '#dcfce7' : '#ffedd5' }]}>
+                  {onboardingStatus.hasPosts ? (
+                    <CheckCircle2 size={18} color="#16a34a" />
+                  ) : (
+                    <AlertCircle size={18} color="#ea580c" />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* ۳- تنظیم برنامه تدریس */}
+            <TouchableOpacity
+              style={[styles.checklistItem, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}
+              onPress={() => navigation.navigate('TeacherScheduleScreen')}
+              activeOpacity={0.75}
+            >
+              <View style={styles.checklistLeft}>
+                <ChevronLeft size={16} color={colors.textLight} />
+                <Text style={[styles.checklistStatusBadgeText, { color: onboardingStatus.hasSchedule ? '#16a34a' : '#ea580c' }]}>
+                  {onboardingStatus.hasSchedule ? 'تکمیل شده' : 'اقدام کنید'}
+                </Text>
+              </View>
+              <View style={styles.checklistRight}>
+                <View style={styles.checklistTextCol}>
+                  <Text style={[styles.checklistTitle, { color: colors.text }]}>۳. تنظیم برنامه تدریس</Text>
+                  <Text style={[styles.checklistDesc, { color: colors.textLight }]}>تعیین روزها و ساعات حضور در هفته</Text>
+                </View>
+                <View style={[styles.checkIconCircle, { backgroundColor: onboardingStatus.hasSchedule ? '#dcfce7' : '#ffedd5' }]}>
+                  {onboardingStatus.hasSchedule ? (
+                    <CheckCircle2 size={18} color="#16a34a" />
+                  ) : (
+                    <AlertCircle size={18} color="#ea580c" />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            {/* ۴- مقطع تحصیلی تدریس */}
+            <TouchableOpacity
+              style={[styles.checklistItem, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}
+              onPress={() => navigation.navigate('OnlineClassSettingsScreen')}
+              activeOpacity={0.75}
+            >
+              <View style={styles.checklistLeft}>
+                <ChevronLeft size={16} color={colors.textLight} />
+                <Text style={[styles.checklistStatusBadgeText, { color: onboardingStatus.hasEducation ? '#16a34a' : '#ea580c' }]}>
+                  {onboardingStatus.hasEducation ? 'تکمیل شده' : 'اقدام کنید'}
+                </Text>
+              </View>
+              <View style={styles.checklistRight}>
+                <View style={styles.checklistTextCol}>
+                  <Text style={[styles.checklistTitle, { color: colors.text }]}>۴. مقطع تحصیلی تدریس</Text>
+                  <Text style={[styles.checklistDesc, { color: colors.textLight }]}>انتخاب مقاطع و دروس تخصصی تدریس</Text>
+                </View>
+                <View style={[styles.checkIconCircle, { backgroundColor: onboardingStatus.hasEducation ? '#dcfce7' : '#ffedd5' }]}>
+                  {onboardingStatus.hasEducation ? (
+                    <CheckCircle2 size={18} color="#16a34a" />
+                  ) : (
+                    <AlertCircle size={18} color="#ea580c" />
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* 4. TUTORIAL VIDEO BOX */}
         <TouchableOpacity
           style={[styles.videoBox, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}
           activeOpacity={0.8}
@@ -726,6 +934,118 @@ const styles = StyleSheet.create({
   bannerImage: {
     width: '100%',
     height: '100%',
+  },
+
+  // Onboarding & Requirement checklist Card
+  onboardingCard: {
+    borderRadius: 22,
+    borderWidth: 1.5,
+    padding: 16,
+    gap: 12,
+    elevation: 3,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+  },
+  onboardingHeaderRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  onboardingHeaderInfo: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  onboardingCharacterImg: {
+    width: 78,
+    height: 85,
+  },
+  onboardingBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 6,
+  },
+  onboardingBadgeText: {
+    color: '#2563eb',
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  onboardingTitle: {
+    fontSize: 13.5,
+    fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
+    lineHeight: 20,
+  },
+  onboardingProgressText: {
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.medium,
+    marginTop: 4,
+    textAlign: 'right',
+  },
+  progressBarTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  checklistWrap: {
+    gap: 8,
+    marginTop: 4,
+  },
+  checklistItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  checklistRight: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  checklistLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  checklistTextCol: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  checklistTitle: {
+    fontSize: 12.5,
+    fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
+  },
+  checklistDesc: {
+    fontSize: 10.5,
+    fontFamily: FONT_FAMILY.regular,
+    marginTop: 2,
+    textAlign: 'right',
+  },
+  checklistStatusBadgeText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  checkIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // Tutorial Video Box

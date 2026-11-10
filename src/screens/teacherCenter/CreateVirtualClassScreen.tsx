@@ -38,7 +38,7 @@ export const CreateVirtualClassScreen: React.FC = () => {
 
   const [className, setClassName] = useState('');
   const [subject, setSubject] = useState('ریاضی');
-  const [studentCount, setStudentCount] = useState<number>(5);
+  const [studentCount, setStudentCount] = useState<number>(1);
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);

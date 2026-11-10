@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Switch,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,20 +28,10 @@ import {
   Save,
   Sparkles,
   ShieldCheck,
-  Percent,
 } from 'lucide-react-native';
 import { DEFAULT_TEACHING_SUBJECTS } from '../profile/ProfileScreen';
 
-const DURATION_RATIOS: { minutes: number; ratio: number; label: string }[] = [
-  { minutes: 90, ratio: 1.0, label: '۹۰ دقیقه (جلسه کامل)' },
-  { minutes: 75, ratio: 0.84, label: '۷۵ دقیقه' },
-  { minutes: 60, ratio: 0.7, label: '۶۰ دقیقه (۱ ساعت)' },
-  { minutes: 45, ratio: 0.56, label: '۴۵ دقیقه' },
-  { minutes: 30, ratio: 0.4, label: '۳۰ دقیقه (نیم ساعت)' },
-  { minutes: 15, ratio: 0.2, label: '۱۵ دقیقه (رفع اشکال کوتاه)' },
-];
-
-const PRESETS = [300000, 400000, 500000, 700000, 1000000];
+const PRESETS = [200000, 300000, 400000, 500000, 700000, 1000000];
 
 export const OnlineClassSettingsScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
@@ -60,17 +49,9 @@ export const OnlineClassSettingsScreen: React.FC = () => {
   // Weekly Schedule Status
   const [scheduleDaysCount, setScheduleDaysCount] = useState<number>(0);
 
-  // Online Class Pricing & Durations
-  const [basePrice90Min, setBasePrice90Min] = useState<number>(500000);
-  const [inputBasePrice, setInputBasePrice] = useState<string>('500000');
-  const [durationToggles, setDurationToggles] = useState<Record<string, boolean>>({
-    '90': true,
-    '75': true,
-    '60': true,
-    '45': true,
-    '30': true,
-    '15': true,
-  });
+  // Fixed Online Class Session Price (Always 1.5 Hours / 90 mins)
+  const [sessionPrice, setSessionPrice] = useState<number>(500000);
+  const [inputSessionPrice, setInputSessionPrice] = useState<string>('500000');
 
   const fetchData = async () => {
     try {
@@ -83,18 +64,10 @@ export const OnlineClassSettingsScreen: React.FC = () => {
 
       // Online Class Settings
       if (classRes.status === 'fulfilled' && classRes.value.data?.success && classRes.value.data.data) {
-        const { basePrice90Min: fetchedPrice, durations } = classRes.value.data.data;
-        const validPrice = fetchedPrice || 500000;
-        setBasePrice90Min(validPrice);
-        setInputBasePrice(validPrice.toString());
-
-        if (durations && Array.isArray(durations)) {
-          const toggles: Record<string, boolean> = {};
-          durations.forEach((d: any) => {
-            toggles[d.minutes.toString()] = d.isEnabled !== false;
-          });
-          setDurationToggles((prev) => ({ ...prev, ...toggles }));
-        }
+        const { basePrice90Min, onlineClassBasePrice } = classRes.value.data.data;
+        const validPrice = basePrice90Min || onlineClassBasePrice || 500000;
+        setSessionPrice(validPrice);
+        setInputSessionPrice(validPrice.toString());
       }
 
       // Profile settings (educationLevel & teachingSubjects)
@@ -105,6 +78,10 @@ export const OnlineClassSettingsScreen: React.FC = () => {
         }
         if (Array.isArray(pd.teachingSubjects) && pd.teachingSubjects.length > 0) {
           setTeachingSubjects(pd.teachingSubjects);
+        }
+        if (pd.onlineClassBasePrice) {
+          setSessionPrice(pd.onlineClassBasePrice);
+          setInputSessionPrice(pd.onlineClassBasePrice.toString());
         }
       }
 
@@ -136,28 +113,16 @@ export const OnlineClassSettingsScreen: React.FC = () => {
 
   const handlePriceChange = (val: string) => {
     const cleanNum = val.replace(/[^0-9]/g, '');
-    setInputBasePrice(cleanNum);
+    setInputSessionPrice(cleanNum);
     const num = Number(cleanNum);
     if (!isNaN(num) && num > 0) {
-      setBasePrice90Min(num);
+      setSessionPrice(num);
     }
   };
 
   const handleSelectPreset = (amount: number) => {
-    setBasePrice90Min(amount);
-    setInputBasePrice(amount.toString());
-  };
-
-  const handleToggleDuration = (minutes: number) => {
-    const key = minutes.toString();
-    setDurationToggles((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
-
-  const calculateDurationPrice = (ratio: number) => {
-    return Math.round((basePrice90Min * ratio) / 1000) * 1000;
+    setSessionPrice(amount);
+    setInputSessionPrice(amount.toString());
   };
 
   // Subjects handling
@@ -185,15 +150,9 @@ export const OnlineClassSettingsScreen: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const numPrice = Number(inputBasePrice);
+    const numPrice = Number(inputSessionPrice);
     if (isNaN(numPrice) || numPrice < 10000) {
-      showWarning('قیمت پایه ۹۰ دقیقه باید حداقل ۱۰,۰۰۰ تومان باشد.');
-      return;
-    }
-
-    const anyEnabled = Object.values(durationToggles).some((v) => v);
-    if (!anyEnabled) {
-      showWarning('لطفاً حداقل یک مدت زمان را برای برگزاری کلاس فعال بگذارید.');
+      showWarning('نرخ هر جلسه کلاس باید حداقل ۱۰,۰۰۰ تومان باشد.');
       return;
     }
 
@@ -205,15 +164,16 @@ export const OnlineClassSettingsScreen: React.FC = () => {
     try {
       setSaving(true);
       await Promise.all([
-        // 1. Save pricing & durations
+        // 1. Save pricing (all classes 1.5 hours)
         api.post('/teacher/center/online-class-settings', {
           basePrice90Min: numPrice,
-          durations: durationToggles,
+          onlineClassBasePrice: numPrice,
         }),
         // 2. Save education level & subjects to profile
         api.put('/teacher/profile', {
           educationLevel,
           teachingSubjects,
+          onlineClassBasePrice: numPrice,
         }),
         // 3. Sync to workdesk settings
         api.put('/teacher/center/workdesk-settings', {
@@ -223,7 +183,7 @@ export const OnlineClassSettingsScreen: React.FC = () => {
         }),
       ]);
 
-      showSuccess('تمامی تنظیمات تدریس و کلاس آنلاین با موفقیت ذخیره شد.');
+      showSuccess('تنظیمات تدریس و نرخ کلاس آنلاین با موفقیت ذخیره شد.');
       navigation.goBack();
     } catch (err: any) {
       showError(err.response?.data?.message || 'خطا در ذخیره تنظیمات');
@@ -265,10 +225,10 @@ export const OnlineClassSettingsScreen: React.FC = () => {
             </View>
             <View style={styles.heroTextCol}>
               <Text style={[styles.heroTitle, { color: isDark ? '#93c5fd' : '#1e3a8a' }]}>
-                تنظیمات هوشمند تدریس و مقاطع تحصیلی
+                تنظیمات تدریس و جلسات کلاس آنلاین
               </Text>
               <Text style={[styles.heroDesc, { color: isDark ? '#cbd5e1' : '#475569' }]}>
-                مقطع و دروس تدریس خود را مشخص نمایید، برنامه زمانی هفتگی‌تان را تعیین کنید و نرخ کلاس‌های آنلاین را با فرمول خودکار هوشمند مدیریت نمایید.
+                تمام جلسات کلاس‌های آنلاین در کیتایار به مدت ۱ ساعت و نیم (۹۰ دقیقه) برگزار می‌شوند. مقطع و دروس تدریس خود را انتخاب و نرخ هر جلسه را مشخص نمایید.
               </Text>
             </View>
           </View>
@@ -435,14 +395,14 @@ export const OnlineClassSettingsScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Section 4: Base Price Card */}
+          {/* Section 4: Fixed Session Price (1.5 Hours / 90 min) */}
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>نرخ پایه کلاس ۹۰ دقیقه‌ای</Text>
+              <Text style={[styles.cardTitle, { color: colors.text }]}>نرخ هر جلسه کلاس آنلاین (۱ ساعت و نیم)</Text>
               <Clock size={18} color={colors.primary} />
             </View>
             <Text style={[styles.cardSub, { color: colors.textLight }]}>
-              مبنای محاسبه نرخ تمام جلسات بر اساس قیمت ۹۰ دقیقه است.
+              تمام جلسات کلاس‌های آنلاین کیتایار به مدت ۱ ساعت و نیم برگزار می‌شوند. هزینه هر جلسه را تعیین کنید.
             </Text>
 
             <View style={[styles.inputRow, { borderColor: colors.primary, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}>
@@ -450,7 +410,7 @@ export const OnlineClassSettingsScreen: React.FC = () => {
               <TextInput
                 style={[styles.priceInput, { color: colors.text }]}
                 keyboardType="numeric"
-                value={Number(inputBasePrice || 0).toLocaleString('fa-IR')}
+                value={Number(inputSessionPrice || 0).toLocaleString('fa-IR')}
                 onChangeText={handlePriceChange}
                 placeholder="۵۰۰,۰۰۰"
                 placeholderTextColor={colors.textLight}
@@ -461,7 +421,7 @@ export const OnlineClassSettingsScreen: React.FC = () => {
             <Text style={[styles.presetsLabel, { color: colors.textLight }]}>انتخاب سریع مبالغ پیشنهادی:</Text>
             <View style={styles.presetsRow}>
               {PRESETS.map((amt) => {
-                const isSelected = basePrice90Min === amt;
+                const isSelected = sessionPrice === amt;
                 return (
                   <TouchableOpacity
                     key={amt}
@@ -489,62 +449,7 @@ export const OnlineClassSettingsScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Section 5: Duration Prices Table */}
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.cardHeader}>
-              <Text style={[styles.cardTitle, { color: colors.text }]}>جدول نرخ و فعال‌سازی مدت جلسات</Text>
-              <Percent size={18} color={colors.primary} />
-            </View>
-            <Text style={[styles.cardSub, { color: colors.textLight }]}>
-              هر مدتی را که غیرفعال کنید، دانش‌آموزان امکان انتخاب آن را در درخواست رزرو نخواهند داشت.
-            </Text>
-
-            <View style={styles.table}>
-              {DURATION_RATIOS.map((item) => {
-                const isEnabled = durationToggles[item.minutes.toString()] !== false;
-                const calculated = calculateDurationPrice(item.ratio);
-                const percentStr = `(${Math.round(item.ratio * 100).toLocaleString('fa-IR')}٪)`;
-
-                return (
-                  <View
-                    key={item.minutes}
-                    style={[
-                      styles.tableRow,
-                      {
-                        borderBottomColor: colors.border,
-                        opacity: isEnabled ? 1 : 0.45,
-                        backgroundColor: isEnabled ? 'transparent' : isDark ? '#1e293b40' : '#f8fafc',
-                      },
-                    ]}
-                  >
-                    <Switch
-                      value={isEnabled}
-                      onValueChange={() => handleToggleDuration(item.minutes)}
-                      trackColor={{ false: '#cbd5e1', true: colors.primary }}
-                      thumbColor="#ffffff"
-                    />
-
-                    <View style={styles.tablePriceCol}>
-                      <Text style={[styles.tablePriceText, { color: isEnabled ? colors.primary : colors.textLight }]}>
-                        {calculated.toLocaleString('fa-IR')} <Text style={styles.tablePriceUnit}>تومان</Text>
-                      </Text>
-                      <Text style={[styles.tablePercentText, { color: colors.textLight }]}>
-                        {percentStr}
-                      </Text>
-                    </View>
-
-                    <View style={styles.tableDurationCol}>
-                      <Text style={[styles.tableDurationTitle, { color: colors.text }]}>
-                        {item.label}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* Section 6: Revenue & Settlement Info Card */}
+          {/* Section 5: Revenue & Settlement Info Card */}
           <View style={[styles.infoCard, { backgroundColor: isDark ? '#064e3b18' : '#f0fdf4', borderColor: isDark ? '#047857' : '#bbf7d0' }]}>
             <View style={styles.infoCardHeader}>
               <ShieldCheck size={20} color="#16a34a" />
@@ -555,24 +460,24 @@ export const OnlineClassSettingsScreen: React.FC = () => {
             <View style={styles.infoItemRow}>
               <CheckCircle size={14} color="#16a34a" style={{ marginLeft: 6, marginTop: 2 }} />
               <Text style={[styles.infoItemText, { color: isDark ? '#a7f3d0' : '#166534' }]}>
-                سهم معلم از شهریه پایه کلاس ۹۰٪ و کارمزد پلتفرم ۱۰٪ است.
+                سهم معلم از شهریه هر جلسه کلاس ۹۰٪ و کارمزد پلتفرم ۱۰٪ است.
               </Text>
             </View>
             <View style={styles.infoItemRow}>
               <CheckCircle size={14} color="#16a34a" style={{ marginLeft: 6, marginTop: 2 }} />
               <Text style={[styles.infoItemText, { color: isDark ? '#a7f3d0' : '#166534' }]}>
-                در کلاس‌های گروهی، به ازای هر دانش‌آموز اضافه مبلغ ۵۰,۰۰۰ تومان به مبلغ کل افزوده می‌شود که ۸۰٪ آن مستقیماً متعلق به دبیر محترم است.
+                در کلاس‌های گروهی، به ازای هر دانش‌آموز اضافه مبلغ ۵۰,۰۰۰ تومان افزوده می‌شود که ۸۰٪ آن مستقیماً به دبیر محترم تعلق می‌گیرد.
               </Text>
             </View>
             <View style={styles.infoItemRow}>
               <CheckCircle size={14} color="#16a34a" style={{ marginLeft: 6, marginTop: 2 }} />
               <Text style={[styles.infoItemText, { color: isDark ? '#a7f3d0' : '#166534' }]}>
-                تسویه حساب بلافاصله پس از اعلام اتمام کلاس توسط شما به کیف پول واریز می‌گردد.
+                تسویه حساب بلافاصله پس از اتمام جلسه کلاس توسط شما، به موجودی قابل برداشت کیف پول واریز می‌گردد.
               </Text>
             </View>
           </View>
 
-          {/* Section 7: Save Button */}
+          {/* Section 6: Save Button */}
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: colors.primary }, saving && { opacity: 0.7 }]}
             onPress={handleSave}
@@ -891,44 +796,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONT_FAMILY.medium,
   },
-  table: {
-    marginTop: 4,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderRadius: 10,
-  },
-  tableDurationCol: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  tableDurationTitle: {
-    fontSize: 13,
-    fontFamily: FONT_FAMILY.bold,
-    textAlign: 'right',
-  },
-  tablePriceCol: {
-    alignItems: 'center',
-    paddingHorizontal: 12,
-  },
-  tablePriceText: {
-    fontSize: 13.5,
-    fontFamily: FONT_FAMILY.bold,
-  },
-  tablePriceUnit: {
-    fontSize: 10.5,
-    fontFamily: FONT_FAMILY.regular,
-  },
-  tablePercentText: {
-    fontSize: 10.5,
-    fontFamily: FONT_FAMILY.regular,
-    marginTop: 2,
-  },
+
   infoCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -976,4 +844,3 @@ const styles = StyleSheet.create({
 });
 
 export default OnlineClassSettingsScreen;
-
