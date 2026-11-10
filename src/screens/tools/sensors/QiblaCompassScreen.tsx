@@ -10,6 +10,8 @@ import {
   ScrollView,
   TextInput,
   Vibration,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -254,52 +256,60 @@ export const QiblaCompassScreen: React.FC = () => {
           onRequestClose={() => setIsCityModalVisible(false)}
         >
           <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                style={styles.modalBackBtn}
-                onPress={() => setIsCityModalVisible(false)}
+            <KeyboardAvoidingView 
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+              style={{ flex: 1 }}
+            >
+              <View style={styles.modalHeader}>
+                <TouchableOpacity
+                  style={styles.modalBackBtn}
+                  onPress={() => setIsCityModalVisible(false)}
+                >
+                  <ArrowRight size={22} color="#1e293b" />
+                </TouchableOpacity>
+                <Text style={styles.modalTitle}>انتخاب شهر برای قبله‌نما</Text>
+                <View style={{ width: 40 }} />
+              </View>
+
+              <View style={styles.searchBox}>
+                <Search size={18} color="#94a3b8" style={{ marginLeft: 8 }} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="جستجوی نام شهر یا استان..."
+                  placeholderTextColor="#94a3b8"
+                  value={searchCityQuery}
+                  onChangeText={setSearchCityQuery}
+                  textAlign="right"
+                />
+              </View>
+
+              <ScrollView 
+                contentContainerStyle={[styles.cityList, { paddingBottom: 60 }]}
+                keyboardShouldPersistTaps="handled"
               >
-                <ArrowRight size={22} color="#1e293b" />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>انتخاب شهر برای قبله‌نما</Text>
-              <View style={{ width: 40 }} />
-            </View>
-
-            <View style={styles.searchBox}>
-              <Search size={18} color="#94a3b8" style={{ marginLeft: 8 }} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="جستجوی نام شهر یا استان..."
-                placeholderTextColor="#94a3b8"
-                value={searchCityQuery}
-                onChangeText={setSearchCityQuery}
-                textAlign="right"
-              />
-            </View>
-
-            <ScrollView contentContainerStyle={styles.cityList}>
-              {filteredCities.map(city => {
-                const isSelected = selectedCity.name === city.name;
-                return (
-                  <TouchableOpacity
-                    key={city.name}
-                    style={[styles.cityRow, isSelected && styles.cityRowSelected]}
-                    onPress={() => {
-                      setSelectedCity(city);
-                      setIsCityModalVisible(false);
-                    }}
-                  >
-                    {isSelected && <Check size={18} color="#059669" />}
-                    <View style={styles.cityMeta}>
-                      <Text style={[styles.cityName, isSelected && styles.cityNameSelected]}>
-                        {city.name}
-                      </Text>
-                      <Text style={styles.cityProvince}>{city.province}</Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                {filteredCities.map(city => {
+                  const isSelected = selectedCity.name === city.name;
+                  return (
+                    <TouchableOpacity
+                      key={city.name}
+                      style={[styles.cityRow, isSelected && styles.cityRowSelected]}
+                      onPress={() => {
+                        setSelectedCity(city);
+                        setIsCityModalVisible(false);
+                      }}
+                    >
+                      {isSelected && <Check size={18} color="#059669" />}
+                      <View style={styles.cityMeta}>
+                        <Text style={[styles.cityName, isSelected && styles.cityNameSelected]}>
+                          {city.name}
+                        </Text>
+                        <Text style={styles.cityProvince}>{city.province}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
       </View>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Vibration, I18nManager, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Vibration, I18nManager, ScrollView, Animated, KeyboardAvoidingView, Platform } from 'react-native';
 import { Play, Pause, Square, Repeat, BellRing } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -99,7 +99,8 @@ const IntervalTimerScreen = () => {
 
   return (
     <Animated.View style={[styles.container, { backgroundColor: bgColor }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.title, { color: colors.text }]}>تنظیمات تایمر</Text>
           
@@ -175,13 +176,14 @@ const IntervalTimerScreen = () => {
           <Text style={[styles.infoText, { color: colors.textLight }]}>هنگام اتمام زمان کار و استراحت، گوشی شما می‌لرزد.</Text>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { padding: 16, flexGrow: 1 },
+  scroll: { padding: 16, flexGrow: 1, paddingBottom: 60 },
   settingsCard: { padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 24 },
   title: { fontSize: 18, fontWeight: 'bold', marginBottom: 16, fontFamily: 'IRANSansX', textAlign: 'center' },
   inputRow: { 

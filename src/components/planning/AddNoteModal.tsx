@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, ActivityIndicator, ScrollView, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { PlanningService } from '../../api/planningService';
@@ -110,7 +110,7 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate, initialClassId }:
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.overlay}>
         <TouchableOpacity 
           style={StyleSheet.absoluteFill}
           activeOpacity={1}
@@ -129,7 +129,7 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate, initialClassId }:
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.form} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             
             {/* Class Selection */}
             <View style={styles.switchRow}>
@@ -256,7 +256,7 @@ const AddNoteModal = ({ visible, onClose, onSave, initialDate, initialClassId }:
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

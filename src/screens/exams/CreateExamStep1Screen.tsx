@@ -182,7 +182,7 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
   const selectedClass = classes.find((c: any) => c._id === selectedClassroomId) || passedClassroom;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* هدر مدرن سازگار با اینست‌ها و تم */}
       <View style={[
         styles.header, 
@@ -364,86 +364,83 @@ const CreateExamStep1Screen = ({ route, navigation }: any) => {
             </View>
 
             {/* انتخاب ساعت شروع و مدت زمان */}
-            <View style={styles.timeRow}>
-              <View style={styles.halfInput}>
-                <View style={styles.smallLabelRow}>
-                  <Clock size={14} color={colors.textLight} />
-                  <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت شروع</Text>
-                </View>
-                <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
-                  <View style={{ flex: 0.46 }}>
-                    <CustomDropdown
-                      items={minutesList}
-                      selectedValue={startMinute}
-                      onSelect={(item) => setStartMinute(item.value)}
-                      placeholder="دقیقه"
-                    />
-                  </View>
-                  <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
-                  <View style={{ flex: 0.46 }}>
-                    <CustomDropdown
-                      items={hoursList}
-                      selectedValue={startHour}
-                      onSelect={(item) => setStartHour(item.value)}
-                      placeholder="ساعت"
-                    />
-                  </View>
-                </View>
+            {/* انتخاب ساعت شروع (تمام عرض) */}
+            <View style={{ width: '100%', marginTop: 12 }}>
+              <View style={styles.smallLabelRow}>
+                <Clock size={14} color={colors.textLight} />
+                <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت شروع</Text>
               </View>
-
-              <View style={styles.halfInput}>
-                <View style={styles.smallLabelRow}>
-                  <Timer size={14} color={colors.textLight} />
-                  <Text style={[styles.smallLabel, { color: colors.textLight }]}>مدت زمان آزمون</Text>
-                </View>
-                <View style={{ marginTop: 6 }}>
+              <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
+                <View style={{ flex: 1 }}>
                   <CustomDropdown
-                    items={[
-                      { id: '15m', label: '۱۵ دقیقه', value: 15 },
-                      { id: '30m', label: '۳۰ دقیقه', value: 30 },
-                      { id: '45m', label: '۴۵ دقیقه', value: 45 },
-                      { id: '60m', label: '۶۰ دقیقه (۱ ساعت)', value: 60 },
-                      { id: '90m', label: '۹۰ دقیقه (۱.۵ ساعت)', value: 90 },
-                      { id: '120m', label: '۱۲۰ دقیقه (۲ ساعت)', value: 120 },
-                      { id: 'custom', label: 'سایر (انتخاب دستی ساعت پایان)', value: 'custom' },
-                    ]}
-                    selectedValue={examDuration}
-                    onSelect={(item) => setExamDuration(item.value)}
-                    placeholder="انتخاب زمان"
+                    items={minutesList}
+                    selectedValue={startMinute}
+                    onSelect={(item) => setStartMinute(item.value)}
+                    placeholder="دقیقه"
+                  />
+                </View>
+                <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
+                <View style={{ flex: 1 }}>
+                  <CustomDropdown
+                    items={hoursList}
+                    selectedValue={startHour}
+                    onSelect={(item) => setStartHour(item.value)}
+                    placeholder="ساعت"
                   />
                 </View>
               </View>
             </View>
 
-            {/* ساعت پایان دستی اگر حالت سفارشی انتخاب شد */}
+            {/* مدت زمان آزمون (تمام عرض در ردیف جداگانه) */}
+            <View style={{ width: '100%', marginTop: 16 }}>
+              <View style={styles.smallLabelRow}>
+                <Timer size={14} color={colors.textLight} />
+                <Text style={[styles.smallLabel, { color: colors.textLight }]}>مدت زمان آزمون</Text>
+              </View>
+              <View style={{ marginTop: 6 }}>
+                <CustomDropdown
+                  items={[
+                    { id: '15m', label: '۱۵ دقیقه', value: 15 },
+                    { id: '30m', label: '۳۰ دقیقه', value: 30 },
+                    { id: '45m', label: '۴۵ دقیقه', value: 45 },
+                    { id: '60m', label: '۶۰ دقیقه (۱ ساعت)', value: 60 },
+                    { id: '90m', label: '۹۰ دقیقه (۱.۵ ساعت)', value: 90 },
+                    { id: '120m', label: '۱۲۰ دقیقه (۲ ساعت)', value: 120 },
+                    { id: 'custom', label: 'سایر (انتخاب دستی ساعت پایان)', value: 'custom' },
+                  ]}
+                  selectedValue={examDuration}
+                  onSelect={(item) => setExamDuration(item.value)}
+                  placeholder="انتخاب زمان"
+                />
+              </View>
+            </View>
+
+            {/* ساعت پایان دستی اگر حالت سفارشی انتخاب شد (تمام عرض) */}
             {examDuration === 'custom' && (
-              <View style={[styles.timeRow, { marginTop: 16 }]}>
-                <View style={styles.halfInput}>
-                  <View style={styles.smallLabelRow}>
-                    <Clock size={14} color={colors.textLight} />
-                    <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت پایان آزمون</Text>
+              <View style={{ width: '100%', marginTop: 16 }}>
+                <View style={styles.smallLabelRow}>
+                  <Clock size={14} color={colors.textLight} />
+                  <Text style={[styles.smallLabel, { color: colors.textLight }]}>ساعت پایان آزمون</Text>
+                </View>
+                <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
+                  <View style={{ flex: 1 }}>
+                    <CustomDropdown
+                      items={minutesList}
+                      selectedValue={endMinute}
+                      onSelect={(item) => setEndMinute(item.value)}
+                      placeholder="دقیقه"
+                    />
                   </View>
-                  <View style={[styles.timeRow, { marginTop: 6, alignItems: 'center' }]}>
-                    <View style={{ flex: 0.46 }}>
-                      <CustomDropdown
-                        items={minutesList}
-                        selectedValue={endMinute}
-                        onSelect={(item) => setEndMinute(item.value)}
-                        placeholder="دقیقه"
-                      />
-                    </View>
-                    <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
-                    <View style={{ flex: 0.46 }}>
-                      <CustomDropdown
-                        items={hoursList}
-                        selectedValue={endHour}
-                        onSelect={(item) => setEndHour(item.value)}
-                        placeholder="ساعت"
-                      />
-                    </View>
+                  <Text style={[styles.colonSeparator, { color: colors.textLight }]}>:</Text>
+                  <View style={{ flex: 1 }}>
+                    <CustomDropdown
+                      items={hoursList}
+                      selectedValue={endHour}
+                      onSelect={(item) => setEndHour(item.value)}
+                      placeholder="ساعت"
+                    />
                   </View>
                 </View>
-                <View style={styles.halfInput} />
               </View>
             )}
 

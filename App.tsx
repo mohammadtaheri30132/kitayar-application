@@ -31,6 +31,7 @@ import CreateSchoolScreen from './src/screens/classes/CreateSchoolScreen';
 import WeeklyScheduleBuilderScreen from './src/screens/main/WeeklyScheduleBuilderScreen';
 import CreateExamStep1Screen from './src/screens/exams/CreateExamStep1Screen';
 import CreateExamStep2Screen from './src/screens/exams/CreateExamStep2Screen';
+import QuestionBankPickerScreen from './src/screens/exams/QuestionBankPickerScreen';
 import CreateCustomQuestionScreen from './src/screens/exams/CreateCustomQuestionScreen';
 import ExamListScreen from './src/screens/exams/ExamListScreen';
 import ExamDashboardScreen from './src/screens/exams/ExamDashboardScreen';
@@ -52,6 +53,7 @@ import { initializeSslPinning } from 'react-native-ssl-public-key-pinning';
 import SwapQuestionScreen from './src/screens/question/SwapQuestionScreen';
 import ManageQuestionsScreen from './src/screens/question/ManageQuestionsScreen';
 import QuestionSettingsScreen from './src/screens/question/QuestionSettingsScreen';
+import TeacherAssistantScreen from './src/screens/tools/TeacherAssistantScreen';
 import PdfConverterScreen from './src/screens/tools/PdfConverterScreen';
 import ConverterScreen from './src/screens/tools/ConverterScreen';
 import PdfViewerScreen from './src/screens/tools/PdfViewerScreen';
@@ -106,6 +108,7 @@ import { PhonebookScreen } from './src/screens/tools/phonebook/PhonebookScreen';
 import { IrRemoteHubScreen } from './src/screens/tools/ir/IrRemoteHubScreen';
 import { IrSetupWizardScreen } from './src/screens/tools/ir/IrSetupWizardScreen';
 import { IrRemoteControlScreen } from './src/screens/tools/ir/IrRemoteControlScreen';
+import { ClassroomNoiseMeterScreen } from './src/screens/tools/classroom/ClassroomNoiseMeterScreen';
 // Planning Screens
 import CalendarScreen from './src/screens/main/CalendarScreen';
 import CreateEventScreen from './src/screens/main/CreateEventScreen';
@@ -113,6 +116,7 @@ import TasksScreen from './src/screens/main/TasksScreen';
 import DailyNotesScreen from './src/screens/main/DailyNotesScreen';
 import WeeklyScheduleScreen from './src/screens/main/WeeklyScheduleScreen';
 import NotificationsScreen from './src/screens/main/NotificationsScreen';
+import MandatoryScheduleWizardScreen from './src/screens/main/MandatoryScheduleWizardScreen';
 
 
 // Interaction Module
@@ -143,22 +147,40 @@ import ManualGradingScreen from './src/screens/smartsheet/ManualGradingScreen';
 import ExamSheetsResultsScreen from './src/screens/smartsheet/ExamSheetsResultsScreen';
 import SupportTicketsScreen from './src/screens/support/SupportTicketsScreen';
 
+// Teacher Center Screens
+import TeacherCenterScreen from './src/screens/teacherCenter/TeacherCenterScreen';
+import TeacherDailyAttendanceScreen from './src/screens/teacherCenter/TeacherDailyAttendanceScreen';
+import StudentRequestsScreen from './src/screens/teacherCenter/StudentRequestsScreen';
+import TeacherConversationsScreen from './src/screens/teacherCenter/TeacherConversationsScreen';
+import TeacherChatScreen from './src/screens/teacherCenter/TeacherChatScreen';
+import TeacherMaterialsScreen from './src/screens/teacherCenter/TeacherMaterialsScreen';
+import UploadMaterialScreen from './src/screens/teacherCenter/UploadMaterialScreen';
+import OnlineClassesScreen from './src/screens/teacherCenter/OnlineClassesScreen';
+import OnlineClassSettingsScreen from './src/screens/teacherCenter/OnlineClassSettingsScreen';
+import LiveClassroomScreen from './src/screens/classroom/LiveClassroomScreen';
+import TeacherWalletScreen from './src/screens/teacherCenter/TeacherWalletScreen';
+import TeacherReviewsScreen from './src/screens/teacherCenter/TeacherReviewsScreen';
+
 const Stack = createNativeStackNavigator();
 
 const AppContent = () => {
-  const { isLoading, userToken } = useContext(AuthContext);
+  const { isLoading, userToken, needsScheduleSetup } = useContext(AuthContext);
   const { colors, isDark } = useTheme();
 
   useEffect(() => {
-    initializeSslPinning({
-      '192.168.1.128': { 
-        includeSubdomains: true,
-        publicKeyHashes: [
-          'HASH_KLID_ASLI_SHOMA', 
-          'HASH_KLID_BACKUP_SHOMA' 
-        ],
-      },
-    });
+    try {
+      initializeSslPinning({
+        '192.168.1.128': { 
+          includeSubdomains: true,
+          publicKeyHashes: [
+            'HASH_KLID_ASLI_SHOMA', 
+            'HASH_KLID_BACKUP_SHOMA' 
+          ],
+        },
+      });
+    } catch (e) {
+      console.warn('SSL Pinning init skipped:', e);
+    }
   }, []);
 
   if (isLoading) {
@@ -175,9 +197,19 @@ const AppContent = () => {
             <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
             <Stack.Screen name="LoginPasswordScreen" component={LoginPasswordScreen} />
           </Stack.Group>
+        ) : needsScheduleSetup ? (
+          <Stack.Group>
+            <Stack.Screen
+              name="MandatoryScheduleWizardScreen"
+              component={MandatoryScheduleWizardScreen}
+              options={{ gestureEnabled: false }}
+            />
+            <Stack.Screen name="MainTabNavigator" component={MainTabNavigator} />
+          </Stack.Group>
         ) : (
           <Stack.Group>
             <Stack.Screen name="MainTabNavigator" component={MainTabNavigator} />
+            <Stack.Screen name="MandatoryScheduleWizardScreen" component={MandatoryScheduleWizardScreen} />
             <Stack.Screen name="PlaceholderScreen" component={PlaceholderScreen} />
             <Stack.Screen name="GenericCategoryScreen" component={GenericCategoryScreen} />
             <Stack.Screen name="AgeCalculatorScreen" component={AgeCalculatorScreen} />
@@ -212,6 +244,7 @@ const AppContent = () => {
             <Stack.Screen name="WeeklyScheduleBuilderScreen" component={WeeklyScheduleBuilderScreen} />
             <Stack.Screen name="CreateExamStep1Screen" component={CreateExamStep1Screen} />
             <Stack.Screen name="CreateExamStep2Screen" component={CreateExamStep2Screen} />
+            <Stack.Screen name="QuestionBankPickerScreen" component={QuestionBankPickerScreen} />
             <Stack.Screen name="CreateCustomQuestionScreen" component={CreateCustomQuestionScreen} />
             <Stack.Screen name="ExamListScreen" component={ExamListScreen} />
             <Stack.Screen name="ExamDashboardScreen" component={ExamDashboardScreen} />
@@ -231,6 +264,7 @@ const AppContent = () => {
             <Stack.Screen name="TeacherQuestionBankScreen" component={TeacherQuestionBankScreen} />
             <Stack.Screen name="CreateTeacherQuestionScreen" component={CreateTeacherQuestionScreen} />
 
+            <Stack.Screen name="TeacherAssistantScreen" component={TeacherAssistantScreen} />
             <Stack.Screen name="ToolsListScreen" component={ToolsListScreen} />
             <Stack.Screen name="DocumentScannerScreen" component={DocumentScannerScreen} />
             <Stack.Screen name="CropAdjustmentScreen" component={CropAdjustmentScreen} />
@@ -251,6 +285,7 @@ const AppContent = () => {
             <Stack.Screen name="AdvancedPdfScreen" component={AdvancedPdfScreen} />
             <Stack.Screen name="PdfReaderScreen" component={PdfReaderScreen} options={{ headerShown: false }} />
             <Stack.Screen name="InfiniteCanvasScreen" component={InfiniteCanvasScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ClassroomNoiseMeterScreen" component={ClassroomNoiseMeterScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MusicMainScreen" component={MusicMainScreen} options={{ headerShown: false }} />
             <Stack.Screen name="MusicCategoryTracksScreen" component={MusicCategoryTracksScreen} options={{ headerShown: false }} />
             <Stack.Screen name="BarcodeHubScreen" component={BarcodeHubScreen} options={{ headerShown: false }} />
@@ -306,6 +341,20 @@ const AppContent = () => {
             <Stack.Screen name="GradingReviewScreen" component={GradingReviewScreen} />
             <Stack.Screen name="ManualGradingScreen" component={ManualGradingScreen} />
             <Stack.Screen name="ExamSheetsResultsScreen" component={ExamSheetsResultsScreen} />
+
+            {/* Teacher Center Screens */}
+            <Stack.Screen name="TeacherCenterScreen" component={TeacherCenterScreen} />
+            <Stack.Screen name="TeacherDailyAttendanceScreen" component={TeacherDailyAttendanceScreen} />
+            <Stack.Screen name="StudentRequestsScreen" component={StudentRequestsScreen} />
+            <Stack.Screen name="TeacherConversationsScreen" component={TeacherConversationsScreen} />
+            <Stack.Screen name="TeacherChatScreen" component={TeacherChatScreen} />
+            <Stack.Screen name="TeacherMaterialsScreen" component={TeacherMaterialsScreen} />
+            <Stack.Screen name="UploadMaterialScreen" component={UploadMaterialScreen} />
+            <Stack.Screen name="OnlineClassesScreen" component={OnlineClassesScreen} />
+            <Stack.Screen name="OnlineClassSettingsScreen" component={OnlineClassSettingsScreen} />
+            <Stack.Screen name="LiveClassroomScreen" component={LiveClassroomScreen} />
+            <Stack.Screen name="TeacherWalletScreen" component={TeacherWalletScreen} />
+            <Stack.Screen name="TeacherReviewsScreen" component={TeacherReviewsScreen} />
           </Stack.Group>
         )}
       </Stack.Navigator>

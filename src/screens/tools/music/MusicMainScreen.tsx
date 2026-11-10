@@ -249,6 +249,7 @@ export const MusicMainScreen: React.FC = () => {
           /* Categories Feed */
           <ScrollView
             contentContainerStyle={styles.feedContent}
+            keyboardShouldPersistTaps="handled"
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366f1']} />
             }

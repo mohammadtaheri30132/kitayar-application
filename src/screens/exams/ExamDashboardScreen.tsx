@@ -276,7 +276,7 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {/* Header with Safe Area Insets */}
         <View style={[
@@ -502,7 +502,10 @@ const ExamDashboardScreen = ({ route, navigation }: any) => {
             />
           </View>
         ) : (
-          <ScrollView contentContainerStyle={[styles.listContainer, { paddingBottom: Math.max(insets.bottom, 40) }]}>
+          <ScrollView 
+            contentContainerStyle={[styles.listContainer, { paddingBottom: Math.max(insets.bottom + 80, 100) }]}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.label, { color: colors.text }]}>عنوان آزمون</Text>
               <TextInput 

@@ -67,7 +67,7 @@ const CreateTeacherQuestionScreen = ({ navigation }: any) => {
           <View style={{ width: 24 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           {/* انتخاب نوع سوال */}
           <Text style={styles.label}>نوع سوال</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeSelectorRow}>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX', color: COLORS.text },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 16, paddingBottom: 80 },
   label: { fontSize: 14, fontWeight: 'bold', fontFamily: 'IRANSansX', color: COLORS.text, marginBottom: 8, textAlign: 'left', marginTop: 16 },
   
   typeSelectorRow: { flexDirection: 'row-reverse', marginBottom: 8 },

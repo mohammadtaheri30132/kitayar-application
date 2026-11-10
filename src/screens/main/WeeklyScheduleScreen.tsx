@@ -124,7 +124,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 16, borderBottomWidth: 1,
   },
   backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX' },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'Estedad-FD-Bold' },
   
   content: { padding: 16, paddingBottom: 40 },
   introBox: {
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   introText: {
     fontSize: 13,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     lineHeight: 22,
     color: '#0369a1'
   },
@@ -144,24 +144,24 @@ const styles = StyleSheet.create({
   dayHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12
   },
-  dayTitle: { fontSize: 16, fontWeight: 'bold', fontFamily: 'IRANSansX' },
+  dayTitle: { fontSize: 16, fontWeight: 'bold', fontFamily: 'Estedad-FD-Bold' },
   addBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f1f5f9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  addBtnText: { fontSize: 12, fontWeight: 'bold', fontFamily: 'IRANSansX', marginLeft: 4 },
+  addBtnText: { fontSize: 12, fontWeight: 'bold', fontFamily: 'Estedad-FD-Bold', marginLeft: 4 },
 
   emptyClassBox: {
     padding: 16, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center'
   },
-  emptyClassText: { fontSize: 13, fontFamily: 'IRANSansX' },
+  emptyClassText: { fontSize: 13, fontFamily: 'Estedad-FD-Regular' },
 
   classCard: {
     flexDirection: 'row', borderRadius: 12, borderWidth: 1, marginBottom: 12, overflow: 'hidden', alignItems: 'center'
   },
   classColorLine: { width: 6, height: '100%' },
   classInfo: { flex: 1, padding: 12 },
-  classTitle: { fontSize: 15, fontWeight: 'bold', fontFamily: 'IRANSansX', marginBottom: 8 },
+  classTitle: { fontSize: 15, fontWeight: 'bold', fontFamily: 'Estedad-FD-Bold', marginBottom: 8 },
   classMeta: { gap: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center' },
-  metaText: { fontSize: 12, fontFamily: 'IRANSansX', marginLeft: 6 },
+  metaText: { fontSize: 12, fontFamily: 'Estedad-FD-Medium', marginLeft: 6 },
   
   deleteBtn: { padding: 12 }
 });

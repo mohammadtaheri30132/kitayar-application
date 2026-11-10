@@ -121,7 +121,7 @@ const ClassManagementScreen = ({ navigation }: any) => {
                 borderWidth: 1, 
                 borderColor: isDark ? '#2563eb' : '#bfdbfe' 
               }}>
-                <Text style={{ fontSize: 11, color: isDark ? '#93c5fd' : '#1d4ed8', fontFamily: 'IRANSansX', fontWeight: 'bold' }}>
+                <Text style={{ fontSize: 11, color: isDark ? '#93c5fd' : '#1d4ed8', fontFamily: 'Estedad-FD-Bold' }}>
                   کد: {toPersianDigits(item.code)}
                 </Text>
               </View>
@@ -284,6 +284,7 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 18,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     color: COLORS.text,
   },
@@ -296,6 +297,7 @@ const styles = StyleSheet.create({
   },
   schoolCountBadgeText: {
     fontSize: 11,
+    fontFamily: 'Estedad-FD-Bold',
     color: COLORS.primary,
     fontWeight: 'bold',
   },
@@ -315,6 +317,7 @@ const styles = StyleSheet.create({
   createClassBtnText: {
     color: '#ffffff',
     fontSize: 14,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
   },
 
@@ -350,6 +353,7 @@ const styles = StyleSheet.create({
   schoolName: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     color: COLORS.text,
     textAlign: 'right',
@@ -361,6 +365,7 @@ const styles = StyleSheet.create({
   },
   schoolBadgeText: {
     fontSize: 12,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
   },
   schoolClassesList: {
@@ -394,6 +399,7 @@ const styles = StyleSheet.create({
   className: {
     flex: 1,
     fontSize: 16,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     color: COLORS.text,
     textAlign: 'right',
@@ -408,6 +414,7 @@ const styles = StyleSheet.create({
   },
   studentBadgeText: {
     fontSize: 12,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
   },
   classCardBody: {
@@ -425,6 +432,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
+    fontFamily: 'Estedad-FD-Medium',
     color: COLORS.textLight,
     marginRight: 6,
     textAlign: 'right',
@@ -438,6 +446,7 @@ const styles = StyleSheet.create({
   },
   enterClassText: {
     fontSize: 12,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: '600',
     marginLeft: 2,
   },
@@ -469,6 +478,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     color: COLORS.text,
     marginBottom: 8,
@@ -476,6 +486,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    fontFamily: 'Estedad-FD-Regular',
     color: COLORS.textLight,
     textAlign: 'center',
     lineHeight: 22,
@@ -493,6 +504,7 @@ const styles = StyleSheet.create({
   emptyActionBtnText: {
     color: '#ffffff',
     fontSize: 14,
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
   },
 

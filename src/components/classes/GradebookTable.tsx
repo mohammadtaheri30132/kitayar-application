@@ -11,7 +11,8 @@ import {
   UIManager,
   TextInput,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView
 } from 'react-native';
 import { 
   ChevronRight, ChevronLeft, Calendar as CalendarIcon, 
@@ -660,7 +661,10 @@ const GradebookTable = ({ classId, classroom }: any) => {
 
       {/* --- Bottom Detail View (Sheet) --- */}
       <Modal visible={!!selectedDay} transparent animationType="slide" onRequestClose={handleCloseSheet}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
+        >
           <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleCloseSheet} />
           {selectedDay && (
             <View style={[styles.bottomSheet, { position: 'relative', paddingBottom: 24, borderTopWidth: 0, elevation: 0, backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -737,7 +741,7 @@ const GradebookTable = ({ classId, classroom }: any) => {
             )}
             </View>
           )}
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Month Selection Modal */}

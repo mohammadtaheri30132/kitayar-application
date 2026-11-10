@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { ChevronRight, Calendar, Clock, MapPin, AlignLeft, Tag } from 'lucide-react-native';
@@ -21,7 +21,8 @@ const CreateEventScreen = ({ navigation }: any) => {
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         
         {/* Title */}
         <View style={styles.inputGroup}>
@@ -112,6 +113,7 @@ const CreateEventScreen = ({ navigation }: any) => {
           <Text style={styles.saveBtnText}>ذخیره رویداد</Text>
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
     </SafeAreaView>
   );
@@ -130,7 +132,7 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', fontFamily: 'IRANSansX' },
   
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 80 },
   
   inputGroup: { marginBottom: 24 },
   label: { fontSize: 14, fontFamily: 'IRANSansX', fontWeight: 'bold', marginBottom: 8 },

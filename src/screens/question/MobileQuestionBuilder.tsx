@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, 
-  Modal, ActivityIndicator, TextInput 
+  Modal, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform 
 } from 'react-native';
 import { showError, showWarning } from '../../components/feedback';
 import { X, ChevronDown, Settings2, Check } from 'lucide-react-native'; // 👈 Check اضافه شد
@@ -286,9 +286,8 @@ const MobileQuestionBuilder = ({ route, navigation }: any) => {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* 👈 قبلا یک FlatList با یک آیتم ساختگی بود که فقط اورهد virtualization
-          اضافه می‌کرد و باعث کند شدن mount صفحه می‌شد. حالا ScrollView ساده. */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>
@@ -371,6 +370,7 @@ const MobileQuestionBuilder = ({ route, navigation }: any) => {
           )}
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
 
       {renderBottomSheet()}
     </SafeAreaView>

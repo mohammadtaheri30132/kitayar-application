@@ -187,7 +187,8 @@ export const MusicCategoryTracksScreen: React.FC = () => {
           <FlatList
             data={tracks}
             keyExtractor={item => item._id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
+            keyboardShouldPersistTaps="handled"
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}

@@ -11,6 +11,7 @@ import {
   Dimensions,
   Platform,
   PermissionsAndroid,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { showError, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -319,7 +320,10 @@ export const SmartSheetScannerScreen = ({ route, navigation }: any) => {
       {/* Fallback Modal: Manual Sheet Code Entry                   */}
       {/* ========================================================= */}
       <Modal visible={showManualCodeModal} animationType="slide" transparent onRequestClose={() => setShowManualCodeModal(false)}>
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalBackdrop}
+        >
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>شناسایی دستی پاسخ‌برگ</Text>
@@ -360,7 +364,7 @@ export const SmartSheetScannerScreen = ({ route, navigation }: any) => {
               )}
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

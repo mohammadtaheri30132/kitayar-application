@@ -12,6 +12,7 @@ import {
   NativeModules,
   Platform,
   PermissionsAndroid,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { showError, showWarning, showSuccess, showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -637,32 +638,34 @@ export default function ClassChatScreen({ route, navigation }: any) {
       </View>
 
       {/* Messages List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>در حال دریافت پیام‌ها...</Text>
-        </View>
-      ) : messages.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconCircle}>
-            <Volume2 size={40} color={COLORS.primary} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>در حال دریافت پیام‌ها...</Text>
           </View>
-          <Text style={styles.emptyTitle}>هنوز پیامی ارسال نشده است</Text>
-          <Text style={styles.emptySubtitle}>
-            می‌توانید برای کل کلاس یا دانش‌آموز مورد نظر، پیام صوتی و تصویر فشرده WebP ارسال کنید.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item._id}
-          renderItem={renderMessageItem}
-          contentContainerStyle={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-        />
-      )}
+        ) : messages.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconCircle}>
+              <Volume2 size={40} color={COLORS.primary} />
+            </View>
+            <Text style={styles.emptyTitle}>هنوز پیامی ارسال نشده است</Text>
+            <Text style={styles.emptySubtitle}>
+              می‌توانید برای کل کلاس یا دانش‌آموز مورد نظر، پیام صوتی و تصویر فشرده WebP ارسال کنید.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item) => item._id}
+            renderItem={renderMessageItem}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+          />
+        )}
 
       {/* Recording in progress overlay bar */}
       {isRecording && (
@@ -766,6 +769,7 @@ export default function ClassChatScreen({ route, navigation }: any) {
           )}
         </View>
       )}
+      </KeyboardAvoidingView>
 
       {/* Student Picker Modal */}
       <Modal
@@ -847,7 +851,10 @@ export default function ClassChatScreen({ route, navigation }: any) {
         animationType="fade"
         onRequestClose={() => setShowImagePreviewModal(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalBackdrop}
+        >
           <View style={styles.imagePreviewModalContent}>
             <View style={styles.modalHeader}>
               <View>
@@ -902,7 +909,7 @@ export default function ClassChatScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Full screen zoom image modal */}

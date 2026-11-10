@@ -207,6 +207,7 @@ const PostDetailScreen = ({ route, navigation }: any) => {
           data={comments}
           keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={renderHeader}
           renderItem={({ item }) => (
             <CommentCard 

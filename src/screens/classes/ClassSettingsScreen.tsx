@@ -152,7 +152,7 @@ const ClassSettingsScreen = ({ route, navigation }: any) => {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>نام کلاس</Text>
             <TextInput style={styles.input} value={editClassName} onChangeText={setEditClassName} textAlign="right" />
@@ -250,18 +250,18 @@ const ClassSettingsScreen = ({ route, navigation }: any) => {
           </View>
 
         </ScrollView>
-      </KeyboardAvoidingView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        <TouchableOpacity style={styles.submitBtn} onPress={handleUpdateClass} disabled={isUpdating}>
-          {isUpdating ? <ActivityIndicator color="#fff" /> : (
-            <>
-              <Save size={20} color="#fff" style={{ marginRight: 8 }} />
-              <Text style={styles.submitBtnText}>ذخیره تغییرات</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <TouchableOpacity style={styles.submitBtn} onPress={handleUpdateClass} disabled={isUpdating}>
+            {isUpdating ? <ActivityIndicator color="#fff" /> : (
+              <>
+                <Save size={20} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.submitBtnText}>ذخیره تغییرات</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </View>
   );
 };
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   headerSubtitle: { fontSize: 13, color: COLORS.textLight, marginTop: 4 },
   
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 100 },
   inputGroup: { marginBottom: 20 },
   inputLabel: { fontSize: 14, fontWeight: 'bold', color: COLORS.text, marginBottom: 10, textAlign: 'left' },
   input: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 14, fontSize: 14, textAlign: 'left', color: COLORS.text },

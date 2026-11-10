@@ -13,6 +13,7 @@ import {
   ScrollView,
   Platform,
   TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -1113,7 +1114,10 @@ export const QuranReaderScreen: React.FC = () => {
         animationType="slide"
         onRequestClose={() => setShowSurahPickerModal(false)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={styles.modalOverlay}
+        >
           <View style={[styles.modalBox, { backgroundColor: themeColors.surface, maxHeight: '85%' }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: themeColors.text }]}>انتخاب سوره</Text>
@@ -1144,6 +1148,7 @@ export const QuranReaderScreen: React.FC = () => {
               data={filteredSurahsForPicker}
               keyExtractor={item => String(item.id)}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => {
                 const isSelected = item.id === currentSurahId;
                 return (
@@ -1210,7 +1215,7 @@ export const QuranReaderScreen: React.FC = () => {
               }}
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 4: Jump to Ayah */}

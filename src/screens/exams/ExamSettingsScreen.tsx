@@ -108,7 +108,7 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
   if (isLoading) return <View style={styles.centerBox}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>🔙 بازگشت</Text>
@@ -117,7 +117,7 @@ const ExamSettingsScreen = ({ route, navigation }: any) => {
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         
         {/* باکس کپی لینک */}
         <View style={styles.linkCard}>
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
-  scrollContainer: { padding: 20 },
+  scrollContainer: { padding: 20, paddingBottom: 80 },
   
   linkCard: { backgroundColor: '#eff6ff', padding: 20, borderRadius: 12, borderWidth: 1, borderColor: '#bfdbfe', marginBottom: 20 },
   linkTitle: { fontSize: 16, fontWeight: 'bold', color: '#1e40af', marginBottom: 12, textAlign: 'left' },

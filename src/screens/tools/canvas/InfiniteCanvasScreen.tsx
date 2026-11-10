@@ -12,7 +12,8 @@ import {
   Dimensions,
   Platform,
   I18nManager,
-  NativeModules
+  NativeModules,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { showError, showSuccess, showConfirm, showInfo } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -730,7 +731,10 @@ export const InfiniteCanvasScreen: React.FC<{ navigation: any; route: any }> = (
 
       {/* 7. TEXT INPUT MODAL */}
       <Modal visible={showTextModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
@@ -788,7 +792,7 @@ export const InfiniteCanvasScreen: React.FC<{ navigation: any; route: any }> = (
               <Text style={styles.primaryModalBtnText}>تایید و درج در بوم</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* 8. PROJECTS MANAGER MODAL */}

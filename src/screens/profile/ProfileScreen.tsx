@@ -13,6 +13,8 @@ import {
   Share,
   RefreshControl,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showConfirm, showWarning, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -105,6 +107,7 @@ export interface TeacherStats {
   studentsCount: number;
   postsCount: number;
   experienceYears: number;
+  invitedCount?: number;
 }
 
 const POPULAR_SKILL_SUGGESTIONS = [
@@ -775,6 +778,27 @@ export const ProfileScreen = ({ navigation }: any) => {
             </View>
           </View>
 
+          {/* Invited Students Badge */}
+          <View style={{
+            backgroundColor: isDark ? 'rgba(59, 130, 246, 0.12)' : '#eff6ff',
+            borderColor: isDark ? 'rgba(59, 130, 246, 0.3)' : '#bfdbfe',
+            borderWidth: 1,
+            borderRadius: 14,
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            marginTop: 12,
+            marginBottom: 4,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+          }}>
+            <Sparkles size={16} color={colors.primary} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>
+              تعداد افراد دعوت‌شده: {stats.invitedCount || 0} نفر
+            </Text>
+          </View>
+
           {/* Action Buttons */}
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
@@ -1175,7 +1199,7 @@ export const ProfileScreen = ({ navigation }: any) => {
 
       {/* MODAL 1: Edit Basic Profile */}
       <Modal visible={editProfileModalVisible} transparent animationType="slide" onRequestClose={() => setEditProfileModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>ویرایش مشخصات حرفه‌ای</Text>
@@ -1184,7 +1208,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>نام و نام خانوادگی:</Text>
               <TextInput
                 style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
@@ -1258,12 +1282,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 2: Add Teaching Experience */}
       <Modal visible={expModalVisible} transparent animationType="slide" onRequestClose={() => setExpModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>افزودن سابقه تدریس</Text>
@@ -1272,7 +1296,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>سمت یا درس تدریسی *:</Text>
               <TextInput
                 style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
@@ -1362,12 +1386,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 3: Add Education Degree */}
       <Modal visible={eduModalVisible} transparent animationType="slide" onRequestClose={() => setEduModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>افزودن مدرک تحصیلی</Text>
@@ -1376,7 +1400,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>مقطع تحصیلی:</Text>
               <View style={styles.degreePillsRow}>
                 {['کاردانی', 'کارشناسی', 'کارشناسی ارشد', 'دکتری'].map((d) => (
@@ -1447,12 +1471,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 4: Manage Skills */}
       <Modal visible={skillsModalVisible} transparent animationType="slide" onRequestClose={() => setSkillsModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>مهارت‌ها و شایستگی‌های تدریس</Text>
@@ -1461,7 +1485,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.sectionSubtitle, { color: colors.textLight }]}>
                 مهارت‌های پرکاربرد معلمان را انتخاب کنید یا مهارت اختصاصی خود را اضافه نمایید:
               </Text>
@@ -1526,12 +1550,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 5: Add Certificate */}
       <Modal visible={certModalVisible} transparent animationType="slide" onRequestClose={() => setCertModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>افزودن دوره و گواهینامه</Text>
@@ -1540,7 +1564,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>عنوان دوره / گواهینامه *:</Text>
               <TextInput
                 style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
@@ -1593,12 +1617,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 6: Add Honor or Publication */}
       <Modal visible={honorModalVisible} transparent animationType="slide" onRequestClose={() => setHonorModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>افزودن افتخار، تقدیرنامه یا اثر</Text>
@@ -1607,7 +1631,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>نوع اثر یا افتخار:</Text>
               <View style={styles.degreePillsRow}>
                 {['تقدیرنامه', 'معلم نمونه', 'مقاله', 'کتاب', 'جشنواره'].map((t) => (
@@ -1664,12 +1688,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* MODAL 7: Create Post Modal */}
       <Modal visible={createPostVisible} transparent animationType="slide" onRequestClose={() => setCreatePostVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>انتشار پست آموزشی جدید</Text>
@@ -1678,7 +1702,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
               <Text style={[styles.inputLabel, { color: colors.text }]}>متن یا توضیح فعالیت آموزشی *:</Text>
               <TextInput
                 style={[styles.inputField, styles.textArea, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
@@ -1736,7 +1760,7 @@ export const ProfileScreen = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Hamburger Menu Bottom Sheet */}

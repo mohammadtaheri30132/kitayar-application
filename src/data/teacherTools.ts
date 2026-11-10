@@ -4,7 +4,7 @@ import {
   Percent, Hash, Banknote, Ruler, Weight, Thermometer, 
   Clock, Zap, Microscope, FlaskConical, Sigma, HeartPulse,
   Shapes, Box, PercentSquare, Award, Square, Plus, Dices, Users, Flag,
-  ClipboardList, Palette, QrCode, ScanLine, Compass, Navigation, Mic, Gauge, Triangle, Phone, Tv, Radio
+  ClipboardList, Palette, QrCode, ScanLine, Compass, Navigation, Mic, Gauge, Triangle, Phone, Tv, Radio, Volume2
 } from 'lucide-react-native';
 
 export interface ToolItem {
@@ -35,6 +35,7 @@ export const teacherToolsHierarchy: ToolItem[] = [
   { id: '3', title: 'فرم‌ساز و پرسش‌نامه', route: 'FormDashboardScreen', icon: ClipboardList, color: '#8b5cf6' },
   { id: '4', title: 'ابزار فایل', route: 'ToolsListScreen', icon: Layers, color: '#f59e0b' },
   { id: 'infinite-canvas', title: 'تخته وایت‌برد و بوم بی‌نهایت', route: 'InfiniteCanvasScreen', icon: Palette, color: '#6366f1' },
+  { id: 'classroom-noise-meter', title: 'صداسنج کلاس (توپ‌های متحرک)', route: 'ClassroomNoiseMeterScreen', icon: Volume2, color: '#10b981' },
   { id: '5', title: 'اطلاعات و آدرس', route: 'PlaceholderScreen', params: { title: 'اطلاعات و آدرس' }, icon: MapPin, color: '#ef4444' },
   {
     id: '6', title: 'ورزشی', route: 'GenericCategoryScreen', icon: Activity, color: '#ec4899',

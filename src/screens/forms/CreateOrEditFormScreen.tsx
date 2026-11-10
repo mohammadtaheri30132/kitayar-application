@@ -14,6 +14,7 @@ import {
   I18nManager,
   Image,
   PermissionsAndroid,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { showError, showWarning, showSuccess, showConfirm } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -667,6 +668,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       style={styles.scrollContent}
       contentContainerStyle={{ paddingBottom: 160 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Title Card */}
       <View style={styles.card}>
@@ -808,6 +810,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
         style={styles.scrollContent}
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.card}>
           {/* Header with Cancel / Close Cross Button */}
@@ -1190,6 +1193,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       style={styles.scrollContent}
       contentContainerStyle={{ paddingBottom: 160 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       <View style={styles.card}>
         <View style={styles.stepHeaderRow}>
@@ -1301,6 +1305,7 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       style={styles.scrollContent}
       contentContainerStyle={{ paddingBottom: 160 }}
       showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
     >
       {/* Device Limit Card */}
       <View style={styles.card}>
@@ -1573,10 +1578,12 @@ export const CreateOrEditFormScreen: React.FC<CreateOrEditFormScreenProps> = ({ 
       {renderWizardProgressBar()}
 
       {/* Step Contents */}
-      {currentStep === 1 && renderStep1()}
-      {currentStep === 2 && renderStep2()}
-      {currentStep === 3 && renderStep3()}
-      {currentStep === 4 && renderStep4()}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
+        {currentStep === 4 && renderStep4()}
+      </KeyboardAvoidingView>
 
       {/* Question Type Selection Modal */}
       <Modal

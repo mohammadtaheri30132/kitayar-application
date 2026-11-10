@@ -66,7 +66,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Backdrop Tap to Close */}
         <TouchableOpacity 
@@ -87,7 +87,7 @@ export default function AddTaskModal({ visible, onClose, onSave, initialDate }: 
             </TouchableOpacity>
           </View>
           
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <Text style={[styles.label, { color: colors.text }]}>عنوان کار</Text>
             <TextInput 
               style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]} 
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   headerTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     fontSize: 16,
     textAlign: 'right',
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   label: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     fontSize: 14,
     marginBottom: 8,
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 14,
     marginBottom: 16,
     textAlign: 'right',
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
   },
   inputText: {
     flex: 1,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 14,
     marginRight: 8,
     textAlign: 'right',
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   typeText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 13,
   },
   row: {
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cancelBtnText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     fontSize: 15,
   },
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     fontSize: 15,
   }

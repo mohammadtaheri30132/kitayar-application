@@ -139,7 +139,8 @@ const AudioToTextScreen = ({ navigation }) => {
         <FlatList
           data={history}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 20 }}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 60 }}
           renderItem={({ item }) => (
             <View style={styles.historyCard}>
               <TouchableOpacity style={styles.absoluteDeleteBtn} onPress={() => handleDelete(item.id)}>

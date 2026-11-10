@@ -14,6 +14,7 @@ import {
   NativeModules,
   Platform,
   Dimensions,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { showError, showSuccess, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -708,7 +709,10 @@ const HomeworkDetailsScreen = ({ route, navigation }: any) => {
         transparent
         onRequestClose={closeReviewModal}
       >
-        <View style={styles.modalBackdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalBackdrop}
+        >
           <View style={[styles.modalSheet, { backgroundColor: colors.surface }]}>
             {/* سربرگ مودال */}
             <View style={styles.modalHeader}>
@@ -737,8 +741,9 @@ const HomeworkDetailsScreen = ({ route, navigation }: any) => {
 
             <ScrollView
               style={styles.modalScrollBody}
-              contentContainerStyle={{ paddingBottom: 20 }}
+              contentContainerStyle={{ paddingBottom: 36 }}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
               {/* زمان ارسال توسط دانش‌آموز */}
               {selectedSubmission?.submittedAt && (
@@ -990,7 +995,7 @@ const HomeworkDetailsScreen = ({ route, navigation }: any) => {
               </View>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ========================================================= */}

@@ -528,7 +528,7 @@ const StudentProfileViewScreen = ({ route, navigation }: any) => {
 
       {/* Note Modal */}
       <Modal visible={noteModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>یادداشت جدید</Text>

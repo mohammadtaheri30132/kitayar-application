@@ -6,7 +6,9 @@ import {
   StyleSheet, 
   ActivityIndicator, 
   FlatList,
-  TextInput
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showSuccess } from '../../components/feedback';
 import { api } from '../../api/axiosConfig';
@@ -143,31 +145,34 @@ const TakeAttendanceScreen = ({ route, navigation }: any) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.content}>
-        {loading ? (
-          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
-        ) : attendance.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>هیچ دانش‌آموزی در این کلاس ثبت نشده است.</Text>
-          </View>
-        ) : (
-          <FlatList
-            data={attendance}
-            keyExtractor={(item) => item.studentPhone}
-            renderItem={renderStudentItem}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-          />
-        )}
-      </View>
-
-      {!loading && attendance.length > 0 && (
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.submitBtn} onPress={saveAttendance} disabled={isSaving}>
-            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>ثبت نهایی همگی</Text>}
-          </TouchableOpacity>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.content}>
+          {loading ? (
+            <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 40 }} />
+          ) : attendance.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>هیچ دانش‌آموزی در این کلاس ثبت نشده است.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={attendance}
+              keyExtractor={(item) => item.studentPhone}
+              renderItem={renderStudentItem}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContent}
+              keyboardShouldPersistTaps="handled"
+            />
+          )}
         </View>
-      )}
+
+        {!loading && attendance.length > 0 && (
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.submitBtn} onPress={saveAttendance} disabled={isSaving}>
+              {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>ثبت نهایی همگی</Text>}
+            </TouchableOpacity>
+          </View>
+        )}
+      </KeyboardAvoidingView>
     </View>
   );
 };

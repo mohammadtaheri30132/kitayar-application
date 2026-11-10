@@ -16,7 +16,43 @@ import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/axiosConfig';
-import { ChevronRight, Plus, Send, MessageCircle, Clock, CheckCircle2, AlertCircle, X } from 'lucide-react-native';
+import {
+  ChevronRight,
+  Plus,
+  Send,
+  MessageCircle,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  HelpCircle,
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react-native';
+
+const FAQS = [
+  {
+    q: 'درآمد حاصل از پاسخ به سوالات و فروش جزوه چگونه تسویه می‌شود؟',
+    a: 'مبالغ به صورت آنی به کیف پول شما در کیتایار اضافه می‌شوند. برای تسویه حساب، از تب مرکز معلمان وارد بخش «کیف پول و تراکنش‌ها» شوید و درخواست برداشت را ثبت نمایید. مبالغ حداکثر ظرف ۲۴ ساعت کاری به شماره شبای شما واریز خواهد شد.',
+  },
+  {
+    q: 'چگونه می‌توانم وضعیت حضور و آنلاین بودن خود را تغییر دهم؟',
+    a: 'در صفحه اصلی مرکز معلمان (تب پنجم نوار پایین)، در بالای صفحه سوئیچ سه حالته «آنلاین، مشغول و آفلاین» قرار دارد. در حالت آنلاین، دانش‌آموزان می‌توانند سوالات خود را به طور مستقیم برای شما ارسال کنند.',
+  },
+  {
+    q: 'فرمت‌های مجاز فایل‌های آموزشی برای فروش در مارکت چیست؟',
+    a: 'فایل‌های PDF جزوه، نمونه‌سوال همراه با پاسخ‌نامه تشریحی و صوت‌های آموزشی تدریس مجاز هستند. برای جزوات، صفحاتی به عنوان پیش‌نمایش رایگان انتخاب می‌شوند تا دانش‌آموز قبل از خرید بتواند کیفیت فایل را بررسی کند.',
+  },
+  {
+    q: 'کلاس‌های آنلاین با چه پلتفرمی برگزار می‌شوند؟',
+    a: 'سامانه کیتایار از پلتفرم‌های امن ویدیو کنفرانس نظیر Google Meet و Jitsi Meet پشتیبانی می‌کند. هنگام تعریف کلاس، لینک جلسه را وارد کنید و دانش‌آموزان در موعد مقرر مستقیماً با یک لمس وارد کلاس می‌شوند.',
+  },
+  {
+    q: 'اگر دانش‌آموزی در گفتگوی چت رفتار نامناسب داشت چه اقدامی باید کرد؟',
+    a: 'از طریق بخش «گزارش تخلف»، شناسه گفتگو یا نام دانش‌آموز را به همراه توضیحات ارسال نمایید. تیم پشتیبانی کیتایار ظرف چند ساعت موضوع را بررسی و در صورت لزوم حساب کاربر را مسدود خواهد کرد.',
+  },
+];
 
 interface Message {
   _id?: string;
@@ -46,6 +82,10 @@ export const SupportTicketsScreen = ({ route, navigation }: any) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Sub Tab: tickets, faq, report
+  const [subTab, setSubTab] = useState<'tickets' | 'faq' | 'report'>('tickets');
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   // Active / Selected Ticket (Chat thread view)
   const [activeTicket, setActiveTicket] = useState<SupportTicket | null>(null);
@@ -222,6 +262,7 @@ export const SupportTicketsScreen = ({ route, navigation }: any) => {
             data={activeTicket.messages}
             keyExtractor={(item, index) => item._id || index.toString()}
             contentContainerStyle={styles.messagesList}
+            keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
             renderItem={({ item }) => {
               const isAdmin = item.sender === 'admin';
@@ -274,53 +315,157 @@ export const SupportTicketsScreen = ({ route, navigation }: any) => {
           </View>
         </KeyboardAvoidingView>
       ) : (
-        /* Ticket List View */
+        /* Main Support View with Sub-Tabs */
         <View style={{ flex: 1 }}>
-          {loading ? (
-            <View style={styles.centerBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: colors.textLight }]}>در حال بارگذاری پیام‌ها...</Text>
-            </View>
-          ) : tickets.length === 0 ? (
-            <View style={styles.centerBox}>
-              <MessageCircle size={56} color={colors.textLight} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>هیچ تیکتی ثبت نشده است</Text>
-              <Text style={[styles.emptySub, { color: colors.textLight }]}>
-                برای ارتباط با پشتیبان کیتایار، روی دکمه "پیام جدید" ضربه بزنید.
+          {/* Sub-Tab Navigation */}
+          <View style={[styles.subTabBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <TouchableOpacity
+              style={[styles.subTabBtn, subTab === 'tickets' && [styles.subTabBtnActive, { borderBottomColor: colors.primary }]]}
+              onPress={() => setSubTab('tickets')}
+            >
+              <Text style={[styles.subTabText, { color: subTab === 'tickets' ? colors.primary : colors.textLight }]}>
+                تیکت‌های من ({tickets.length})
               </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={tickets}
-              keyExtractor={(item) => item._id}
-              contentContainerStyle={styles.ticketsList}
-              refreshing={refreshing}
-              onRefresh={() => fetchTickets(true)}
-              renderItem={({ item }) => {
-                const lastMsg = item.messages[item.messages.length - 1];
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.subTabBtn, subTab === 'faq' && [styles.subTabBtnActive, { borderBottomColor: colors.primary }]]}
+              onPress={() => setSubTab('faq')}
+            >
+              <Text style={[styles.subTabText, { color: subTab === 'faq' ? colors.primary : colors.textLight }]}>
+                سوالات متداول (FAQ)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.subTabBtn, subTab === 'report' && [styles.subTabBtnActive, { borderBottomColor: colors.primary }]]}
+              onPress={() => setSubTab('report')}
+            >
+              <Text style={[styles.subTabText, { color: subTab === 'report' ? colors.primary : colors.textLight }]}>
+                گزارش مشکل و تخلف
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* TAB 1: TICKETS */}
+          {subTab === 'tickets' && (
+            loading ? (
+              <View style={styles.centerBox}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.textLight }]}>در حال بارگذاری پیام‌ها...</Text>
+              </View>
+            ) : tickets.length === 0 ? (
+              <View style={styles.centerBox}>
+                <MessageCircle size={56} color={colors.textLight} />
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>هیچ تیکتی ثبت نشده است</Text>
+                <Text style={[styles.emptySub, { color: colors.textLight }]}>
+                  برای ارتباط با پشتیبان کیتایار، روی دکمه "پیام جدید" ضربه بزنید.
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={tickets}
+                keyExtractor={(item) => item._id}
+                contentContainerStyle={styles.ticketsList}
+                refreshing={refreshing}
+                onRefresh={() => fetchTickets(true)}
+                renderItem={({ item }) => {
+                  const lastMsg = item.messages[item.messages.length - 1];
+                  return (
+                    <TouchableOpacity
+                      style={[styles.ticketCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                      onPress={() => setActiveTicket(item)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.ticketCardHeader}>
+                        <Text style={[styles.ticketSubject, { color: colors.text }]}>{item.subject}</Text>
+                        {getStatusBadge(item.status)}
+                      </View>
+                      <Text style={[styles.ticketPreview, { color: colors.textLight }]} numberOfLines={2}>
+                        {lastMsg?.text || 'بدون پیام'}
+                      </Text>
+                      <View style={styles.ticketCardFooter}>
+                        <Text style={[styles.ticketFooterText, { color: colors.textLight }]}>
+                          {new Date(item.lastReplyAt).toLocaleDateString('fa-IR')}
+                        </Text>
+                        <Text style={[styles.ticketFooterLink, { color: colors.primary }]}>مشاهده گفتگو ›</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )
+          )}
+
+          {/* TAB 2: FAQS */}
+          {subTab === 'faq' && (
+            <ScrollView contentContainerStyle={styles.faqList} showsVerticalScrollIndicator={false}>
+              <View style={styles.faqIntroBox}>
+                <HelpCircle size={22} color={colors.primary} />
+                <Text style={[styles.faqIntroTitle, { color: colors.text }]}>راهنمای جامع معلمان</Text>
+              </View>
+              {FAQS.map((faq, idx) => {
+                const isOpen = expandedFaq === idx;
                 return (
                   <TouchableOpacity
-                    style={[styles.ticketCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => setActiveTicket(item)}
-                    activeOpacity={0.7}
+                    key={idx}
+                    style={[styles.faqCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => setExpandedFaq(isOpen ? null : idx)}
+                    activeOpacity={0.8}
                   >
-                    <View style={styles.ticketCardHeader}>
-                      <Text style={[styles.ticketSubject, { color: colors.text }]}>{item.subject}</Text>
-                      {getStatusBadge(item.status)}
+                    <View style={styles.faqHeaderRow}>
+                      <Text style={[styles.faqQuestion, { color: colors.text }]}>{faq.q}</Text>
+                      {isOpen ? <ChevronUp size={20} color={colors.primary} /> : <ChevronDown size={20} color={colors.textLight} />}
                     </View>
-                    <Text style={[styles.ticketPreview, { color: colors.textLight }]} numberOfLines={2}>
-                      {lastMsg?.text || 'بدون پیام'}
-                    </Text>
-                    <View style={styles.ticketCardFooter}>
-                      <Text style={[styles.ticketFooterText, { color: colors.textLight }]}>
-                        {new Date(item.lastReplyAt).toLocaleDateString('fa-IR')}
-                      </Text>
-                      <Text style={[styles.ticketFooterLink, { color: colors.primary }]}>مشاهده گفتگو ›</Text>
-                    </View>
+                    {isOpen && (
+                      <Text style={[styles.faqAnswer, { color: colors.textLight }]}>{faq.a}</Text>
+                    )}
                   </TouchableOpacity>
                 );
-              }}
-            />
+              })}
+            </ScrollView>
+          )}
+
+          {/* TAB 3: REPORT */}
+          {subTab === 'report' && (
+            <ScrollView contentContainerStyle={styles.reportList} showsVerticalScrollIndicator={false}>
+              <View style={[styles.reportAlertBox, { backgroundColor: isDark ? 'rgba(239,68,68,0.1)' : '#fee2e2', borderColor: '#ef4444' }]}>
+                <ShieldAlert size={24} color="#dc2626" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.reportAlertTitle, { color: isDark ? '#fca5a5' : '#991b1b' }]}>
+                    مرکز رسیدگی به گزارش‌ها و تخلفات
+                  </Text>
+                  <Text style={[styles.reportAlertSub, { color: isDark ? '#fecaca' : '#7f1d1d' }]}>
+                    تیم پشتیبانی کیتایار تمام گزارش‌های فنی و انضباطی را با اولویت ویژه و محرمانه بررسی می‌نماید.
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={[styles.reportSectionHeader, { color: colors.text }]}>موضوع گزارش خود را انتخاب کنید:</Text>
+
+              {[
+                { title: 'گزارش رفتار نامناسب یا محتوای غیرمجاز دانش‌آموز', defaultSubject: '[گزارش تخلف دانش‌آموز]' },
+                { title: 'گزارش مشکل فنی در چت بومی، ویس یا ارسال فایل', defaultSubject: '[گزارش فنی چت]' },
+                { title: 'گزارش اشکال در تسویه حساب یا تراکنش کیف پول', defaultSubject: '[گزارش مالی کیف پول]' },
+                { title: 'گزارش اشکال در برگزاری و لینک کلاس آنلاین', defaultSubject: '[گزارش کلاس آنلاین]' },
+              ].map((item, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.reportOptionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  onPress={() => {
+                    setNewSubject(item.defaultSubject + ' ');
+                    setNewModalVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.reportOptionHeader}>
+                    <Text style={[styles.reportOptionTitle, { color: colors.text }]}>{item.title}</Text>
+                    <ChevronRight size={18} color={colors.textLight} />
+                  </View>
+                  <Text style={[styles.reportOptionSub, { color: colors.primary }]}>ثبت گزارش فوری ›</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           )}
         </View>
       )}
@@ -328,7 +473,7 @@ export const SupportTicketsScreen = ({ route, navigation }: any) => {
       {/* New Ticket Modal */}
       <Modal visible={newModalVisible} transparent animationType="slide" onRequestClose={() => setNewModalVisible(false)}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
@@ -339,7 +484,7 @@ export const SupportTicketsScreen = ({ route, navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.modalBody}>
+            <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
               <Text style={[styles.inputLabel, { color: colors.text }]}>موضوع پیام</Text>
               <TextInput
                 style={[styles.textInput, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', color: colors.text, borderColor: colors.border }]}
@@ -645,6 +790,121 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  subTabBar: {
+    flexDirection: 'row-reverse',
+    borderBottomWidth: 1,
+  },
+  subTabBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  subTabBtnActive: {
+    borderBottomWidth: 2,
+  },
+  subTabText: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  faqList: {
+    padding: 16,
+    gap: 12,
+  },
+  faqIntroBox: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  faqIntroTitle: {
+    fontFamily: 'IRANSansX',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  faqCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 10,
+  },
+  faqHeaderRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  faqQuestion: {
+    fontFamily: 'IRANSansX',
+    fontSize: 13,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'right',
+  },
+  faqAnswer: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    lineHeight: 22,
+    textAlign: 'right',
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(150,150,150,0.15)',
+  },
+  reportList: {
+    padding: 16,
+    gap: 14,
+  },
+  reportAlertBox: {
+    flexDirection: 'row-reverse',
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 12,
+    alignItems: 'center',
+  },
+  reportAlertTitle: {
+    fontFamily: 'IRANSansX',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  reportAlertSub: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  reportSectionHeader: {
+    fontFamily: 'IRANSansX',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  reportOptionCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 8,
+  },
+  reportOptionHeader: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  reportOptionTitle: {
+    fontFamily: 'IRANSansX',
+    fontSize: 13,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'right',
+  },
+  reportOptionSub: {
+    fontFamily: 'IRANSansX',
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'left',
   },
 });
 

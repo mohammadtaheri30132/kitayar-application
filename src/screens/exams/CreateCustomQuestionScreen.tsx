@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, Text, TextInput, TouchableOpacity, StyleSheet, 
-  ScrollView, ActivityIndicator, Image, NativeModules, Platform, PermissionsAndroid 
+  ScrollView, ActivityIndicator, Image, NativeModules, Platform, PermissionsAndroid, KeyboardAvoidingView 
 } from 'react-native';
 import { showWarning, showError, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -312,7 +312,8 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.row}>
           <View style={styles.half}>
             <CustomDropdown
@@ -450,6 +451,7 @@ const CreateCustomQuestionScreen = ({ route, navigation }: any) => {
           )}
         </TouchableOpacity>
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -468,7 +470,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.primary },
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
-  content: { padding: 20 },
+  content: { padding: 20, paddingBottom: 80 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
   half: { width: '48%' },
   inputGroup: { marginBottom: 20 },

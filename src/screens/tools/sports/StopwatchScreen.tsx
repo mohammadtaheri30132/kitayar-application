@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, I18nManager } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, I18nManager, KeyboardAvoidingView, Platform } from 'react-native';
 import { Play, Pause, Square, Flag, Users } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -60,58 +60,64 @@ const StopwatchScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.timerContainer, { backgroundColor: colors.card }]}>
-        <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(time)}</Text>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={[styles.timerContainer, { backgroundColor: colors.card }]}>
+          <Text style={[styles.timerText, { color: colors.text }]}>{formatTime(time)}</Text>
+        </View>
 
-      <View style={styles.controls}>
-        <TouchableOpacity 
-          style={[styles.btn, { backgroundColor: isRunning ? colors.error : colors.primary }]} 
-          onPress={handleStartStop}
+        <View style={styles.controls}>
+          <TouchableOpacity 
+            style={[styles.btn, { backgroundColor: isRunning ? colors.error : colors.primary }]} 
+            onPress={handleStartStop}
+          >
+            {isRunning ? <Pause color="#fff" size={24} /> : <Play color="#fff" size={24} />}
+            <Text style={styles.btnText}>{isRunning ? 'توقف' : 'شروع'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.btn, { backgroundColor: colors.surface }]} 
+            onPress={handleReset}
+          >
+            <Square color={colors.text} size={24} />
+            <Text style={[styles.btnText, { color: colors.text }]}>بازنشانی</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.recordInputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Users color={colors.textLight} size={20} />
+          <TextInput
+            style={[styles.input, { color: colors.text }]}
+            placeholder="نام دانش‌آموز برای ثبت رکورد (اختیاری)"
+            placeholderTextColor={colors.textLight}
+            value={studentName}
+            onChangeText={setStudentName}
+          />
+          <TouchableOpacity 
+            style={[styles.recordBtn, { backgroundColor: colors.secondary }]} 
+            onPress={handleRecord}
+            disabled={time === 0}
+          >
+            <Flag color="#fff" size={16} />
+            <Text style={styles.recordBtnText}>ثبت</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView 
+          style={styles.recordsList}
+          contentContainerStyle={{ paddingBottom: 60 }}
+          keyboardShouldPersistTaps="handled"
         >
-          {isRunning ? <Pause color="#fff" size={24} /> : <Play color="#fff" size={24} />}
-          <Text style={styles.btnText}>{isRunning ? 'توقف' : 'شروع'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.btn, { backgroundColor: colors.surface }]} 
-          onPress={handleReset}
-        >
-          <Square color={colors.text} size={24} />
-          <Text style={[styles.btnText, { color: colors.text }]}>بازنشانی</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.recordInputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Users color={colors.textLight} size={20} />
-        <TextInput
-          style={[styles.input, { color: colors.text }]}
-          placeholder="نام دانش‌آموز برای ثبت رکورد (اختیاری)"
-          placeholderTextColor={colors.textLight}
-          value={studentName}
-          onChangeText={setStudentName}
-        />
-        <TouchableOpacity 
-          style={[styles.recordBtn, { backgroundColor: colors.secondary }]} 
-          onPress={handleRecord}
-          disabled={time === 0}
-        >
-          <Flag color="#fff" size={16} />
-          <Text style={styles.recordBtnText}>ثبت</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView style={styles.recordsList}>
-        {records.map((r, index) => (
-          <View key={r.id} style={[styles.recordItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={styles.recordLeft}>
-              <Text style={[styles.recordIndex, { color: colors.textLight }]}>#{records.length - index}</Text>
-              <Text style={[styles.recordName, { color: colors.text }]}>{r.studentName}</Text>
+          {records.map((r, index) => (
+            <View key={r.id} style={[styles.recordItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.recordLeft}>
+                <Text style={[styles.recordIndex, { color: colors.textLight }]}>#{records.length - index}</Text>
+                <Text style={[styles.recordName, { color: colors.text }]}>{r.studentName}</Text>
+              </View>
+              <Text style={[styles.recordTime, { color: colors.primary }]}>{formatTime(r.time)}</Text>
             </View>
-            <Text style={[styles.recordTime, { color: colors.primary }]}>{formatTime(r.time)}</Text>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };

@@ -6,10 +6,10 @@ import { useTheme } from '../context/ThemeContext';
 import { Home, Users, Wrench, MessageCircle } from 'lucide-react-native';
 
 import DashboardScreen from '../screens/main/DashboardScreen';
-import TeacherToolsScreen from '../screens/tools/TeacherToolsScreen';
+import TeacherAssistantScreen from '../screens/tools/TeacherAssistantScreen';
 import ClassManagementScreen from '../screens/classes/ClassManagementScreen';
 import InteractionScreen from '../screens/interaction/InteractionScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
+import TeacherCenterScreen from '../screens/teacherCenter/TeacherCenterScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -42,7 +42,7 @@ const MainTabNavigator = () => {
           marginTop: -2,
         },
         tabBarIcon: ({ focused, color, size }) => {
-          if (route.name === 'ProfileTab') {
+          if (route.name === 'TeacherCenterTab') {
             return (
               <View
                 style={{
@@ -87,8 +87,11 @@ const MainTabNavigator = () => {
       />
       <Tab.Screen 
         name="ToolsTab" 
-        component={TeacherToolsScreen} 
-        options={{ title: 'ابزار معلم' }} 
+        component={TeacherAssistantScreen} 
+        options={{ 
+          title: 'دستیار معلم',
+          lazy: false,
+        }} 
       />
       <Tab.Screen 
         name="HomeTab" 
@@ -101,9 +104,9 @@ const MainTabNavigator = () => {
         options={{ title: 'تعامل' }} 
       />
       <Tab.Screen 
-        name="ProfileTab" 
-        component={ProfileScreen} 
-        options={{ title: 'پروفایل' }} 
+        name="TeacherCenterTab" 
+        component={TeacherCenterScreen} 
+        options={{ title: 'میز کار' }} 
       />
     </Tab.Navigator>
   );

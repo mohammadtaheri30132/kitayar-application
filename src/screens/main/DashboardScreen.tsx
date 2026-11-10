@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { 
-  Megaphone, ChevronLeft, MapPin, CheckSquare, Plus, FileText, Calendar as CalendarIcon, Clock, X, Filter, BookOpen
+  Megaphone, ChevronLeft, MapPin, CheckSquare, Plus, FileText, Calendar as CalendarIcon, Clock, X, Filter, BookOpen,
+  HelpCircle, Send, User
 } from 'lucide-react-native';
 import GlobalHeader from '../../components/common/GlobalHeader';
 import { getTodayJalali, formatJalaliDate, formatJalaliStandard, toPersianNumbers, PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
@@ -13,6 +14,8 @@ import AddTaskModal from '../../components/planning/AddTaskModal';
 import FilterBottomSheet, { FilterOptions } from '../../components/planning/FilterBottomSheet';
 import AddBottomSheet from '../../components/planning/AddBottomSheet';
 import PrayerTimesWidget from '../../components/prayertimes/PrayerTimesWidget';
+import { api } from '../../api/axiosConfig';
+import { showSuccess, showError } from '../../components/feedback';
 import * as jalaali from 'jalaali-js';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +30,8 @@ const DashboardScreen = ({ navigation }: any) => {
   const [events, setEvents] = useState<any[]>([]);
   const [notes, setNotes] = useState<DailyNote[]>([]);
   const [homeworks, setHomeworks] = useState<Homework[]>([]);
+  const [liveQuestions, setLiveQuestions] = useState<any[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // UI State
@@ -43,6 +48,10 @@ const DashboardScreen = ({ navigation }: any) => {
   const [isFilterVisible, setIsFilterVisible] = useState(false);
   const [isAddVisible, setIsAddVisible] = useState(false);
   const [isAddTaskVisible, setIsAddTaskVisible] = useState(false);
+
+  // Teacher Overview & Active Classes
+  const [teacherOverview, setTeacherOverview] = useState<any>(null);
+  const [activeClasses, setActiveClasses] = useState<any[]>([]);
 
   const dateStr = formatJalaliDate(jy, jm, jd, true);
   const persianDateStr = toPersianNumbers(dateStr);
@@ -100,6 +109,13 @@ const DashboardScreen = ({ navigation }: any) => {
       const scheduleRes = await PlanningService.getSchedule();
       if (scheduleRes.success && scheduleRes.data) {
         const scheduleData = scheduleRes.data;
+
+        // اگر کاربر هیچ برنامه هفتگی نداشت، به صفحه اجباری تعریف برنامه و کلاس‌ها هدایت شود
+        if (Array.isArray(scheduleData) && scheduleData.length === 0) {
+          navigation.navigate('MandatoryScheduleWizardScreen');
+          setIsLoading(false);
+          return;
+        }
         
         let mappedClasses: any[] = [];
         for (let d = 0; d < 31; d++) { // fetch for a month window around today
@@ -149,10 +165,65 @@ const DashboardScreen = ({ navigation }: any) => {
       } catch (e) {
         console.warn('Failed to fetch homeworks in dashboard', e);
       }
+
+      // 6. 5 Live pending questions from students
+      try {
+        const liveQRes = await api.get('/teacher/center/requests?tab=pending&limit=5');
+        if (liveQRes.data?.success && Array.isArray(liveQRes.data.data)) {
+          setLiveQuestions(liveQRes.data.data);
+        }
+      } catch (e) {
+        // Fallback
+      }
+
+      // 7. Teacher overview & wallet data
+      try {
+        const overviewRes = await api.get('/teacher/center/overview');
+        if (overviewRes.data?.success) {
+          setTeacherOverview(overviewRes.data.data);
+        }
+      } catch (e) {}
+
+      // 8. Active class requests
+      try {
+        const classReqsRes = await api.get('/teacher/center/class-requests');
+        if (classReqsRes.data?.success && Array.isArray(classReqsRes.data.data)) {
+          setActiveClasses(
+            classReqsRes.data.data.filter((c: any) => ['confirmed', 'in_progress'].includes(c.status))
+          );
+        }
+      } catch (e) {}
     } catch (err) {
       console.warn('Error fetching data:', err);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleClaimAndChat = async (q: any) => {
+    try {
+      setClaimingId(q._id);
+      const res = await api.post(`/teacher/center/requests/${q._id}/claim-and-chat`);
+      if (res.data?.success) {
+        // Immediately remove question from list
+        setLiveQuestions(prev => prev.filter(item => item._id !== q._id));
+        showSuccess('سوال با موفقیت به شما اختصاص یافت');
+        navigation.navigate('TeacherChatScreen', {
+          conversationId: res.data.data.conversationId,
+          title: res.data.data.studentName || 'دانش‌آموز',
+          studentAvatar: res.data.data.studentAvatar,
+        });
+      }
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'این سوال قبلاً توسط همکار دیگری انتخاب شده است.');
+      try {
+        const liveQRes = await api.get('/teacher/center/requests?tab=pending&limit=5');
+        if (liveQRes.data?.success && Array.isArray(liveQRes.data.data)) {
+          setLiveQuestions(liveQRes.data.data);
+        }
+      } catch (e) {}
+    } finally {
+      setClaimingId(null);
     }
   };
 
@@ -283,11 +354,47 @@ const DashboardScreen = ({ navigation }: any) => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <GlobalHeader 
+        userFullName={teacherOverview?.profileSummary?.fullName || 'همکار گرامی'}
+        avatarUrl={teacherOverview?.profileSummary?.avatar}
+        walletBalance={teacherOverview?.wallet?.balance ?? 0}
+        onWalletPress={() => navigation.navigate('TeacherWalletScreen')}
         dateInfo={persianDateStr} 
+        showHomeActions={true}
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
+        {/* ACTIVE ONLINE CLASSES WIDGET */}
+        {activeClasses.length > 0 && (
+          <View style={[styles.activeClassWidget, { backgroundColor: isDark ? '#1e293b' : '#f0fdf4', borderColor: '#10b981' }]}>
+            <View style={styles.activeClassWidgetHeader}>
+              <View style={styles.activeClassLiveBadge}>
+                <View style={styles.livePulseDot} />
+                <Text style={styles.activeClassLiveText}>کلاس آنلاین فعال</Text>
+              </View>
+              <Text style={[styles.activeClassTitle, { color: colors.text }]}>
+                {activeClasses[0].topic || activeClasses[0].subjectName || 'جلسه رفع اشکال آنلاین'}
+              </Text>
+            </View>
+            <Text style={[styles.activeClassMeta, { color: colors.textLight }]}>
+              دانش‌آموز: {activeClasses[0].studentId?.fullName || 'دانش‌آموز'} | ظرفیت: {activeClasses[0].capacity || 1} نفر
+            </Text>
+            <TouchableOpacity
+              style={styles.joinClassBtn}
+              onPress={() => {
+                navigation.navigate('LiveClassroomScreen', {
+                  sessionId: activeClasses[0]._id,
+                  bookingCode: activeClasses[0].bookingCode,
+                  title: activeClasses[0].topic,
+                });
+              }}
+            >
+              <Video color="#ffffff" size={16} />
+              <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ADMIN ANNOUNCEMENTS */}
         {announcements.length > 0 && announcements.map(ann => (
           <View key={ann._id} style={[styles.announcementCard, { backgroundColor: isDark ? 'rgba(239,68,68,0.15)' : '#fee2e2', borderColor: isDark ? '#b91c1c' : '#fca5a5' }]}>
@@ -306,6 +413,82 @@ const DashboardScreen = ({ navigation }: any) => {
 
         {/* PRAYER TIMES MINI WIDGET */}
         <PrayerTimesWidget navigation={navigation} />
+
+        {/* 5 RECENT PENDING STUDENT QUESTIONS */}
+        {liveQuestions.length > 0 && (
+          <View style={[styles.liveQuestionsContainer, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}>
+            <View style={styles.liveQuestionsHeader}>
+              <View style={styles.livePulsePill}>
+                <View style={styles.livePulseDot} />
+                <Text style={styles.livePulsePillText}>
+                  {toPersianNumbers(liveQuestions.length)} سوال در انتظار پاسخ
+                </Text>
+              </View>
+              <View style={styles.liveTitleRow}>
+                <HelpCircle size={18} color="#2563eb" />
+                <Text style={[styles.liveQuestionsTitle, { color: colors.text }]}>
+                  سوالات در جریان دانش‌آموزان
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.liveQuestionsSub, { color: colors.textLight }]}>
+              با قبول هر سوال، وارد گفتگوی اختصاصی رفع اشکال با دانش‌آموز می‌شوید.
+            </Text>
+
+            {liveQuestions.map((q) => (
+              <View
+                key={q._id}
+                style={[
+                  styles.liveQuestionCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.liveCardTopRow}>
+                  <View style={styles.priceBadge}>
+                    <Text style={styles.priceBadgeText}>
+                      {q.price && q.price > 0 ? `${toPersianNumbers(q.price.toLocaleString())} تومان` : 'رایگان'}
+                    </Text>
+                  </View>
+                  <View style={styles.studentMetaRow}>
+                    <Text style={[styles.studentNameText, { color: colors.text }]}>
+                      {q.studentId?.fullName || 'دانش‌آموز'}
+                    </Text>
+                    {q.studentId?.avatar ? (
+                      <Image source={{ uri: q.studentId.avatar }} style={styles.studentAvatarMini} />
+                    ) : (
+                      <View style={styles.studentAvatarFallback}>
+                        <User size={13} color="#2563eb" />
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                <Text style={[styles.liveQuestionSubject, { color: colors.primary }]}>
+                  {q.title}
+                </Text>
+                <Text style={[styles.liveQuestionContent, { color: colors.textLight }]} numberOfLines={2}>
+                  {q.description}
+                </Text>
+
+                <TouchableOpacity
+                  style={[styles.acceptQuestionBtn, claimingId === q._id && { opacity: 0.7 }]}
+                  onPress={() => handleClaimAndChat(q)}
+                  disabled={claimingId === q._id}
+                  activeOpacity={0.8}
+                >
+                  {claimingId === q._id ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Text style={styles.acceptQuestionBtnText}>قبول سوال و ورود به گفتگو</Text>
+                      <ChevronLeft size={16} color="#ffffff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* UNIFIED TIMELINE WIDGET */}
         <View style={[styles.widgetCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -423,8 +606,8 @@ const DashboardScreen = ({ navigation }: any) => {
                     {dayEvents.map((ev, idx) => (
                       <View key={ev.id || ev._id || idx} style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 6 }}>
                         <View style={[styles.eventSimpleDot, { backgroundColor: ev.color || colors.primary, width: 6, height: 6, marginLeft: 6, marginRight: 0 }]} />
-                        <Text style={{ fontFamily: 'IRANSansX', fontSize: 13, color: colors.text, lineHeight: 22, textAlign: 'right', flex: 1 }}>
-                          <Text style={{ color: ev.color || colors.primary, fontWeight: 'bold' }}>({ev.type || ev.tagLabel || 'رویداد'})</Text> - {ev.title}
+                        <Text style={{ fontFamily: 'Estedad-FD-Medium', fontSize: 13, color: colors.text, lineHeight: 22, textAlign: 'right', flex: 1 }}>
+                          <Text style={{ color: ev.color || colors.primary, fontFamily: 'Estedad-FD-Bold', fontWeight: 'bold' }}>({ev.type || ev.tagLabel || 'رویداد'})</Text> - {ev.title}
                         </Text>
                       </View>
                     ))}
@@ -494,13 +677,13 @@ const DashboardScreen = ({ navigation }: any) => {
                               {hw.items.slice(0, 2).map((item, idx) => (
                                 <View key={item._id || idx} style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
                                   <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#f97316' }} />
-                                  <Text style={{ fontFamily: 'IRANSansX', fontSize: 12, color: '#7c2d12', textAlign: 'right' }} numberOfLines={1}>
+                                  <Text style={{ fontFamily: 'Estedad-FD-Medium', fontSize: 12, color: '#7c2d12', textAlign: 'right' }} numberOfLines={1}>
                                     {item.title}
                                   </Text>
                                 </View>
                               ))}
                               {hw.items.length > 2 && (
-                                <Text style={{ fontFamily: 'IRANSansX', fontSize: 11, color: '#ea580c', textAlign: 'right', fontWeight: 'bold' }}>
+                                <Text style={{ fontFamily: 'Estedad-FD-Bold', fontSize: 11, color: '#ea580c', textAlign: 'right', fontWeight: 'bold' }}>
                                   +{toPersianNumbers(hw.items.length - 2)} مورد دیگر...
                                 </Text>
                               )}
@@ -509,7 +692,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
                           {totalCount > 0 && (
                             <View style={{ marginTop: 8, flexDirection: 'row-reverse', justifyContent: 'flex-start', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ fontFamily: 'IRANSansX', fontSize: 11, color: '#9a3412', textAlign: 'right' }}>
+                              <Text style={{ fontFamily: 'Estedad-FD-Medium', fontSize: 11, color: '#9a3412', textAlign: 'right' }}>
                                 وضعیت بررسی: {toPersianNumbers(doneCount)} از {toPersianNumbers(totalCount)} دانش‌آموز انجام داده‌اند
                               </Text>
                             </View>
@@ -626,7 +809,7 @@ const DashboardScreen = ({ navigation }: any) => {
           {/* Events List for independent calendar */}
           <View style={[styles.eventsList, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc' }]}>
             {filteredCalendarEvents.length === 0 ? (
-              <Text style={{ fontFamily: 'IRANSansX', color: colors.textLight, textAlign: 'center', marginVertical: 12 }}>
+              <Text style={{ fontFamily: 'Estedad-FD-Medium', color: colors.textLight, textAlign: 'center', marginVertical: 12 }}>
                 هیچ موردی برای این تاریخ وجود ندارد
               </Text>
             ) : (
@@ -678,7 +861,7 @@ const DashboardScreen = ({ navigation }: any) => {
             <View style={styles.latestNotesHeader}>
               <Text style={[styles.widgetTitle, { color: colors.text }]}>یادداشت‌های اخیر</Text>
               <TouchableOpacity onPress={() => navigation.navigate('DailyNotesScreen')}>
-                <Text style={{ fontFamily: 'IRANSansX', fontSize: 12, color: colors.primary }}>مشاهده همه</Text>
+                <Text style={{ fontFamily: 'Estedad-FD-Bold', fontSize: 12, color: colors.primary }}>مشاهده همه</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, flexDirection: 'row-reverse' }}>
@@ -802,14 +985,14 @@ const styles = StyleSheet.create({
   },
   latestNoteDate: {
     fontSize: 10,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     color: '#475569',
     marginBottom: 4,
     textAlign: 'right',
   },
   latestNoteTitle: {
     fontSize: 13,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     color: '#0f172a',
     marginBottom: 2,
@@ -817,7 +1000,7 @@ const styles = StyleSheet.create({
   },
   latestNoteContent: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     color: '#1e293b',
     lineHeight: 18,
     textAlign: 'right',
@@ -840,7 +1023,7 @@ const styles = StyleSheet.create({
   widgetTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     textAlign: 'right',
   },
   filterBtnCompact: {
@@ -867,7 +1050,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dateFilterText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -892,13 +1075,13 @@ const styles = StyleSheet.create({
   announcementTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     marginRight: 8,
     textAlign: 'right',
   },
   announcementBody: {
     fontSize: 13,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     lineHeight: 22,
     textAlign: 'right',
   },
@@ -909,7 +1092,7 @@ const styles = StyleSheet.create({
   dateGroupTitle: {
     fontSize: 15,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     marginBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
@@ -921,7 +1104,7 @@ const styles = StyleSheet.create({
   },
   categoryTitle: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     marginBottom: 8,
     marginRight: 8,
@@ -943,7 +1126,7 @@ const styles = StyleSheet.create({
   },
   timelineTime: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
   },
   timelineTrackCol: {
@@ -972,7 +1155,7 @@ const styles = StyleSheet.create({
   timelineClassTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     marginBottom: 4,
     textAlign: 'right',
   },
@@ -983,7 +1166,7 @@ const styles = StyleSheet.create({
   },
   timelineDetailText: {
     fontSize: 11,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     marginRight: 4,
     textAlign: 'right',
   },
@@ -1014,13 +1197,13 @@ const styles = StyleSheet.create({
   taskText: {
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     marginBottom: 2,
     textAlign: 'right',
   },
   taskDesc: {
     fontSize: 11,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     lineHeight: 18,
     textAlign: 'right',
   },
@@ -1048,7 +1231,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   eventItemTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 15,
     fontWeight: 'bold',
     textAlign: 'right',
@@ -1062,7 +1245,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   eventItemTimeText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     fontWeight: 'bold',
     marginRight: 4,
@@ -1087,7 +1270,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   tagText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 12,
   },
   eventTabsContainer: {
@@ -1102,7 +1285,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   eventTabText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -1122,7 +1305,7 @@ const styles = StyleSheet.create({
   noteText: {
     flex: 1,
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     lineHeight: 20,
     textAlign: 'right',
   },
@@ -1138,13 +1321,13 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     marginBottom: 4,
     textAlign: 'center',
   },
   emptyStateSub: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -1159,7 +1342,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     textAlign: 'right',
   },
 
@@ -1218,7 +1401,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   managementCardText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -1239,29 +1422,211 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   homeworkBadgeDashboardText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 11,
     fontWeight: 'bold',
     color: '#ea580c',
   },
   homeworkDashboardSubject: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     fontWeight: 'bold',
     textAlign: 'right',
   },
   homeworkDashboardTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 14,
     fontWeight: 'bold',
     marginTop: 4,
     textAlign: 'right',
   },
   homeworkDashboardMeta: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 11,
     textAlign: 'right',
-  }
+  },
+  // 5 Live Pending Questions Widget
+  liveQuestionsContainer: {
+    borderRadius: 20,
+    borderWidth: 1.5,
+    padding: 16,
+    marginBottom: 16,
+  },
+  liveQuestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  livePulsePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dbeafe',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
+  },
+  livePulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#2563eb',
+  },
+  livePulsePillText: {
+    fontSize: 11,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+    color: '#1e40af',
+  },
+  liveTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveQuestionsTitle: {
+    fontSize: 15,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+  },
+  liveQuestionsSub: {
+    fontSize: 11.5,
+    fontFamily: 'Estedad-FD-Medium',
+    textAlign: 'right',
+    marginBottom: 12,
+  },
+  liveQuestionCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
+  },
+  liveCardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  priceBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  priceBadgeText: {
+    fontSize: 11,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+    color: '#15803d',
+  },
+  studentMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  studentNameText: {
+    fontSize: 13,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+  },
+  studentAvatarMini: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  studentAvatarFallback: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#eff6ff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  liveQuestionSubject: {
+    fontSize: 13.5,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+    textAlign: 'right',
+    marginBottom: 4,
+  },
+  liveQuestionContent: {
+    fontSize: 11.5,
+    fontFamily: 'Estedad-FD-Regular',
+    textAlign: 'right',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  acceptQuestionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 6,
+  },
+  acceptQuestionBtnText: {
+    color: '#ffffff',
+    fontSize: 12.5,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+  },
+  activeClassWidget: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  activeClassWidgetHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  activeClassLiveBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  activeClassLiveText: {
+    fontSize: 10.5,
+    fontFamily: 'Estedad-FD-Bold',
+    color: '#15803d',
+  },
+  activeClassTitle: {
+    fontSize: 13,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'right',
+    marginRight: 8,
+  },
+  activeClassMeta: {
+    fontSize: 11,
+    fontFamily: 'Estedad-FD-Regular',
+    textAlign: 'right',
+    marginBottom: 10,
+  },
+  joinClassBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    paddingVertical: 9,
+    borderRadius: 10,
+    gap: 6,
+  },
+  joinClassBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: 'Estedad-FD-Bold',
+    fontWeight: 'bold',
+  },
 });
 
 export default DashboardScreen;

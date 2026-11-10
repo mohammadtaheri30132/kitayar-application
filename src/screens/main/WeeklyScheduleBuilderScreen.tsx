@@ -7,6 +7,8 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showWarning, showSuccess } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -260,7 +262,8 @@ const WeeklyScheduleBuilderScreen = ({ route, navigation }: any) => {
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* ۱. فیلد یا لیست نام درس */}
         <View style={styles.sectionHeaderRow}>
           <Text style={[styles.label, { color: colors.text }]}>نام درس</Text>
@@ -646,6 +649,7 @@ const WeeklyScheduleBuilderScreen = ({ route, navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -668,11 +672,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
   },
   content: {
     padding: 16,
-    paddingBottom: 48,
+    paddingBottom: 100,
   },
   sectionHeaderRow: {
     flexDirection: 'row-reverse',
@@ -683,7 +687,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: '700',
     textAlign: 'right',
     marginTop: 14,
@@ -691,14 +695,14 @@ const styles = StyleSheet.create({
   },
   subLabel: {
     fontSize: 12.5,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     textAlign: 'right',
     marginTop: 10,
     marginBottom: 6,
   },
   hintText: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Regular',
   },
   switchModeBtn: {
     paddingVertical: 2,
@@ -706,7 +710,7 @@ const styles = StyleSheet.create({
   },
   switchModeText: {
     fontSize: 12,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: '600',
   },
   input: {
@@ -714,7 +718,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 14,
     textAlign: 'right',
     marginBottom: 4,
@@ -738,7 +742,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   subjectChipText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 13,
   },
   dayChip: {
@@ -750,7 +754,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   dayChipText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -779,7 +783,7 @@ const styles = StyleSheet.create({
   dayCardTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
   },
   timeBadge: {
     flexDirection: 'row-reverse',
@@ -790,7 +794,7 @@ const styles = StyleSheet.create({
   },
   timeBadgeText: {
     fontSize: 11,
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: '600',
   },
   segmentedRow: {
@@ -808,7 +812,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   segmentedText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12.5,
     fontWeight: '600',
   },
@@ -819,7 +823,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   periodChipText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -830,7 +834,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   schoolChipText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 12,
   },
   loader: {
@@ -849,7 +853,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: 'bold',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
   },
 });
 

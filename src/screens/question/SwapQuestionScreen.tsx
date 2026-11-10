@@ -278,7 +278,8 @@ const SwapQuestionScreen = ({ route, navigation }: any) => {
         data={questions}
         keyExtractor={(item, idx) => item._id + idx}
         renderItem={renderQuestionItem}
-        contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+        keyboardShouldPersistTaps="handled"
         onEndReached={() => fetchQuestions(page)}
         onEndReachedThreshold={0.5}
         ListFooterComponent={loading ? <ActivityIndicator color="#3b82f6" style={{ padding: 20 }} /> : null}

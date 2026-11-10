@@ -227,6 +227,7 @@ const PdfReaderScreen = ({ route, navigation }) => {
         <View style={styles.searchResultsPanel}>
           <Text style={styles.searchCountText}>{searchResults.length} نتیجه:</Text>
           <FlatList
+            keyboardShouldPersistTaps="handled"
             data={searchResults}
             keyExtractor={(item, idx) => `res_${idx}`}
             renderItem={({ item }) => (

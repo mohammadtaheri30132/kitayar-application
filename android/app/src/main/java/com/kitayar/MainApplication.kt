@@ -33,6 +33,11 @@ import com.kitayar.modules.barcode.BarcodePackage
 import com.kitayar.modules.sensors.SensorsPackage
 import com.kitayar.modules.ir.KitayarIrPackage
 import com.kitayar.modules.smartsheet.SmartSheetPackage
+import com.kitayar.modules.preloader.TeacherAssistantPreloaderPackage
+import com.kitayar.modules.noisemeter.ClassroomNoiseMeterPackage
+import com.kitayar.modules.questions.NativeQuestionListPackage
+import com.kitayar.modules.chat.NativeChatPackage
+import com.kitayar.modules.classroom.KitayarClassroomPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -70,6 +75,11 @@ class MainApplication : Application(), ReactApplication {
           add(SensorsPackage())
           add(KitayarIrPackage())
           add(SmartSheetPackage())
+          add(TeacherAssistantPreloaderPackage())
+          add(ClassroomNoiseMeterPackage())
+          add(NativeQuestionListPackage())
+          add(NativeChatPackage())
+          add(KitayarClassroomPackage())
         },
     )
   }

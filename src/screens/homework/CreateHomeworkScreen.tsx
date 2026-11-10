@@ -8,6 +8,8 @@ import {
   TextInput,
   ActivityIndicator,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showWarning, showSuccess, showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -208,7 +210,8 @@ const CreateHomeworkScreen = ({ route, navigation }: any) => {
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* ۱. عنوان تکلیف */}
         <Text style={[styles.label, { color: colors.text }]}>عنوان تکلیف *</Text>
         <TextInput
@@ -433,6 +436,7 @@ const CreateHomeworkScreen = ({ route, navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -449,7 +453,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: 'bold', fontFamily: 'IRANSansX' },
-  content: { padding: 16, paddingBottom: 50 },
+  content: { padding: 16, paddingBottom: 100 },
   label: {
     fontSize: 13.5,
     fontFamily: 'IRANSansX',

@@ -1,13 +1,15 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { View, Image, ActivityIndicator, StyleSheet, Text, TouchableOpacity, Dimensions } from 'react-native';
-import { WifiOff } from 'lucide-react-native';
+import { WifiOff, Server } from 'lucide-react-native';
 import { COLORS } from '../theme/colors';
 import { AuthContext } from '../context/AuthContext';
+import { ServerSwitchModal } from '../components/common/ServerSwitchModal';
 
 const { width, height } = Dimensions.get('window');
 
 const SplashScreen = () => {
   const { connectionError, retryConnection } = useContext(AuthContext);
+  const [serverModalVisible, setServerModalVisible] = useState(false);
 
   return (
     <View style={styles.container}>
@@ -34,8 +36,25 @@ const SplashScreen = () => {
           <TouchableOpacity style={styles.retryBtn} onPress={retryConnection}>
             <Text style={styles.retryBtnText}>تلاش مجدد</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.serverBtn}
+            onPress={() => setServerModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Server size={18} color={COLORS.primary} />
+            <Text style={styles.serverBtnText}>تغییر و تنظیم سرور (آنلاین / لوکال)</Text>
+          </TouchableOpacity>
         </View>
       )}
+
+      <ServerSwitchModal
+        visible={serverModalVisible}
+        onClose={() => setServerModalVisible(false)}
+        onChanged={() => {
+          setServerModalVisible(false);
+          retryConnection();
+        }}
+      />
     </View>
   );
 };
@@ -101,12 +120,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     width: '100%',
     alignItems: 'center',
+    marginBottom: 10,
   },
   retryBtnText: {
     color: COLORS.surface,
     fontSize: 16,
     fontWeight: 'bold',
-  }
+  },
+  serverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    width: '100%',
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  serverBtnText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
 
 export default SplashScreen;

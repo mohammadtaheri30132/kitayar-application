@@ -428,7 +428,8 @@ export const FormDashboardScreen: React.FC<FormDashboardScreenProps> = ({ naviga
           data={forms}
           keyExtractor={(item) => item._id}
           renderItem={renderFormCard}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 80 }]}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={

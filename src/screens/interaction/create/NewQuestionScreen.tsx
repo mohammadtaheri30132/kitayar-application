@@ -7,7 +7,9 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ActivityIndicator, 
-  I18nManager 
+  I18nManager,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showWarning, showSuccess, showInfo } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -109,7 +111,8 @@ const NewQuestionScreen = ({ navigation }: any) => {
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Category Selector */}
         <View style={styles.section}>
           <View style={styles.labelRow}>
@@ -226,6 +229,7 @@ const NewQuestionScreen = ({ navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -252,7 +256,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 20,

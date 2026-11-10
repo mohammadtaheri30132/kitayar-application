@@ -69,7 +69,10 @@ const UnitConverterScreen = ({ route, navigation }: any) => {
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView 
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 }]}
+          keyboardShouldPersistTaps="handled"
+        >
           
           <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             

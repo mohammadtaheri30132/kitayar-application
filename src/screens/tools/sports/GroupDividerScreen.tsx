@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, I18nManager, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, I18nManager, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { Users, LayoutGrid } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 
@@ -34,71 +34,73 @@ const GroupDividerScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.inputHeader}>
-            <Users color={colors.textLight} size={20} />
-            <Text style={[styles.inputLabel, { color: colors.textLight }]}>
-              اسامی را وارد کنید (هر خط یک نفر)
-            </Text>
-          </View>
-          <TextInput
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-            multiline
-            numberOfLines={5}
-            placeholder="مثال:&#10;علی&#10;رضا&#10;سارا"
-            placeholderTextColor={colors.textLight}
-            value={namesText}
-            onChangeText={setNamesText}
-            textAlignVertical="top"
-          />
-          
-          <View style={styles.groupCountRow}>
-            <Text style={[styles.inputLabel, { color: colors.textLight }]}>تعداد گروه‌ها:</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.inputHeader}>
+              <Users color={colors.textLight} size={20} />
+              <Text style={[styles.inputLabel, { color: colors.textLight }]}>
+                اسامی را وارد کنید (هر خط یک نفر)
+              </Text>
+            </View>
             <TextInput
-              style={[styles.countInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-              keyboardType="numeric"
-              value={groupCount}
-              onChangeText={setGroupCount}
+              style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              multiline
+              numberOfLines={5}
+              placeholder="مثال:&#10;علی&#10;رضا&#10;سارا"
+              placeholderTextColor={colors.textLight}
+              value={namesText}
+              onChangeText={setNamesText}
+              textAlignVertical="top"
             />
+            
+            <View style={styles.groupCountRow}>
+              <Text style={[styles.inputLabel, { color: colors.textLight }]}>تعداد گروه‌ها:</Text>
+              <TextInput
+                style={[styles.countInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+                keyboardType="numeric"
+                value={groupCount}
+                onChangeText={setGroupCount}
+              />
+            </View>
           </View>
-        </View>
 
-        <TouchableOpacity 
-          style={[styles.btn, { backgroundColor: colors.primary, opacity: namesText.trim().length === 0 ? 0.7 : 1 }]} 
-          onPress={handleDivide}
-          disabled={namesText.trim().length === 0}
-        >
-          <LayoutGrid color="#fff" size={24} />
-          <Text style={styles.btnText}>تقسیم‌بندی گروه‌ها</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.btn, { backgroundColor: colors.primary, opacity: namesText.trim().length === 0 ? 0.7 : 1 }]} 
+            onPress={handleDivide}
+            disabled={namesText.trim().length === 0}
+          >
+            <LayoutGrid color="#fff" size={24} />
+            <Text style={styles.btnText}>تقسیم‌بندی گروه‌ها</Text>
+          </TouchableOpacity>
 
-        {groups.length > 0 && (
-          <View style={styles.resultsContainer}>
-            {groups.map((group, index) => (
-              <View key={index} style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.groupTitle, { color: colors.primary }]}>گروه {index + 1}</Text>
-                {group.length > 0 ? (
-                  group.map((member, mIndex) => (
-                    <Text key={mIndex} style={[styles.memberText, { color: colors.text }]}>
-                      {mIndex + 1}. {member}
-                    </Text>
-                  ))
-                ) : (
-                  <Text style={[styles.memberText, { color: colors.textLight }]}>بدون عضو</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-      </ScrollView>
+          {groups.length > 0 && (
+            <View style={styles.resultsContainer}>
+              {groups.map((group, index) => (
+                <View key={index} style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={[styles.groupTitle, { color: colors.primary }]}>گروه {index + 1}</Text>
+                  {group.length > 0 ? (
+                    group.map((member, mIndex) => (
+                      <Text key={mIndex} style={[styles.memberText, { color: colors.text }]}>
+                        {mIndex + 1}. {member}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={[styles.memberText, { color: colors.textLight }]}>بدون عضو</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { padding: 16, flexGrow: 1 },
+  scroll: { padding: 16, flexGrow: 1, paddingBottom: 60 },
   inputContainer: { padding: 16, borderRadius: 16, borderWidth: 1, marginBottom: 16 },
   inputHeader: { flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse', alignItems: 'center', marginBottom: 12 },
   inputLabel: { marginHorizontal: 8, fontFamily: 'IRANSansX', fontSize: 14 },

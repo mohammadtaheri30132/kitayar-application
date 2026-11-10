@@ -185,6 +185,7 @@ export const QuranSurahListScreen: React.FC = () => {
         keyExtractor={item => String(item.id)}
         renderItem={renderSurahItem}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         initialNumToRender={15}
         maxToRenderPerBatch={20}

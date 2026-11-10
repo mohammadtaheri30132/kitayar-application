@@ -13,6 +13,8 @@ import {
   Clipboard,
   Switch,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -230,7 +232,8 @@ export const BarcodeGeneratorScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Category Selector Tabs */}
         <ScrollView
           horizontal
@@ -513,6 +516,7 @@ export const BarcodeGeneratorScreen: React.FC = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* History Modal */}
       <Modal
@@ -642,6 +646,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+    paddingBottom: 80,
   },
   categoryTabsRow: {
     flexDirection: 'row-reverse',

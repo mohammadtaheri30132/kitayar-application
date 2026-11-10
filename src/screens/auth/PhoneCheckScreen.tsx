@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,15 +6,25 @@ import {
   TouchableOpacity, 
   StyleSheet, 
   ActivityIndicator, 
-  Keyboard
+  Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { showWarning, showError } from '../../components/feedback';
-import { api } from '../../api/axiosConfig';
+import { api, getServerConfig, ServerMode } from '../../api/axiosConfig';
+import { ServerSwitchModal } from '../../components/common/ServerSwitchModal';
 import { COLORS } from '../../theme/colors';
 
 const PhoneCheckScreen = ({ navigation }: any) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [serverModalVisible, setServerModalVisible] = useState(false);
+  const [serverMode, setServerMode] = useState<ServerMode>('server');
+
+  useEffect(() => {
+    getServerConfig().then(cfg => setServerMode(cfg.mode));
+  }, []);
 
   const handleCheckPhone = async () => {
     Keyboard.dismiss(); // بستن کیبورد هنگام کلیک
@@ -33,9 +43,15 @@ const PhoneCheckScreen = ({ navigation }: any) => {
 
       if (data.success) {
         if (data.data.isRegistered) {
-          navigation.navigate('LoginPasswordScreen', { phoneNumber });
+          navigation.navigate('LoginPasswordScreen', { 
+            phoneNumber,
+            remainingSeconds: data.data.remainingSeconds || 0,
+          });
         } else {
-          navigation.navigate('RegisterScreen', { phoneNumber });
+          navigation.navigate('RegisterScreen', { 
+            phoneNumber,
+            remainingSeconds: data.data.remainingSeconds || 120,
+          });
         }
       }
     } catch (error: any) {
@@ -48,43 +64,73 @@ const PhoneCheckScreen = ({ navigation }: any) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>ورود به کیتایار</Text>
-        <Text style={styles.subtitle}>جهت ورود یا ثبت‌نام، شماره موبایل خود را وارد کنید</Text>
-      </View>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="09123456789"
-          placeholderTextColor={COLORS.textLight}
-          keyboardType="numeric"
-          maxLength={11}
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-        />
-      </View>
-
-      <TouchableOpacity 
-        style={[styles.button, isLoading && styles.buttonDisabled]} 
-        onPress={handleCheckPhone}
-        disabled={isLoading}
-        activeOpacity={0.8}
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        bounces={false}
       >
-        {isLoading ? (
-          <ActivityIndicator color={COLORS.surface} />
-        ) : (
-          <Text style={styles.buttonText}>ادامه</Text>
-        )}
-      </TouchableOpacity>
-    </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>ورود به کیتایار</Text>
+          <Text style={styles.subtitle}>جهت ورود یا ثبت‌نام، شماره موبایل خود را وارد کنید</Text>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="09123456789"
+            placeholderTextColor={COLORS.textLight}
+            keyboardType="numeric"
+            maxLength={11}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+          />
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
+          onPress={handleCheckPhone}
+          disabled={isLoading}
+          activeOpacity={0.8}
+        >
+          {isLoading ? (
+            <ActivityIndicator color={COLORS.surface} />
+          ) : (
+            <Text style={styles.buttonText}>ادامه</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Server Status & Switcher */}
+        <TouchableOpacity
+          style={styles.serverBadge}
+          onPress={() => setServerModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.serverDot, { backgroundColor: serverMode === 'server' ? '#10b981' : '#f59e0b' }]} />
+          <Text style={styles.serverBadgeText}>
+            {serverMode === 'server' ? 'متصل به سرور آنلاین کیتایار' : 'متصل به سرور محلی (Local)'}
+          </Text>
+          <Text style={styles.serverBadgeAction}>• تغییر سرور</Text>
+        </TouchableOpacity>
+
+        <ServerSwitchModal
+          visible={serverModalVisible}
+          onClose={() => setServerModalVisible(false)}
+          onChanged={() => {
+            getServerConfig().then(cfg => setServerMode(cfg.mode));
+          }}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: COLORS.background,
     padding: 24,
     justifyContent: 'center',
@@ -132,6 +178,33 @@ const styles = StyleSheet.create({
   buttonText: {
     color: COLORS.surface,
     fontSize: 18,
+    fontWeight: 'bold',
+  },
+  serverBadge: {
+    marginTop: 24,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9',
+    alignSelf: 'center',
+    gap: 8,
+  },
+  serverDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  serverBadgeText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  serverBadgeAction: {
+    fontSize: 12,
+    color: '#2563eb',
     fontWeight: 'bold',
   },
 });

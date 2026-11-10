@@ -60,7 +60,7 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Backdrop Tap to Close */}
         <TouchableOpacity 
@@ -81,7 +81,7 @@ export default function AddClassModal({ visible, onClose, onSave, initialDay = 0
             </TouchableOpacity>
           </View>
           
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             
             <View style={{ marginBottom: 20 }}>
               <Text style={[styles.label, { color: colors.text }]}>روز هفته</Text>

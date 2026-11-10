@@ -60,7 +60,7 @@ export default function AddEventModal({ visible, onClose, onSave, selectedDateSt
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <KeyboardAvoidingView 
         style={styles.overlay} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Backdrop Tap to Close */}
         <TouchableOpacity 
@@ -81,7 +81,7 @@ export default function AddEventModal({ visible, onClose, onSave, selectedDateSt
             </TouchableOpacity>
           </View>
           
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             <View style={[styles.dateBox, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
               <CalendarIcon color="#3b82f6" size={20} />
               <Text style={styles.dateText}>{toPersianNumbers(displayDate)}</Text>

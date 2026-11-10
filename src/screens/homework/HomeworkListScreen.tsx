@@ -277,7 +277,8 @@ const HomeworkListScreen = ({ route, navigation }: any) => {
           data={filteredHomeworks}
           keyExtractor={item => item._id}
           renderItem={renderHomeworkCard}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: 80 }]}
+          keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />}
           showsVerticalScrollIndicator={false}
         />

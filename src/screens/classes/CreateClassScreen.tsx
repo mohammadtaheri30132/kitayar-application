@@ -165,7 +165,7 @@ const CreateClassScreen = ({ navigation }: any) => {
   );
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backButtonText}>🔙 بازگشت</Text>
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
   
-  scrollContainer: { flexGrow: 1, backgroundColor: COLORS.background, padding: 20 },
+  scrollContainer: { flexGrow: 1, backgroundColor: COLORS.background, padding: 20, paddingBottom: 80 },
   formContainer: { backgroundColor: COLORS.surface, borderRadius: 20, padding: 20, elevation: 2 },
   
   inputGroup: { marginBottom: 24 },

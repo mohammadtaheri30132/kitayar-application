@@ -10,6 +10,8 @@ import {
   Image,
   NativeModules,
   I18nManager,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -249,7 +251,12 @@ export const FormPreviewScreen: React.FC<FormPreviewScreenProps> = ({ route, nav
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView 
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} 
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
           {/* Header Card */}
           <View style={styles.formHeaderCard}>
             <Text style={styles.formTitle}>{form.title}</Text>
@@ -351,6 +358,7 @@ export const FormPreviewScreen: React.FC<FormPreviewScreenProps> = ({ route, nav
             </View>
           )}
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );

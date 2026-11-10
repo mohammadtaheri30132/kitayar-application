@@ -254,6 +254,7 @@ const QuestionDetailScreen = ({ route, navigation }: any) => {
           data={answers}
           keyExtractor={item => item._id}
           contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
           ListHeaderComponent={renderHeader}
           renderItem={({ item }) => (
             <CommentCard 

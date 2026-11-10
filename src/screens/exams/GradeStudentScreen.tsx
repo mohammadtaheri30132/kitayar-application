@@ -139,7 +139,7 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       
       {/* هدر صفحه */}
       <View style={styles.header}>
@@ -154,7 +154,7 @@ const GradeStudentScreen = ({ route, navigation }: any) => {
       </View>
 
       {/* لیست پاسخ‌ها */}
-      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {sessionData?.answers?.map((ans: any, index: number) => renderAnswerItem(ans, index))}
       </ScrollView>
 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   backButton: { padding: 8 },
   backButtonText: { color: COLORS.textLight, fontSize: 14 },
 
-  scrollContainer: { padding: 20, paddingBottom: 40 },
+  scrollContainer: { padding: 20, paddingBottom: 80 },
   
   answerCard: {
     backgroundColor: COLORS.surface,

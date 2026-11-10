@@ -11,6 +11,8 @@ import {
   Share,
   Modal,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showSuccess, showDialog } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -317,7 +319,8 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
           <FlatList
             data={responses}
             keyExtractor={(item) => item._id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: 80 }]}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item, index }) => (
               <TouchableOpacity
                 style={styles.responseCard}
@@ -369,27 +372,34 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
         onRequestClose={() => setGradingModalVisible(false)}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setGradingModalVisible(false)} style={styles.backButton}>
-              <ArrowRight size={22} color="#1e293b" />
-            </TouchableOpacity>
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={styles.modalHeaderTitle}>بررسی پاسخ و نمره‌دهی</Text>
-              <Text style={styles.modalHeaderSubtitle}>{selectedResponse?.respondentName || 'پاسخ دانش‌آموز'}</Text>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            style={{ flex: 1 }}
+          >
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setGradingModalVisible(false)} style={styles.backButton}>
+                <ArrowRight size={22} color="#1e293b" />
+              </TouchableOpacity>
+              <View style={{ flex: 1, alignItems: 'center' }}>
+                <Text style={styles.modalHeaderTitle}>بررسی پاسخ و نمره‌دهی</Text>
+                <Text style={styles.modalHeaderSubtitle}>{selectedResponse?.respondentName || 'پاسخ دانش‌آموز'}</Text>
+              </View>
+              <TouchableOpacity style={styles.saveGradeBtn} onPress={handleSaveGrades} disabled={savingGrades}>
+                {savingGrades ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Save size={16} color="#ffffff" style={{ marginLeft: 4 }} />
+                    <Text style={styles.saveGradeBtnText}>ذخیره</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.saveGradeBtn} onPress={handleSaveGrades} disabled={savingGrades}>
-              {savingGrades ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <>
-                  <Save size={16} color="#ffffff" style={{ marginLeft: 4 }} />
-                  <Text style={styles.saveGradeBtnText}>ذخیره</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
 
-          <ScrollView style={{ padding: 16 }}>
+            <ScrollView 
+              contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+              keyboardShouldPersistTaps="handled"
+            >
             {selectedResponse?.answers?.map((ans: any, aIdx: number) => (
               <View key={ans.questionId} style={styles.answerCard}>
                 <Text style={styles.answerCardNumber}>سوال {aIdx + 1}</Text>
@@ -465,6 +475,7 @@ export const FormResponsesScreen: React.FC<FormResponsesScreenProps> = ({ route,
               />
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>

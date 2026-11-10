@@ -7,6 +7,8 @@ import {
   ScrollView,
   TextInput,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showConfirm } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -201,7 +203,8 @@ export const IrSetupWizardScreen: React.FC = () => {
           </View>
         </View>
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {/* STEP 1: CATEGORY SELECTION */}
           {step === 1 && (
             <View style={styles.stepContainer}>
@@ -540,6 +543,7 @@ export const IrSetupWizardScreen: React.FC = () => {
             </View>
           )}
         </ScrollView>
+        </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
   );
@@ -603,7 +607,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 80,
   },
   stepContainer: {
     gap: 16,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet, 
-  ActivityIndicator, TextInput, PanResponder, Dimensions
+  ActivityIndicator, TextInput, PanResponder, Dimensions, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -238,7 +238,8 @@ const VideoTrimScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.actionBox}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <View style={styles.actionBox}>
         <View style={styles.actionHeader}>
           <Scissors color={COLORS.primary} size={35} />
           <Text style={styles.actionTitle}>برش حرفه‌ای ویدیو</Text>
@@ -324,7 +325,8 @@ const VideoTrimScreen = ({ navigation }) => {
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 60 }}
         renderItem={({ item }) => (
           <View style={styles.historyCard}>
             <TouchableOpacity style={styles.absoluteDeleteBtn} onPress={() => handleDelete(item.id)}>
@@ -356,6 +358,7 @@ const VideoTrimScreen = ({ navigation }) => {
           </View>
         )}
       />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

@@ -149,7 +149,7 @@ export const PersianBottomSheet: React.FC<PersianBottomSheetProps> = ({
 
         {/* Keyboard Avoidance wrapper */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardContainer}
           pointerEvents="box-none"
         >

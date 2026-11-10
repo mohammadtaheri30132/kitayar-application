@@ -202,6 +202,7 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
           data={history}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingBottom: 20 }}
+          keyboardShouldPersistTaps="handled"
           ListEmptyComponent={<Text style={styles.emptyText}>فایلی موجود نیست.</Text>}
           renderItem={({ item }) => (
             <View style={styles.historyCard}>
@@ -246,7 +247,10 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
 
         {/* 👈 پاپ‌آپ گرفتن رمز عبور */}
         <Modal visible={passwordModalVisible} transparent animationType="fade" onRequestClose={() => setPasswordModalVisible(false)}>
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalOverlay}
+          >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Lock color="#c0392b" size={28} />
@@ -272,7 +276,7 @@ const AdvancedPdfScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </Modal>
 
       </KeyboardAvoidingView>

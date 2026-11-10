@@ -8,7 +8,9 @@ import {
   ScrollView, 
   Image, 
   ActivityIndicator, 
-  I18nManager 
+  I18nManager,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showError, showWarning, showSuccess } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -102,7 +104,8 @@ const NewPostScreen = ({ navigation }: any) => {
         <View style={{ width: 28 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TextInput
           style={[styles.inputTextArea, { color: colors.text, borderColor: colors.border, backgroundColor: colors.surface }]}
           placeholder="تجربه تدریس، چالش کلاسی، روش نوآورانه یا مطلب خود را بنویسید..."
@@ -167,6 +170,7 @@ const NewPostScreen = ({ navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -193,7 +197,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   inputTextArea: {
     borderWidth: 1,

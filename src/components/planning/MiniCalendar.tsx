@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   calendarTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontWeight: 'bold',
     fontSize: 16,
     marginRight: 8,
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   toggleText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 12,
   },
   calendarNav: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   calendarDayLabel: {
     width: '14.28%',
     textAlign: 'center',
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Bold',
     fontSize: 12,
     marginBottom: 8,
   },
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   calendarDayText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: 'Estedad-FD-Medium',
     fontSize: 14,
   },
   dotsContainer: {

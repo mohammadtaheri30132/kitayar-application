@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     NativeModules,
   View, Text, TouchableOpacity, FlatList, StyleSheet, 
-  ActivityIndicator, Image, Modal, TextInput 
+  ActivityIndicator, Image, Modal, TextInput, KeyboardAvoidingView, Platform 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -226,7 +226,10 @@ const ConverterScreen = ({ route, navigation }) => {
       />
 
       <Modal visible={isImagesModalVisible} transparent={true} animationType="slide">
-        <View style={styles.fullModalOverlay}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={styles.fullModalOverlay}
+        >
           <View style={styles.fullModalContainer}>
             <Text style={styles.modalTitle}>ترتیب صفحات و ذخیره</Text>
             <TextInput style={styles.nameInput} placeholder="نام فایل خروجی" value={outputFileName} onChangeText={setOutputFileName} />
@@ -235,6 +238,7 @@ const ConverterScreen = ({ route, navigation }) => {
               data={selectedImages}
               keyExtractor={(item, index) => index.toString()}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               style={{ maxHeight: '60%' }}
               ListHeaderComponent={
                 <TouchableOpacity style={styles.addMoreBtn} onPress={handlePickImages}>
@@ -262,7 +266,7 @@ const ConverterScreen = ({ route, navigation }) => {
               <TouchableOpacity style={styles.modalBtnConfirm} onPress={handleConfirmImagesToPdf}><Text style={styles.modalBtnConfirmText}>ساخت PDF</Text></TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

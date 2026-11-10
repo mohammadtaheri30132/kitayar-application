@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   NativeModules, View, Text, TouchableOpacity, FlatList, StyleSheet,
-  ActivityIndicator, Image, TextInput, Switch
+  ActivityIndicator, Image, TextInput, Switch, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { showError, showWarning } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -107,7 +107,8 @@ const ImageResizeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.actionBox}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.actionBox}>
         <View style={styles.actionHeader}>
           <Maximize color={COLORS.primary} size={35} />
           <Text style={styles.actionTitle}>تغییر ابعاد عکس</Text>
@@ -154,7 +155,8 @@ const ImageResizeScreen = ({ navigation }) => {
       <FlatList
         data={history}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{ paddingBottom: 60 }}
+        keyboardShouldPersistTaps="handled"
         renderItem={({ item }) => (
           <View style={styles.historyCard}>
             <TouchableOpacity style={styles.absoluteDeleteBtn} onPress={() => handleDelete(item.id)}>
@@ -189,6 +191,7 @@ const ImageResizeScreen = ({ navigation }) => {
           </View>
         )}
       />
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

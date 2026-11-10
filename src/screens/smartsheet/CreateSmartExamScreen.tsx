@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Switch,
   NativeModules,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { showWarning, showError, showInfo } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -360,7 +362,8 @@ export const CreateSmartExamScreen = ({ route, navigation }: any) => {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* ۱. انتخاب کلاس و مدرسه */}
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.cardHeaderRow}>
@@ -825,6 +828,7 @@ export const CreateSmartExamScreen = ({ route, navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -841,7 +845,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 16.5, fontWeight: 'bold', fontFamily: 'IRANSansX' },
-  content: { padding: 16, paddingBottom: 60 },
+  content: { padding: 16, paddingBottom: 100 },
   card: {
     borderRadius: 14,
     borderWidth: 1,
