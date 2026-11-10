@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
 import { AuthContext } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   Menu,
   ChevronRight,
@@ -51,7 +52,11 @@ import {
   TrendingUp,
   BookOpen,
   Search,
+  Camera,
 } from 'lucide-react-native';
+import ImagePicker from 'react-native-image-crop-picker';
+import { communityService } from '../../services/community/communityService';
+import { FONT_FAMILY } from '../../theme/typography';
 
 const { width } = Dimensions.get('window');
 const GRID_ITEM_SIZE = (width - 36) / 3;
@@ -160,6 +165,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [avatarUri, setAvatarUri] = useState('https://i.pravatar.cc/150?u=kitayar@teacher.com');
+  const [coverUri, setCoverUri] = useState<string | null>(null);
   const [category, setCategory] = useState('آموزگار');
   const [position, setPosition] = useState('معلم');
 
@@ -284,6 +290,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
         if (d.headline) setHeadline(d.headline);
         if (d.bio) setBio(d.bio);
         if (d.avatar) setAvatarUri(d.avatar);
+        if (d.coverImage) setCoverUri(d.coverImage);
         if (d.city) setCity(d.city);
         if (d.province) setProvince(d.province);
         if (d.schools && d.schools.length > 0) setSchoolName(d.schools[0]);
@@ -339,6 +346,12 @@ export const ProfileScreen = ({ navigation, route }: any) => {
     fetchProfile();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfile();
+    }, [])
+  );
+
   useEffect(() => {
     if (route?.params?.openTeachingModal) {
       setTempEducationLevel(educationLevel);
@@ -367,18 +380,79 @@ export const ProfileScreen = ({ navigation, route }: any) => {
     return Math.min(100, score);
   }, [fullName, headline, bio, schoolName, experiences, education, skills, certificates, honors, teachingSubjects]);
 
-  // 3. Save Basic Profile Info
+  const getFullUrl = (uri?: string | null) => {
+    if (!uri) return null;
+    if (uri.startsWith('http')) return uri;
+    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
+    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+  };
+
+  const handlePickCoverImage = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        mediaType: 'photo',
+        cropping: true,
+        width: 1200,
+        height: 450,
+      });
+
+      if (image.size && image.size > 2 * 1024 * 1024) {
+        showWarning('حجم تصویر کاور نباید بیشتر از ۲ مگابایت باشد.');
+        return;
+      }
+
+      showSuccess('در حال بارگذاری تصویر پشت پروفایل...');
+      const uploadedUrl = await communityService.uploadAttachment(
+        image.path,
+        image.filename || `cover_${Date.now()}.jpg`,
+        image.mime || 'image/jpeg'
+      );
+
+      if (uploadedUrl) {
+        setCoverUri(uploadedUrl);
+        await api.put('/teacher/profile', { coverImage: uploadedUrl });
+        showSuccess('عکس پشت پروفایل (کاور) با موفقیت به‌روزرسانی شد.');
+      }
+    } catch {
+      // User cancelled
+    }
+  };
+
+  const handlePickAvatar = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        mediaType: 'photo',
+        cropping: true,
+        width: 400,
+        height: 400,
+        cropperCircleOverlay: true,
+      });
+
+      if (image.size && image.size > 2 * 1024 * 1024) {
+        showWarning('حجم عکس پروفایل نباید بیشتر از ۲ مگابایت باشد.');
+        return;
+      }
+
+      showSuccess('در حال بارگذاری عکس جدید پروفایل...');
+      const uploadedUrl = await communityService.uploadAttachment(
+        image.path,
+        image.filename || `avatar_${Date.now()}.jpg`,
+        image.mime || 'image/jpeg'
+      );
+
+      if (uploadedUrl) {
+        setAvatarUri(uploadedUrl);
+        await api.put('/teacher/profile', { avatar: uploadedUrl });
+        showSuccess('عکس پروفایل با موفقیت به‌روزرسانی شد.');
+      }
+    } catch {
+      // User cancelled
+    }
+  };
+
+  // 3. Open Dedicated Edit Profile Screen
   const handleOpenEditProfile = () => {
-    setEditProfileForm({
-      fullName,
-      headline,
-      bio,
-      schoolName,
-      city,
-      province,
-      experienceYears: String(stats.experienceYears || 0),
-    });
-    setEditProfileModalVisible(true);
+    navigation.navigate('TeacherProfileSettingsScreen');
   };
 
   const handleSaveEditProfile = async () => {
@@ -840,18 +914,39 @@ export const ProfileScreen = ({ navigation, route }: any) => {
       >
         {/* Cover Banner (LinkedIn Style) */}
         <View style={styles.bannerContainer}>
-          <View style={[styles.bannerGradient, { backgroundColor: colors.primary }]}>
-            <View style={styles.bannerBadge}>
-              <School size={14} color="#fff" />
-              <Text style={styles.bannerBadgeText}>کیتایار • آموزش و پرورش</Text>
+          {coverUri ? (
+            <Image source={{ uri: getFullUrl(coverUri)! }} style={styles.bannerImageCover} resizeMode="cover" />
+          ) : (
+            <View style={[styles.bannerGradient, { backgroundColor: colors.primary }]}>
+              <View style={styles.bannerBadge}>
+                <School size={14} color="#fff" />
+                <Text style={styles.bannerBadgeText}>کیتایار • آموزش و پرورش</Text>
+              </View>
             </View>
-          </View>
+          )}
+
+          {/* Change Cover Photo Button */}
+          <TouchableOpacity
+            style={styles.changeCoverBtn}
+            onPress={handlePickCoverImage}
+            activeOpacity={0.85}
+          >
+            <Camera size={13} color="#ffffff" style={{ marginLeft: 4 }} />
+            <Text style={styles.changeCoverBtnText}>تغییر عکس پشت پروفایل</Text>
+          </TouchableOpacity>
 
           {/* Avatar */}
           <View style={[styles.avatarWrapper, { borderColor: colors.surface, backgroundColor: colors.surface }]}>
-            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            <Image source={{ uri: getFullUrl(avatarUri)! }} style={styles.avatarImage} resizeMode="cover" />
+            <TouchableOpacity
+              style={styles.changeAvatarBtn}
+              onPress={handlePickAvatar}
+              activeOpacity={0.85}
+            >
+              <Camera size={13} color="#ffffff" />
+            </TouchableOpacity>
             <View style={styles.verifiedBadge}>
-              <CheckCircle2 size={18} color="#0284c7" fill="#fff" />
+              <CheckCircle2 size={16} color="#0284c7" fill="#fff" />
             </View>
           </View>
         </View>
@@ -925,7 +1020,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity
               style={[styles.primaryActionBtn, { backgroundColor: colors.primary }]}
-              onPress={() => setCreatePostVisible(true)}
+              onPress={() => navigation.navigate('NewPostScreen')}
               activeOpacity={0.85}
             >
               <Plus size={18} color="#fff" />
@@ -1365,94 +1460,6 @@ export const ProfileScreen = ({ navigation, route }: any) => {
           </View>
         )}
       </ScrollView>
-
-      {/* MODAL 1: Edit Basic Profile */}
-      <Modal visible={editProfileModalVisible} transparent animationType="slide" onRequestClose={() => setEditProfileModalVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>ویرایش مشخصات حرفه‌ای</Text>
-              <TouchableOpacity onPress={() => setEditProfileModalVisible(false)}>
-                <X size={22} color={colors.textLight} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>نام و نام خانوادگی:</Text>
-              <TextInput
-                style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={editProfileForm.fullName}
-                onChangeText={(t) => setEditProfileForm((p) => ({ ...p, fullName: t }))}
-                placeholder="مثال: علی احمدی"
-                placeholderTextColor={colors.textLight}
-              />
-
-              <Text style={[styles.inputLabel, { color: colors.text }]}>عنوان حرفه‌ای (Headline):</Text>
-              <TextInput
-                style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={editProfileForm.headline}
-                onChangeText={(t) => setEditProfileForm((p) => ({ ...p, headline: t }))}
-                placeholder="مثال: آموزگار رسمی پایه ششم • مدرس روش تدریس نوین"
-                placeholderTextColor={colors.textLight}
-              />
-
-              <Text style={[styles.inputLabel, { color: colors.text }]}>مدرسه محل خدمت فعلی:</Text>
-              <TextInput
-                style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={editProfileForm.schoolName}
-                onChangeText={(t) => setEditProfileForm((p) => ({ ...p, schoolName: t }))}
-                placeholder="مثال: دبستان شهید همت منطقه ۵ تهران"
-                placeholderTextColor={colors.textLight}
-              />
-
-              <View style={styles.twoInputsRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { color: colors.text }]}>شهر:</Text>
-                  <TextInput
-                    style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                    value={editProfileForm.city}
-                    onChangeText={(t) => setEditProfileForm((p) => ({ ...p, city: t }))}
-                    placeholder="تهران"
-                    placeholderTextColor={colors.textLight}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.inputLabel, { color: colors.text }]}>سابقه کار (سال):</Text>
-                  <TextInput
-                    style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                    value={editProfileForm.experienceYears}
-                    onChangeText={(t) => setEditProfileForm((p) => ({ ...p, experienceYears: t }))}
-                    keyboardType="numeric"
-                    placeholder="۸"
-                    placeholderTextColor={colors.textLight}
-                  />
-                </View>
-              </View>
-
-              <Text style={[styles.inputLabel, { color: colors.text }]}>درباره من (بیوگرافی):</Text>
-              <TextInput
-                style={[styles.inputField, styles.textArea, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={editProfileForm.bio}
-                onChangeText={(t) => setEditProfileForm((p) => ({ ...p, bio: t }))}
-                placeholder="چند خط درباره تجربیات، اهداف آموزشی و علاقه‌مندی‌های خود در کلاس درس..."
-                placeholderTextColor={colors.textLight}
-                multiline
-                numberOfLines={3}
-              />
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }]}
-                onPress={handleSaveEditProfile}
-                disabled={isSaving}
-              >
-                {isSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitBtnText}>ذخیره تغییرات در سرور</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       {/* MODAL 2: Add Teaching Experience */}
       <Modal visible={expModalVisible} transparent animationType="slide" onRequestClose={() => setExpModalVisible(false)}>
@@ -2009,78 +2016,6 @@ export const ProfileScreen = ({ navigation, route }: any) => {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* MODAL 7: Create Post Modal */}
-      <Modal visible={createPostVisible} transparent animationType="slide" onRequestClose={() => setCreatePostVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
-          <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>انتشار پست آموزشی جدید</Text>
-              <TouchableOpacity onPress={() => setCreatePostVisible(false)}>
-                <X size={22} color={colors.textLight} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-              <Text style={[styles.inputLabel, { color: colors.text }]}>متن یا توضیح فعالیت آموزشی *:</Text>
-              <TextInput
-                style={[styles.inputField, styles.textArea, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={newPostTitle}
-                onChangeText={setNewPostTitle}
-                placeholder="توضیحاتی درباره روش تدریس، دستاورد دانش‌آموزان یا تجربه کلاسی امروز..."
-                placeholderTextColor={colors.textLight}
-                multiline
-                numberOfLines={4}
-              />
-
-              <Text style={[styles.inputLabel, { color: colors.text }]}>نوع محتوا:</Text>
-              <View style={styles.degreePillsRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.degreePill,
-                    newPostType === 'image'
-                      ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                      : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
-                  ]}
-                  onPress={() => setNewPostType('image')}
-                >
-                  <Text style={[styles.degreePillText, { color: newPostType === 'image' ? '#fff' : colors.text }]}>📷 عکس</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.degreePill,
-                    newPostType === 'video'
-                      ? { backgroundColor: colors.primary, borderColor: colors.primary }
-                      : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
-                  ]}
-                  onPress={() => setNewPostType('video')}
-                >
-                  <Text style={[styles.degreePillText, { color: newPostType === 'video' ? '#fff' : colors.text }]}>🎬 ویدیو</Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={[styles.inputLabel, { color: colors.text }]}>آدرس تصویر یا ویدیو (URL):</Text>
-              <TextInput
-                style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
-                value={newPostUrl}
-                onChangeText={setNewPostUrl}
-                placeholder="https://... (اختیاری)"
-                placeholderTextColor={colors.textLight}
-              />
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }]}
-                onPress={handleCreatePost}
-                disabled={isSaving}
-              >
-                {isSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitBtnText}>انتشار در تالار تعامل</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
       {/* Hamburger Menu Bottom Sheet */}
       <Modal visible={menuModalVisible} transparent animationType="slide" onRequestClose={() => setMenuModalVisible(false)}>
         <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuModalVisible(false)}>
@@ -2233,7 +2168,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centerBox: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  loadingText: { fontFamily: 'IRANSansX', fontSize: 13, marginTop: 12 },
+  loadingText: { fontFamily: FONT_FAMILY.regular, fontSize: 13, marginTop: 12 },
   header: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
@@ -2244,7 +2179,7 @@ const styles = StyleSheet.create({
   },
   headerBtn: { padding: 4 },
   headerTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -2253,8 +2188,28 @@ const styles = StyleSheet.create({
   // Cover Banner
   bannerContainer: {
     position: 'relative',
-    height: 120,
+    height: 130,
     marginBottom: 44,
+  },
+  bannerImageCover: {
+    width: '100%',
+    height: '100%',
+  },
+  changeCoverBtn: {
+    position: 'absolute',
+    top: 10,
+    right: 12,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  changeCoverBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
   },
   bannerGradient: {
     width: '100%',
@@ -2274,7 +2229,7 @@ const styles = StyleSheet.create({
   },
   bannerBadgeText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
   },
   avatarWrapper: {
@@ -2299,6 +2254,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 10,
   },
+  changeAvatarBtn: {
+    position: 'absolute',
+    bottom: 0,
+    left: 20,
+    backgroundColor: '#2563eb',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
 
   // Profile Info
   profileInfoSection: {
@@ -2312,13 +2280,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   profileName: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'right',
   },
   profileHeadline: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     textAlign: 'right',
     lineHeight: 20,
@@ -2331,11 +2299,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   metaText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
   },
   bioText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     lineHeight: 20,
     textAlign: 'right',
@@ -2356,12 +2324,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statNumber: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 15,
     fontWeight: 'bold',
   },
   statLabel: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
   },
@@ -2387,7 +2355,7 @@ const styles = StyleSheet.create({
   },
   primaryActionText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -2402,7 +2370,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   secondaryActionText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -2434,7 +2402,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
   },
   tabBtnText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2477,7 +2445,7 @@ const styles = StyleSheet.create({
   gridLikesText: {
     color: '#fff',
     fontSize: 10,
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
   },
 
   // Resume Container & Completion Card
@@ -2502,12 +2470,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   completionTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: 'bold',
   },
   completionBadge: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -2522,7 +2490,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   completionHint: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     lineHeight: 18,
     textAlign: 'right',
@@ -2550,7 +2518,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   resumeCardTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -2563,7 +2531,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   addBtnText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     fontWeight: 'bold',
   },
@@ -2591,25 +2559,25 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   timelineRole: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: 'bold',
     textAlign: 'right',
   },
   timelineCompany: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     marginTop: 2,
     textAlign: 'right',
   },
   timelinePeriod: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
     textAlign: 'right',
   },
   itemDesc: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 4,
     lineHeight: 18,
@@ -2623,7 +2591,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptySectionText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     textAlign: 'center',
   },
@@ -2631,7 +2599,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   emptyActionBtnText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2649,7 +2617,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   skillPillText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
   },
   activeSkillPill: {
@@ -2661,7 +2629,7 @@ const styles = StyleSheet.create({
   },
   activeSkillText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -2672,7 +2640,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   suggestedSkillText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
   },
   addCustomSkillRow: {
@@ -2687,7 +2655,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     textAlign: 'right',
   },
@@ -2698,7 +2666,7 @@ const styles = StyleSheet.create({
   },
   addCustomSkillBtnText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -2714,13 +2682,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   notesEmptyTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 15,
     fontWeight: 'bold',
     marginTop: 14,
   },
   notesEmptyDesc: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     textAlign: 'center',
     marginTop: 6,
@@ -2749,7 +2717,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   modalTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -2758,14 +2726,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   sectionSubtitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     textAlign: 'right',
     marginBottom: 6,
     lineHeight: 18,
   },
   inputLabel: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'right',
@@ -2777,7 +2745,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     textAlign: 'right',
   },
@@ -2796,7 +2764,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   switchLabel: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
   },
   degreePillsRow: {
@@ -2812,7 +2780,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   degreePillText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -2828,7 +2796,7 @@ const styles = StyleSheet.create({
   },
   modalSubmitBtnText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -2855,7 +2823,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   menuSheetTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'right',
@@ -2875,13 +2843,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuItemText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: '600',
     textAlign: 'right',
   },
   menuItemSubText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     marginTop: 2,
     textAlign: 'right',
@@ -2911,7 +2879,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dialogTitle: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -2919,7 +2887,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dialogText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     lineHeight: 22,
     textAlign: 'right',
@@ -2935,24 +2903,24 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   contactLabel: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
   },
   contactValue: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: 'bold',
     marginTop: 2,
   },
   aboutText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     lineHeight: 22,
     textAlign: 'right',
     marginBottom: 8,
   },
   versionText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     textAlign: 'right',
   },
@@ -2963,7 +2931,7 @@ const styles = StyleSheet.create({
   },
   dialogCloseBtnText: {
     color: '#fff',
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -2977,7 +2945,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   levelBadgeText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '700',
     color: '#2563eb',
@@ -2989,7 +2957,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   teachingSubjectChipText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 12,
     fontWeight: '700',
     color: '#15803d',
@@ -3014,7 +2982,7 @@ const styles = StyleSheet.create({
     borderColor: '#2563eb',
   },
   levelPillText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     fontSize: 11,
     fontWeight: '700',
     color: '#64748b',
@@ -3032,7 +3000,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   elementaryNoticeText: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     flex: 1,
     fontSize: 11.5,
     textAlign: 'right',
@@ -3048,7 +3016,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   subjectSearchInput: {
-    fontFamily: 'IRANSansX',
+    fontFamily: FONT_FAMILY.regular,
     flex: 1,
     paddingVertical: 8,
     fontSize: 12,

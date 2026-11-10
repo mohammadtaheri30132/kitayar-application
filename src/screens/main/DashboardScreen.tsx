@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { 
   Megaphone, ChevronLeft, MapPin, CheckSquare, Plus, FileText, Calendar as CalendarIcon, Clock, X, Filter, BookOpen,
-  HelpCircle, Send, User
+  HelpCircle, Send, User, Video
 } from 'lucide-react-native';
 import GlobalHeader from '../../components/common/GlobalHeader';
 import { getTodayJalali, formatJalaliDate, formatJalaliStandard, toPersianNumbers, PERSIAN_MONTHS } from '../../utils/date/jalaliHelper';
@@ -364,6 +364,19 @@ const DashboardScreen = ({ navigation }: any) => {
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         
+        {/* HERO BANNER */}
+        <TouchableOpacity
+          style={styles.heroBannerContainer}
+          activeOpacity={0.9}
+          onPress={() => navigation.navigate('OnlineClassesScreen')}
+        >
+          <Image
+            source={require('../../assets/image/classBanner.png')}
+            style={styles.heroBannerImage}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* ACTIVE ONLINE CLASSES WIDGET */}
         {activeClasses.length > 0 && (
           <View style={[styles.activeClassWidget, { backgroundColor: isDark ? '#1e293b' : '#f0fdf4', borderColor: '#10b981' }]}>
@@ -1055,6 +1068,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   content: { padding: 16, paddingBottom: 100 },
+  heroBannerContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+  },
+  heroBannerImage: {
+    width: '100%',
+    height: '100%',
+  },
   
   announcementCard: {
     padding: 16,

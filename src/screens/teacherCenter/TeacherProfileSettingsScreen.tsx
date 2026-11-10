@@ -6,7 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Image,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -14,73 +17,58 @@ import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/axiosConfig';
 import {
   ChevronRight,
-  GraduationCap,
-  BookOpen,
+  Camera,
   User,
-  Search,
-  CheckCircle2,
+  Building,
+  MapPin,
+  Clock,
+  FileText,
   Save,
-  Check,
-  Plus,
+  CheckCircle2,
 } from 'lucide-react-native';
+import ImagePicker from 'react-native-image-crop-picker';
+import { communityService } from '../../services/community/communityService';
 import { FONT_FAMILY } from '../../theme/typography';
 import { showSuccess, showError, showWarning } from '../../components/feedback';
-
-const DEFAULT_SUBJECTS = [
-  'ریاضی',
-  'فیزیک',
-  'شیمی',
-  'زیست‌شناسی',
-  'عربی',
-  'زبان انگلیسی',
-  'ادبیات فارسی',
-  'هندسه',
-  'حسابان',
-  'علوم تجربی',
-  'دینی و معارف',
-  'جامعه‌شناسی',
-  'فلسفه و منطق',
-  'اقتصاد',
-  'تاریخ و جغرافیا',
-  'روان‌شناسی',
-  'کامپیوتر و برنامه‌نویسی',
-];
 
 export const TeacherProfileSettingsScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
   const navigation = useNavigation<any>();
 
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Teaching setup
-  const [educationLevel, setEducationLevel] = useState<'elementary' | 'secondary' | 'both'>('secondary');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(['ریاضی']);
-  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
-  const [customSubjectInput, setCustomSubjectInput] = useState('');
+  // Photos
+  const [avatarUri, setAvatarUri] = useState<string>('https://i.pravatar.cc/150?u=kitayar@teacher.com');
+  const [coverUri, setCoverUri] = useState<string | null>(null);
 
-  // Profile & Resume
+  // Profile Fields
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
-  const [bio, setBio] = useState('');
+  const [schoolName, setSchoolName] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
   const [experienceYears, setExperienceYears] = useState('5');
+  const [bio, setBio] = useState('');
 
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/teacher/center/overview');
+      const res = await api.get('/teacher/profile');
       if (res.data?.success && res.data.data) {
         const d = res.data.data;
-        if (d.profileSummary) {
-          setFullName(d.profileSummary.fullName || '');
-          setHeadline(d.profileSummary.headline || '');
-          if (Array.isArray(d.profileSummary.teachingSubjects) && d.profileSummary.teachingSubjects.length > 0) {
-            setSelectedSubjects(d.profileSummary.teachingSubjects);
-          }
-          if (d.profileSummary.educationLevel) {
-            setEducationLevel(d.profileSummary.educationLevel);
-          }
-        }
+        if (d.user?.fullName) setFullName(d.user.fullName);
+        else if (d.fullName) setFullName(d.fullName);
+
+        if (d.avatar) setAvatarUri(d.avatar);
+        if (d.coverImage) setCoverUri(d.coverImage);
+        if (d.headline) setHeadline(d.headline);
+        if (d.bio) setBio(d.bio);
+        if (d.schools && d.schools.length > 0) setSchoolName(d.schools[0]);
+        else if (d.school) setSchoolName(d.school);
+        if (d.city) setCity(d.city);
+        if (d.province) setProvince(d.province);
+        if (d.experienceYears !== undefined) setExperienceYears(d.experienceYears.toString());
       }
     } catch (e) {
       console.warn('Error fetching profile settings:', e);
@@ -93,48 +81,99 @@ export const TeacherProfileSettingsScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
-  const toggleSubject = (sub: string) => {
-    if (selectedSubjects.includes(sub)) {
-      if (selectedSubjects.length === 1) {
-        showWarning('حداقل یک درس باید انتخاب شده باشد.');
+  const getFullUrl = (uri?: string | null) => {
+    if (!uri) return null;
+    if (uri.startsWith('http')) return uri;
+    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
+    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+  };
+
+  const handlePickCover = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        mediaType: 'photo',
+        cropping: true,
+        width: 1200,
+        height: 450,
+      });
+
+      if (image.size && image.size > 2 * 1024 * 1024) {
+        showWarning('حجم تصویر کاور نباید بیشتر از ۲ مگابایت باشد.');
         return;
       }
-      setSelectedSubjects((prev) => prev.filter((s) => s !== sub));
-    } else {
-      setSelectedSubjects((prev) => [...prev, sub]);
+
+      showSuccess('در حال بارگذاری تصویر کاور...');
+      const uploadedUrl = await communityService.uploadAttachment(
+        image.path,
+        image.filename || `cover_${Date.now()}.jpg`,
+        image.mime || 'image/jpeg'
+      );
+
+      if (uploadedUrl) {
+        setCoverUri(uploadedUrl);
+        await api.put('/teacher/profile', { coverImage: uploadedUrl });
+        showSuccess('تصویر کاور با موفقیت به‌روزرسانی شد.');
+      }
+    } catch {
+      // User cancelled
     }
   };
 
-  const handleAddCustomSubject = () => {
-    const trimmed = customSubjectInput.trim();
-    if (!trimmed) return;
-    if (selectedSubjects.includes(trimmed)) {
-      showWarning('این درس قبلاً اضافه شده است.');
-      return;
+  const handlePickAvatar = async () => {
+    try {
+      const image = await ImagePicker.openPicker({
+        mediaType: 'photo',
+        cropping: true,
+        width: 400,
+        height: 400,
+        cropperCircleOverlay: true,
+      });
+
+      if (image.size && image.size > 2 * 1024 * 1024) {
+        showWarning('حجم عکس پروفایل نباید بیشتر از ۲ مگابایت باشد.');
+        return;
+      }
+
+      showSuccess('در حال بارگذاری عکس پروفایل...');
+      const uploadedUrl = await communityService.uploadAttachment(
+        image.path,
+        image.filename || `avatar_${Date.now()}.jpg`,
+        image.mime || 'image/jpeg'
+      );
+
+      if (uploadedUrl) {
+        setAvatarUri(uploadedUrl);
+        await api.put('/teacher/profile', { avatar: uploadedUrl });
+        showSuccess('عکس پروفایل با موفقیت تغییر یافت.');
+      }
+    } catch {
+      // User cancelled
     }
-    setSelectedSubjects((prev) => [...prev, trimmed]);
-    setCustomSubjectInput('');
-    showSuccess(`درس «${trimmed}» افزوده شد.`);
   };
 
   const handleSave = async () => {
-    if (educationLevel !== 'elementary' && selectedSubjects.length === 0) {
-      showWarning('لطفاً حداقل یک درس تخصصی انتخاب کنید.');
+    if (!fullName.trim()) {
+      showWarning('نام و نام خانوادگی نمی‌تواند خالی باشد.');
       return;
     }
 
     try {
-      setSubmitting(true);
+      setSaving(true);
       const payload: any = {
-        educationLevel,
-        teachingSubjects: educationLevel === 'elementary' ? ['آموزگار ابتدایی (تمام دروس)'] : selectedSubjects,
+        fullName: fullName.trim(),
         headline: headline.trim(),
         bio: bio.trim(),
+        schools: schoolName.trim() ? [schoolName.trim()] : [],
+        city: city.trim(),
+        province: province.trim(),
+        experienceYears: parseInt(experienceYears) || 0,
+        avatar: avatarUri,
+        coverImage: coverUri || '',
       };
 
-      const res = await api.put('/teacher/center/workdesk-settings', payload);
+      const res = await api.put('/teacher/profile', payload);
       if (res.data?.success) {
-        showSuccess('تنظیمات مقاطع، دروس و پروفایل با موفقیت ذخیره شد.');
+        showSuccess('مشخصات پروفایل با موفقیت در سرور ذخیره شد.');
         navigation.goBack();
       } else {
         showError(res.data?.message || 'خطا در ذخیره‌سازی اطلاعات');
@@ -142,229 +181,179 @@ export const TeacherProfileSettingsScreen: React.FC = () => {
     } catch (err: any) {
       showError(err.response?.data?.message || 'خطا در برقراری ارتباط با سرور');
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Header */}
+      {/* Top Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <ChevronRight size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>ویرایش دروس و پروفایل تدریس</Text>
-        <View style={{ width: 24 }} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>ویرایش مشخصات و پروفایل</Text>
+        <View style={{ width: 32 }} />
       </View>
 
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.textLight }]}>در حال بارگذاری اطلاعات پروفایل...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
-          {/* Section 1: Education Level */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <GraduationCap size={20} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>مقطع تحصیلی تدریس</Text>
-            </View>
-            <Text style={[styles.sectionDesc, { color: colors.textLight }]}>
-              مقطع یا دوره‌ای که توانایی حل مسئله و برگزاری کلاس‌های آنلاین برای آن را دارید انتخاب کنید:
-            </Text>
-
-            <View style={styles.levelSelectorRow}>
-              <TouchableOpacity
-                style={[
-                  styles.levelPill,
-                  educationLevel === 'elementary' && styles.levelPillActive,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => setEducationLevel('elementary')}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.levelPillText, educationLevel === 'elementary' && styles.levelPillTextActive]}>
-                  ابتدایی (پایه‌های ۱ تا ۶)
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.levelPill,
-                  educationLevel === 'secondary' && styles.levelPillActive,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => setEducationLevel('secondary')}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.levelPillText, educationLevel === 'secondary' && styles.levelPillTextActive]}>
-                  متوسطه تخصصی
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.levelPill,
-                  educationLevel === 'both' && styles.levelPillActive,
-                  { borderColor: colors.border },
-                ]}
-                onPress={() => setEducationLevel('both')}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.levelPillText, educationLevel === 'both' && styles.levelPillTextActive]}>
-                  هر دو مقطع
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {educationLevel === 'elementary' && (
-              <View style={styles.noticeBox}>
-                <Text style={styles.noticeText}>
-                  به‌عنوان آموزگار دوره ابتدایی، درخواست‌ها و سوالات تمامی پایه‌های اول تا ششم برای شما ارسال خواهد شد.
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Section 2: Specialized Teaching Subjects */}
-          {(educationLevel === 'secondary' || educationLevel === 'both') && (
-            <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={styles.sectionHeader}>
-                <BookOpen size={20} color={colors.primary} />
-                <Text style={[styles.sectionTitle, { color: colors.text }]}>دروس تخصصی تدریس</Text>
-              </View>
-              <Text style={[styles.sectionDesc, { color: colors.textLight }]}>
-                شما می‌توانید چندین درس را همزمان انتخاب نمایید (مثلاً ریاضی و زبان):
-              </Text>
-
-              {/* Search Box */}
-              <View style={[styles.searchRow, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', borderColor: colors.border }]}>
-                <Search size={16} color={colors.textLight} />
-                <TextInput
-                  style={[styles.searchInput, { color: colors.text }]}
-                  placeholder="جستجوی درس..."
-                  placeholderTextColor={colors.textLight}
-                  value={subjectSearchQuery}
-                  onChangeText={setSubjectSearchQuery}
-                  textAlign="right"
-                />
-              </View>
-
-              {/* Subject Chips */}
-              <View style={styles.chipsWrap}>
-                {DEFAULT_SUBJECTS.filter((s) => !subjectSearchQuery || s.includes(subjectSearchQuery)).map((subj) => {
-                  const isSelected = selectedSubjects.includes(subj);
-                  return (
-                    <TouchableOpacity
-                      key={subj}
-                      style={[
-                        styles.chip,
-                        isSelected && { backgroundColor: colors.primary, borderColor: colors.primary },
-                        { borderColor: colors.border },
-                      ]}
-                      onPress={() => toggleSubject(subj)}
-                      activeOpacity={0.7}
-                    >
-                      {isSelected && <CheckCircle2 size={13} color="#ffffff" style={{ marginLeft: 4 }} />}
-                      <Text
-                        style={[
-                          styles.chipText,
-                          {
-                            color: isSelected ? '#ffffff' : colors.text,
-                            fontFamily: isSelected ? FONT_FAMILY.bold : FONT_FAMILY.regular,
-                          },
-                        ]}
-                      >
-                        {subj}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Add Custom Subject */}
-              <View style={styles.customSubjectRow}>
-                <TouchableOpacity
-                  style={[styles.addCustomBtn, { backgroundColor: colors.primary }]}
-                  onPress={handleAddCustomSubject}
-                  activeOpacity={0.8}
-                >
-                  <Plus size={16} color="#ffffff" />
-                  <Text style={styles.addCustomBtnText}>افزودن</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.customSubjectInput, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: colors.text, borderColor: colors.border }]}
-                  placeholder="افزودن درس دیگر (مثال: منطق دوازدهم)"
-                  placeholderTextColor={colors.textLight}
-                  value={customSubjectInput}
-                  onChangeText={setCustomSubjectInput}
-                  textAlign="right"
-                />
-              </View>
-            </View>
-          )}
-
-          {/* Section 3: Profile & Headline & Bio */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <User size={20} color={colors.primary} />
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>اطلاعات و بیوگرافی استاد</Text>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>نام و نام خانوادگی:</Text>
-              <TextInput
-                style={[styles.textInputDisabled, { backgroundColor: isDark ? '#1e293b' : '#f1f5f9', color: colors.textLight, borderColor: colors.border }]}
-                value={fullName}
-                editable={false}
-                textAlign="right"
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>عنوان شغلی / سرفصل رزومه:</Text>
-              <TextInput
-                style={[styles.textInput, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: colors.text, borderColor: colors.border }]}
-                placeholder="مثال: دبیر رسمی آموزش و پرورش، مدرس رتبه‌های برتر"
-                placeholderTextColor={colors.textLight}
-                value={headline}
-                onChangeText={setHeadline}
-                textAlign="right"
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>معرفی و سوابق آموزشی (بیوگرافی):</Text>
-              <TextInput
-                style={[styles.textArea, { backgroundColor: isDark ? '#0f172a' : '#f8fafc', color: colors.text, borderColor: colors.border }]}
-                placeholder="توضیح مختصری درباره تجربه تدریس، روش آموزش و افتخارات..."
-                placeholderTextColor={colors.textLight}
-                value={bio}
-                onChangeText={setBio}
-                multiline={true}
-                numberOfLines={4}
-                textAlign="right"
-              />
-            </View>
-          </View>
-
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-            onPress={handleSave}
-            disabled={submitting}
-            activeOpacity={0.85}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        >
+          <ScrollView
+            style={styles.content}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {submitting ? (
-              <ActivityIndicator color="#ffffff" size="small" />
-            ) : (
-              <>
-                <Check size={18} color="#ffffff" />
-                <Text style={styles.saveBtnText}>ذخیره تغییرات مشخصات و دروس</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </ScrollView>
+            {/* 1. Cover Photo & Avatar Customization */}
+            <View style={styles.bannerContainer}>
+              {coverUri ? (
+                <Image source={{ uri: getFullUrl(coverUri)! }} style={styles.coverImage} resizeMode="cover" />
+              ) : (
+                <View style={[styles.coverPlaceholder, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.coverPlaceholderText}>کیتایار • پروفایل رسمی معلم</Text>
+                </View>
+              )}
+
+              {/* Change Cover Button */}
+              <TouchableOpacity style={styles.changeCoverBtn} onPress={handlePickCover} activeOpacity={0.85}>
+                <Camera size={15} color="#ffffff" style={{ marginLeft: 5 }} />
+                <Text style={styles.changeCoverBtnText}>تغییر عکس پشت پروفایل (کاور)</Text>
+              </TouchableOpacity>
+
+              {/* Avatar Circle with Camera Button */}
+              <View style={[styles.avatarWrapper, { borderColor: colors.surface, backgroundColor: colors.surface }]}>
+                <Image source={{ uri: getFullUrl(avatarUri)! }} style={styles.avatarImage} resizeMode="cover" />
+                <TouchableOpacity style={styles.changeAvatarBtn} onPress={handlePickAvatar} activeOpacity={0.85}>
+                  <Camera size={14} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 2. Form Inputs */}
+            <View style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* Full Name */}
+              <View style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <User size={15} color={colors.primary} />
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>نام و نام خانوادگی:</Text>
+                </View>
+                <TextInput
+                  style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="مثال: علی احمدی"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              {/* Headline */}
+              <View style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <FileText size={15} color={colors.primary} />
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>عنوان حرفه‌ای (Headline):</Text>
+                </View>
+                <TextInput
+                  style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                  value={headline}
+                  onChangeText={setHeadline}
+                  placeholder="مثال: آموزگار رسمی پایه ششم • مدرس ریاضی تیزهوشان"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              {/* School Name */}
+              <View style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <Building size={15} color={colors.primary} />
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>مدرسه محل خدمت فعلی:</Text>
+                </View>
+                <TextInput
+                  style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                  value={schoolName}
+                  onChangeText={setSchoolName}
+                  placeholder="مثال: دبستان شهید همت منطقه ۵ تهران"
+                  placeholderTextColor={colors.textLight}
+                />
+              </View>
+
+              {/* City & Province & Experience Years */}
+              <View style={styles.twoInputsRow}>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.labelRow}>
+                    <MapPin size={14} color={colors.primary} />
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>شهر:</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                    value={city}
+                    onChangeText={setCity}
+                    placeholder="تهران"
+                    placeholderTextColor={colors.textLight}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <View style={styles.labelRow}>
+                    <Clock size={14} color={colors.primary} />
+                    <Text style={[styles.inputLabel, { color: colors.text }]}>سابقه کار (سال):</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.inputField, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                    value={experienceYears}
+                    onChangeText={setExperienceYears}
+                    keyboardType="numeric"
+                    placeholder="۸"
+                    placeholderTextColor={colors.textLight}
+                  />
+                </View>
+              </View>
+
+              {/* Bio / About Me */}
+              <View style={styles.fieldWrap}>
+                <View style={styles.labelRow}>
+                  <FileText size={15} color={colors.primary} />
+                  <Text style={[styles.inputLabel, { color: colors.text }]}>درباره من (بیوگرافی و تجربیات):</Text>
+                </View>
+                <TextInput
+                  style={[styles.inputField, styles.textArea, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                  value={bio}
+                  onChangeText={setBio}
+                  placeholder="چند خط درباره سبک تدریس، اهداف آموزشی، سوابق و شیوه‌های تعامل با دانش‌آموزان بنویسید..."
+                  placeholderTextColor={colors.textLight}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            {/* 3. Save Button */}
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: colors.primary }, saving && { opacity: 0.7 }]}
+              onPress={handleSave}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <>
+                  <Save size={18} color="#ffffff" style={{ marginLeft: 8 }} />
+                  <Text style={styles.saveBtnText}>ذخیره تغییرات مشخصات پروفایل</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </SafeAreaView>
   );
@@ -375,15 +364,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
     borderBottomWidth: 1,
   },
   backBtn: {
-    padding: 4,
+    padding: 6,
+    borderRadius: 8,
   },
   headerTitle: {
     fontSize: 16,
@@ -393,185 +383,146 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.regular,
   },
   content: {
     flex: 1,
   },
   contentContainer: {
-    padding: 16,
-    paddingBottom: 40,
-    gap: 14,
+    paddingBottom: 60,
   },
-  sectionCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 12,
+
+  // Cover & Avatar
+  bannerContainer: {
+    position: 'relative',
+    height: 150,
+    marginBottom: 50,
   },
-  sectionHeader: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 8,
+  coverImage: {
+    width: '100%',
+    height: '100%',
   },
-  sectionTitle: {
-    fontSize: 14.5,
-    fontFamily: FONT_FAMILY.bold,
-  },
-  sectionDesc: {
-    fontSize: 11.5,
-    fontFamily: FONT_FAMILY.regular,
-    textAlign: 'right',
-    lineHeight: 18,
-  },
-  levelSelectorRow: {
-    flexDirection: 'row-reverse',
-    gap: 8,
-    marginTop: 4,
-  },
-  levelPill: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
+  coverPlaceholder: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  levelPillActive: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-  levelPillText: {
-    fontSize: 11,
-    fontFamily: FONT_FAMILY.bold,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  levelPillTextActive: {
+  coverPlaceholderText: {
     color: '#ffffff',
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
   },
-  noticeBox: {
-    backgroundColor: '#eff6ff',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-    borderRadius: 10,
-    padding: 10,
-  },
-  noticeText: {
-    fontSize: 11,
-    fontFamily: FONT_FAMILY.regular,
-    color: '#1e40af',
-    textAlign: 'right',
-    lineHeight: 18,
-  },
-  searchRow: {
+  changeCoverBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    fontSize: 12,
-    fontFamily: FONT_FAMILY.regular,
-  },
-  chipsWrap: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 11.5,
-  },
-  customSubjectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 6,
-  },
-  customSubjectInput: {
-    flex: 1,
-    borderWidth: 1,
     borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    fontSize: 12,
-    fontFamily: FONT_FAMILY.regular,
   },
-  addCustomBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-    gap: 4,
-  },
-  addCustomBtnText: {
+  changeCoverBtnText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: FONT_FAMILY.bold,
   },
-  fieldGroup: {
+  avatarWrapper: {
+    position: 'absolute',
+    bottom: -40,
+    right: 20,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3.5,
+    elevation: 4,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 44,
+  },
+  changeAvatarBtn: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    backgroundColor: '#2563eb',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+  },
+
+  // Form Card
+  formCard: {
+    marginHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+    gap: 16,
+  },
+  fieldWrap: {
     gap: 6,
   },
-  fieldLabel: {
-    fontSize: 12,
+  labelRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
+  inputLabel: {
+    fontSize: 12.5,
     fontFamily: FONT_FAMILY.bold,
     textAlign: 'right',
   },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    fontSize: 12.5,
+  inputField: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13,
     fontFamily: FONT_FAMILY.regular,
+    textAlign: 'right',
   },
-  textInputDisabled: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    fontSize: 12.5,
-    fontFamily: FONT_FAMILY.regular,
+  twoInputsRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
   },
   textArea: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 12.5,
-    fontFamily: FONT_FAMILY.regular,
-    minHeight: 80,
-    textAlignVertical: 'top',
+    height: 100,
+    paddingTop: 10,
   },
+
+  // Save Button
   saveBtn: {
-    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginTop: 20,
+    flexDirection: 'row-reverse',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 13,
-    borderRadius: 12,
-    gap: 6,
-    marginTop: 6,
+    paddingVertical: 14,
+    borderRadius: 14,
+    elevation: 3,
+    shadowColor: '#2563eb',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   saveBtnText: {
     color: '#ffffff',
-    fontSize: 13.5,
+    fontSize: 14,
     fontFamily: FONT_FAMILY.bold,
   },
 });
 
 export default TeacherProfileSettingsScreen;
-

@@ -402,20 +402,7 @@ export const TeacherCenterScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchServerData} colors={[colors.primary]} />}
       >
-        {/* 2. HERO BANNER */}
-        <TouchableOpacity
-          style={styles.bannerContainer}
-          activeOpacity={0.9}
-          onPress={() => navigation.navigate('OnlineClassesScreen')}
-        >
-          <Image
-            source={require('../../assets/image/classBanner.png')}
-            style={styles.bannerImage}
-            resizeMode="cover"
-          />
-        </TouchableOpacity>
-
-        {/* 3. ONBOARDING & EARNING REQUIREMENTS CARD */}
+        {/* 1. ONBOARDING & EARNING REQUIREMENTS CARD */}
         <View style={[styles.onboardingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Top Banner Row with 3D Character Illustration */}
           <View style={styles.onboardingHeaderRow}>

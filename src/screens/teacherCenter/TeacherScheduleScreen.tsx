@@ -286,9 +286,9 @@ export const TeacherScheduleScreen: React.FC = () => {
           </View>
 
           {/* Weekday Labels (ش تا ج) */}
-          <View style={styles.calendarWeekdaysRow}>
+          <View style={styles.calendarWeekRow}>
             {['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map((dayInitial, idx) => (
-              <View key={idx} style={styles.calendarWeekdayCell}>
+              <View key={idx} style={styles.calendarColCell}>
                 <Text style={[styles.calendarWeekdayText, { color: idx === 6 ? '#ef4444' : colors.textLight }]}>
                   {dayInitial}
                 </Text>
@@ -296,70 +296,87 @@ export const TeacherScheduleScreen: React.FC = () => {
             ))}
           </View>
 
-          {/* Monthly Calendar Grid */}
-          <View style={styles.calendarGridWrap}>
-            {getCalendarGrid(calJy, calJm).map((dayNum, cellIdx) => {
-              if (dayNum === null) {
-                return <View key={`empty-${cellIdx}`} style={styles.calendarDayCellEmpty} />;
+          {/* Monthly Calendar Grid by Weeks (100% aligned with weekdays) */}
+          <View style={styles.calendarWeeksContainer}>
+            {(() => {
+              const rawGrid = getCalendarGrid(calJy, calJm);
+              while (rawGrid.length % 7 !== 0) {
+                rawGrid.push(null);
               }
-              const isSelected = calJd === dayNum;
-              const isToday = todayJalali.jy === calJy && todayJalali.jm === calJm && todayJalali.jd === dayNum;
-              const dateKey = formatJalaliStandard(calJy, calJm, dayNum);
-              const daySchedule = availableSchedule.find((s) => s.date === dateKey);
-              const hasSlots = daySchedule && daySchedule.slots && daySchedule.slots.length > 0;
+              const weeks: (number | null)[][] = [];
+              for (let i = 0; i < rawGrid.length; i += 7) {
+                weeks.push(rawGrid.slice(i, i + 7));
+              }
+              return weeks.map((week, wIdx) => (
+                <View key={wIdx} style={styles.calendarWeekRow}>
+                  {week.map((dayNum, cellIdx) => {
+                    if (dayNum === null) {
+                      return <View key={`empty-${cellIdx}`} style={styles.calendarColCell} />;
+                    }
+                    const isSelected = calJd === dayNum;
+                    const isToday = todayJalali.jy === calJy && todayJalali.jm === calJm && todayJalali.jd === dayNum;
+                    const dateKey = formatJalaliStandard(calJy, calJm, dayNum);
+                    const daySchedule = availableSchedule.find((s) => s.date === dateKey);
+                    const hasSlots = daySchedule && daySchedule.slots && daySchedule.slots.length > 0;
 
-              return (
-                <TouchableOpacity
-                  key={`day-${dayNum}`}
-                  style={[
-                    styles.calendarDayCell,
-                    {
-                      backgroundColor: hasSlots
-                        ? isDark
-                          ? '#065f4633'
-                          : '#dcfce7'
-                        : isDark
-                        ? '#1e293b55'
-                        : '#ffffff',
-                      borderColor: isSelected
-                        ? colors.primary
-                        : hasSlots
-                        ? '#86efac'
-                        : '#f97316',
-                      borderWidth: isSelected ? 2.5 : 1.2,
-                    },
-                  ]}
-                  onPress={() => handleSelectDay(dayNum)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.calendarDayNum,
-                      {
-                        color: isSelected
-                          ? colors.primary
-                          : hasSlots
-                          ? '#15803d'
-                          : colors.text,
-                        fontFamily: isSelected || hasSlots ? FONT_FAMILY.bold : FONT_FAMILY.medium,
-                      },
-                    ]}
-                  >
-                    {toPersianNumbers(dayNum)}
-                  </Text>
-                  {hasSlots ? (
-                    <View style={styles.slotDotBadge}>
-                      <View style={styles.greenDot} />
-                      <Text style={styles.slotCountText}>
-                        {toPersianNumbers(daySchedule.slots.length)}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={{ height: 12 }} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                    return (
+                      <View key={`day-${dayNum}`} style={styles.calendarColCell}>
+                        <TouchableOpacity
+                          style={[
+                            styles.calendarDayCell,
+                            {
+                              backgroundColor: hasSlots
+                                ? isDark
+                                  ? '#065f4633'
+                                  : '#dcfce7'
+                                : isDark
+                                ? '#1e293b55'
+                                : '#ffffff',
+                              borderColor: isSelected
+                                ? colors.primary
+                                : hasSlots
+                                ? '#86efac'
+                                : '#f97316',
+                              borderWidth: isSelected ? 2.5 : 1.2,
+                            },
+                          ]}
+                          onPress={() => handleSelectDay(dayNum)}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.calendarDayNum,
+                              {
+                                color: isSelected
+                                  ? colors.primary
+                                  : hasSlots
+                                  ? '#15803d'
+                                  : colors.text,
+                                fontFamily: isSelected || hasSlots ? FONT_FAMILY.bold : FONT_FAMILY.medium,
+                              },
+                            ]}
+                          >
+                            {toPersianNumbers(dayNum)}
+                          </Text>
+                          {hasSlots ? (
+                            <View style={styles.slotDotBadge}>
+                              <View style={styles.greenDot} />
+                              <Text style={styles.slotCountText}>
+                                {toPersianNumbers(daySchedule.slots.length)}
+                              </Text>
+                            </View>
+                          ) : isToday ? (
+                            <Text style={[styles.todayLabel, { color: colors.primary }]}>امروز</Text>
+                          ) : (
+                            <View style={{ height: 10 }} />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </View>
+              ));
+            })()}
           </View>
 
           {/* Calendar Color Legend */}
@@ -664,37 +681,39 @@ const styles = StyleSheet.create({
     fontFamily: FONT_FAMILY.regular,
     marginTop: 2,
   },
-  calendarWeekdaysRow: {
+  calendarWeekRow: {
     flexDirection: 'row-reverse',
+    gap: 6,
+    marginBottom: 6,
   },
-  calendarWeekdayCell: {
+  calendarColCell: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'center',
   },
   calendarWeekdayText: {
     fontSize: 12,
     fontFamily: FONT_FAMILY.bold,
+    paddingVertical: 4,
   },
-  calendarGridWrap: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  calendarDayCellEmpty: {
-    width: `${(100 - 6 * 1) / 7}%`,
-    height: 48,
+  calendarWeeksContainer: {
+    gap: 4,
   },
   calendarDayCell: {
-    width: `${(100 - 6 * 1) / 7}%`,
-    height: 50,
+    width: '100%',
+    aspectRatio: 1,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   calendarDayNum: {
     fontSize: 13,
+  },
+  todayLabel: {
+    fontSize: 9,
+    fontFamily: FONT_FAMILY.bold,
+    marginTop: 2,
   },
   slotDotBadge: {
     flexDirection: 'row',
