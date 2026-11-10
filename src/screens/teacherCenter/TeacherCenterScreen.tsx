@@ -43,7 +43,18 @@ import {
   X,
   GraduationCap,
   CheckCircle2,
+  Calendar,
+  Trash2,
 } from 'lucide-react-native';
+import * as jalaali from 'jalaali-js';
+import {
+  PERSIAN_MONTHS,
+  toPersianNumbers,
+  getCalendarGrid,
+  getTodayJalali,
+  formatJalaliStandard,
+  getDaysInJalaliMonth,
+} from '../../utils/date/jalaliHelper';
 import { FONT_FAMILY } from '../../theme/typography';
 import { showSuccess, showWarning, showError } from '../../components/feedback';
 
@@ -121,14 +132,41 @@ const INITIAL_CONVERSATIONS: ConversationItem[] = [
   },
 ];
 
+export interface DaySchedule {
+  date: string; // Jalali YYYY-MM-DD e.g. 1405-08-25
+  slots: string[]; // e.g. ["۳ تا ۴ و نیم", "۵ تا ۶ و نیم"]
+}
+
+const PERSIAN_DAY_NAMES = [
+  'شنبه',
+  'یکشنبه',
+  'دوشنبه',
+  'سه‌شنبه',
+  'چهارشنبه',
+  'پنج‌شنبه',
+  'جمعه',
+];
+
 export const TeacherCenterScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
   const navigation = useNavigation<any>();
 
-  // Online Availability state
-  const [isOnline, setIsOnline] = useState<boolean>(true);
-  const [selectedDurationHours, setSelectedDurationHours] = useState<number>(2); // 1, 2, 3, 4
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(7172); // ~ 01:59:32
+  // Active Schedule & Calendar states (Replaces old Online toggle mechanism)
+  const [availableSchedule, setAvailableSchedule] = useState<DaySchedule[]>([]);
+  const [isScheduleModalVisible, setIsScheduleModalVisible] = useState(false);
+  const [scheduleView, setScheduleView] = useState<'calendar' | 'daySlots'>('calendar');
+
+  const todayJalali = getTodayJalali();
+  const [calJy, setCalJy] = useState<number>(todayJalali.jy);
+  const [calJm, setCalJm] = useState<number>(todayJalali.jm);
+  const [calJd, setCalJd] = useState<number>(todayJalali.jd);
+
+  // Day slots configuration states
+  const [slotInputHour, setSlotInputHour] = useState<string>('3');
+  const [daySlots, setDaySlots] = useState<string[]>([]);
+  const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+
   const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active');
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [conversations, setConversations] = useState<ConversationItem[]>(INITIAL_CONVERSATIONS);
@@ -160,73 +198,135 @@ export const TeacherCenterScreen: React.FC = () => {
   const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
   const [submittingWorkdesk, setSubmittingWorkdesk] = useState(false);
 
-  const timerRef = useRef<any>(null);
+  // Helper: get weekday index (0=شنبه, 1=یکشنبه, ..., 6=جمعه)
+  const getDayWeekday = (jy: number, jm: number, jd: number): number => {
+    const g = jalaali.toGregorian(jy, jm, jd);
+    const d = new Date(g.gy, g.gm - 1, g.gd);
+    return (d.getDay() + 1) % 7;
+  };
 
-  // Countdown timer logic
-  useEffect(() => {
-    if (isOnline && remainingSeconds > 0) {
-      timerRef.current = setInterval(() => {
-        setRemainingSeconds((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            setIsOnline(false);
-            showWarning('زمان آنلاین بودن به پایان رسید و به حالت آفلاین تغییر یافتید.');
-            handleUpdateBackendAvailability(false);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  // Helper: calculate 1.5-hour slot range from start hour (e.g. 3 -> "۳ تا ۴ و نیم")
+  const calculateSlotRange = (inputHour: string): string => {
+    if (!inputHour || !inputHour.trim()) return '';
+    const normalized = inputHour.trim().replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d).toString());
+    let startMinutes = 0;
+    if (normalized.includes(':')) {
+      const parts = normalized.split(':');
+      const h = parseInt(parts[0], 10);
+      const m = parseInt(parts[1], 10) || 0;
+      if (isNaN(h)) return '';
+      startMinutes = h * 60 + m;
     } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+      const h = parseInt(normalized, 10);
+      if (isNaN(h)) return '';
+      startMinutes = h * 60;
     }
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+    const endMinutes = startMinutes + 90; // Exactly 1.5 hours duration
+
+    const toLabel = (totalMins: number) => {
+      const h = Math.floor(totalMins / 60) % 24;
+      const m = totalMins % 60;
+      const hP = toPersianNumbers(h);
+      if (m === 30) return `${hP} و نیم`;
+      if (m === 0) return `${hP}`;
+      return `${hP}:${toPersianNumbers(m < 10 ? `0${m}` : `${m}`)}`;
     };
-  }, [isOnline, remainingSeconds]);
 
-  // Format seconds into HH:MM:SS with Persian digits
-  const formatTimer = (totalSec: number) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
-    const secs = totalSec % 60;
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-    const timeStr = `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-    const farsiDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-    return timeStr.replace(/[0-9]/g, (w) => farsiDigits[+w]);
+    return `${toLabel(startMinutes)} تا ${toLabel(endMinutes)}`;
   };
 
-  const handleSelectDuration = (hours: number) => {
-    setSelectedDurationHours(hours);
-    const newSeconds = hours * 3600;
-    setRemainingSeconds(newSeconds);
-    if (!isOnline) {
-      setIsOnline(true);
-      handleUpdateBackendAvailability(true);
-    }
-    showSuccess(`زمان پاسخگویی روی ${hours} ساعت تنظیم شد.`);
-  };
-
-  const handleToggleOnline = (value: boolean) => {
-    setIsOnline(value);
-    if (value) {
-      setRemainingSeconds(selectedDurationHours * 3600);
-      showSuccess('وضعیت شما به «آنلاین» تغییر یافت.');
+  const handlePrevMonth = () => {
+    if (calJm === 1) {
+      setCalJm(12);
+      setCalJy((prev) => prev - 1);
     } else {
-      showWarning('وضعیت شما به «آفلاین» تغییر یافت.');
+      setCalJm((prev) => prev - 1);
     }
-    handleUpdateBackendAvailability(value);
   };
 
-  const handleUpdateBackendAvailability = async (online: boolean) => {
+  const handleNextMonth = () => {
+    if (calJm === 12) {
+      setCalJm(1);
+      setCalJy((prev) => prev + 1);
+    } else {
+      setCalJm((prev) => prev + 1);
+    }
+  };
+
+  const handleAddSlot = () => {
+    const range = calculateSlotRange(slotInputHour);
+    if (!range) {
+      showWarning('لطفاً ساعت شروع معتبری وارد کنید (مثلاً ۳ یا ۱۵)');
+      return;
+    }
+    if (daySlots.includes(range)) {
+      showWarning('این بازه زمانی قبلاً افزوده شده است.');
+      return;
+    }
+    setDaySlots((prev) => [...prev, range]);
+    showSuccess(`بازه «${range}» ثبت شد.`);
+    setSlotInputHour('');
+  };
+
+  const handleRemoveSlot = (indexToRemove: number) => {
+    setDaySlots((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    showSuccess('بازه زمانی حذف شد.');
+  };
+
+  const handleSaveDaySchedule = async () => {
     try {
-      await api.post('/teacher/center/availability', {
-        status: online ? 'online' : 'offline',
-        acceptingQuestions: online,
+      setSavingSchedule(true);
+      let updated = [...availableSchedule];
+
+      if (repeatWeekdays.length > 0) {
+        // Apply this day's slot schedule across all matching weekdays in the month
+        const daysCount = getDaysInJalaliMonth(calJy, calJm);
+        for (let day = 1; day <= daysCount; day++) {
+          const wk = getDayWeekday(calJy, calJm, day);
+          if (repeatWeekdays.includes(wk)) {
+            const dateStr = formatJalaliStandard(calJy, calJm, day);
+            const existingIdx = updated.findIndex((s) => s.date === dateStr);
+            if (daySlots.length > 0) {
+              if (existingIdx >= 0) {
+                updated[existingIdx] = { date: dateStr, slots: [...daySlots] };
+              } else {
+                updated.push({ date: dateStr, slots: [...daySlots] });
+              }
+            } else {
+              if (existingIdx >= 0) {
+                updated.splice(existingIdx, 1);
+              }
+            }
+          }
+        }
+      } else {
+        const dateStr = formatJalaliStandard(calJy, calJm, calJd);
+        const existingIdx = updated.findIndex((s) => s.date === dateStr);
+        if (daySlots.length > 0) {
+          if (existingIdx >= 0) {
+            updated[existingIdx] = { date: dateStr, slots: [...daySlots] };
+          } else {
+            updated.push({ date: dateStr, slots: [...daySlots] });
+          }
+        } else {
+          if (existingIdx >= 0) {
+            updated.splice(existingIdx, 1);
+          }
+        }
+      }
+
+      await api.put('/teacher/center/workdesk-settings', {
+        availableSchedule: updated,
       });
-    } catch (e) {
-      console.warn('Could not sync availability with server:', e);
+
+      setAvailableSchedule(updated);
+      showSuccess('برنامه کاری شما با موفقیت ذخیره شد.');
+      setScheduleView('calendar');
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'خطا در ذخیره برنامه کاری');
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -245,8 +345,8 @@ export const TeacherCenterScreen: React.FC = () => {
 
       if (ovRes.status === 'fulfilled' && ovRes.value.data?.success) {
         const d = ovRes.value.data.data;
-        if (d.availability?.status) {
-          setIsOnline(d.availability.status === 'online');
+        if (Array.isArray(d.profileSummary?.availableSchedule)) {
+          setAvailableSchedule(d.profileSummary.availableSchedule);
         }
         if (d.counters) {
           setStats({
@@ -469,7 +569,10 @@ export const TeacherCenterScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.bannerContainer}
           activeOpacity={0.9}
-          onPress={() => handleToggleOnline(true)}
+          onPress={() => {
+            setScheduleView('calendar');
+            setIsScheduleModalVisible(true);
+          }}
         >
           <Image
             source={require('../../assets/image/classBanner.png')}
@@ -504,109 +607,94 @@ export const TeacherCenterScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* 5. ONLINE STATUS CARD (Character + Toggle + 4 Duration Pills + Timer) */}
-        <View style={[styles.onlineCard, { backgroundColor: isDark ? '#064e3b18' : '#f0fdf4', borderColor: isDark ? '#047857' : '#bbf7d0' }]}>
-          {/* Top Row: Character & Toggle */}
-          <View style={styles.onlineHeaderRow}>
-            {/* Status Text on Right */}
-            <View style={styles.onlineStatusTextCol}>
-              <View style={styles.statusIndicatorRow}>
-                <View style={[styles.statusGlowDot, { backgroundColor: isOnline ? '#16a34a' : '#94a3b8' }]} />
-                <Text style={[styles.statusTitle, { color: isOnline ? '#15803d' : '#64748b' }]}>
-                  {isOnline ? 'آنلاین' : 'آفلاین'}
+        {/* 5. ACTIVE DAYS / SCHEDULE CARD (Replaces old Online Toggle) */}
+        <TouchableOpacity
+          style={[
+            styles.activeDaysCard,
+            {
+              backgroundColor: isDark ? '#064e3b18' : '#f0fdf4',
+              borderColor: isDark ? '#047857' : '#86efac',
+            },
+          ]}
+          onPress={() => {
+            setScheduleView('calendar');
+            setIsScheduleModalVisible(true);
+          }}
+          activeOpacity={0.88}
+        >
+          <View style={styles.activeDaysTopRow}>
+            <View style={styles.activeDaysBadge}>
+              <Text style={styles.activeDaysBadgeText}>
+                {availableSchedule.length > 0
+                  ? `${toPersianNumbers(availableSchedule.length)} روز فعال ثبت‌شده`
+                  : 'برنامه کاری ثبت‌نشده'}
+              </Text>
+            </View>
+            <View style={styles.activeDaysHeaderRight}>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={[styles.activeDaysTitle, { color: isDark ? '#a7f3d0' : '#14532d' }]}>
+                  روزهای فعال تدریس و رفع اشکال
+                </Text>
+                <Text style={[styles.activeDaysSub, { color: isDark ? '#6ee7b7' : '#166534' }]}>
+                  مشاهده تقویم ماهانه و تنظیم بازه‌های زمانی ۱.۵ ساعته
                 </Text>
               </View>
-              <Text style={[styles.statusSubtitle, { color: isDark ? '#a7f3d0' : '#475569' }]}>
-                {isOnline ? 'در حال پاسخ به سوالات دانش‌آموزان' : 'جهت دریافت سوالات جدید آنلاین شوید'}
-              </Text>
-            </View>
-
-            {/* Switch in Center */}
-            <View style={styles.switchCol}>
-              <Text style={[styles.switchHint, { color: isDark ? '#86efac' : '#2563eb' }]}>
-                فعال‌سازی وضعیت آنلاین
-              </Text>
-              <Switch
-                value={isOnline}
-                onValueChange={handleToggleOnline}
-                trackColor={{ false: '#cbd5e1', true: '#16a34a' }}
-                thumbColor="#ffffff"
-                style={{ transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }], marginTop: 4 }}
-              />
-            </View>
-
-            {/* Character Image on Left */}
-            <View style={styles.characterContainer}>
-              <Image
-                source={
-                  isOnline
-                    ? require('../../assets/image/activecarecter.png')
-                    : require('../../assets/image/diactive-carecter.png')
-                }
-                style={styles.characterImage}
-                resizeMode="contain"
-              />
-              <ChevronLeft size={18} color="#15803d" style={styles.characterChevron} />
+              <View style={[styles.activeDaysIconCircle, { backgroundColor: isDark ? '#065f46' : '#dcfce7' }]}>
+                <Calendar size={22} color="#16a34a" />
+              </View>
             </View>
           </View>
 
-          {/* 4 Duration Pills: 1 ساعت، ۲ ساعت، ۳ ساعت، ۴ ساعت */}
-          <View style={styles.durationsRow}>
-            {[
-              { hours: 1, label: '۱ ساعت' },
-              { hours: 2, label: '۲ ساعت' },
-              { hours: 3, label: '۳ ساعت' },
-              { hours: 4, label: '۴ ساعت' },
-            ].map((pill) => {
-              const isSelected = selectedDurationHours === pill.hours && isOnline;
-              return (
-                <TouchableOpacity
-                  key={pill.hours}
-                  style={[
-                    styles.durationPill,
-                    {
-                      backgroundColor: isSelected
-                        ? (isDark ? '#065f46' : '#dcfce7')
-                        : (isDark ? '#0f172a66' : '#ffffff'),
-                      borderColor: isSelected ? '#16a34a' : (isDark ? '#334155' : '#e2e8f0'),
-                    },
-                  ]}
-                  onPress={() => handleSelectDuration(pill.hours)}
-                  activeOpacity={0.8}
-                >
-                  {isSelected ? (
-                    <View style={styles.checkCircleSmall}>
-                      <Check size={11} color="#ffffff" strokeWidth={3} />
-                    </View>
-                  ) : (
-                    <Clock size={13} color="#64748b" />
-                  )}
-                  <Text
+          {/* Active Days Preview Pills */}
+          {availableSchedule.length > 0 ? (
+            <View style={styles.activeDaysSlotsPreview}>
+              <Text style={[styles.previewLabel, { color: isDark ? '#86efac' : '#15803d' }]}>
+                نوبت‌های فعال ثبت‌شده:
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, flexDirection: 'row-reverse' }}
+              >
+                {availableSchedule.slice(0, 4).map((item, idx) => (
+                  <View
+                    key={idx}
                     style={[
-                      styles.durationPillText,
-                      { color: isSelected ? '#15803d' : '#475569', fontWeight: isSelected ? 'bold' : '500' },
+                      styles.previewSlotChip,
+                      {
+                        backgroundColor: isDark ? '#064e3b40' : '#ffffff',
+                        borderColor: '#86efac',
+                      },
                     ]}
                   >
-                    {pill.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Countdown Timer Row */}
-          <View style={[styles.timerBanner, { backgroundColor: isDark ? '#064e3b33' : '#dcfce788', borderColor: isDark ? '#059669' : '#86efac' }]}>
-            <Text style={[styles.timerDigits, { color: isOnline ? '#15803d' : '#64748b' }]}>
-              {isOnline ? formatTimer(remainingSeconds) : '۰۰:۰۰:۰۰'}
-            </Text>
-            <View style={styles.timerLabelRow}>
-              <Text style={[styles.timerLabel, { color: isDark ? '#a7f3d0' : '#166534' }]}>
-                زمان تا غیرفعال شدن آنلاین بودن:
+                    <Clock size={12} color="#16a34a" />
+                    <Text style={[styles.previewSlotText, { color: isDark ? '#d1fae5' : '#166534' }]}>
+                      {toPersianNumbers(item.date)}: {item.slots[0] || '۱.۵ ساعت'}
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={[styles.emptyScheduleNotice, { backgroundColor: isDark ? '#064e3b25' : '#ffffff' }]}>
+              <Text style={[styles.emptyScheduleText, { color: isDark ? '#a7f3d0' : '#15803d' }]}>
+                جهت حضور در لیست اساتید فعال، تقویم ماهانه خود را با کلیک روی این بخش تنظیم کنید.
               </Text>
-              <Clock size={16} color="#16a34a" style={{ marginRight: 6 }} />
+            </View>
+          )}
+
+          {/* Bottom Action Row */}
+          <View style={styles.activeDaysFooterRow}>
+            <View style={styles.openCalendarBtn}>
+              <ChevronLeft size={16} color="#15803d" />
+              <Text style={styles.openCalendarBtnText}>مدیریت تقویم و ساعات کاری</Text>
+            </View>
+            <View style={styles.slotDurationBadge}>
+              <Clock size={13} color="#15803d" />
+              <Text style={styles.slotDurationText}>طول هر نوبت: ۱.۵ ساعت</Text>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* ONLINE CLASSES PROMINENT BANNER */}
         <View style={[styles.onlineClassHeroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1235,6 +1323,334 @@ export const TeacherCenterScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* MODAL 3: Active Days & Schedule Calendar Modal */}
+      <Modal
+        visible={isScheduleModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsScheduleModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalBox, { backgroundColor: colors.surface, maxHeight: '92%' }]}>
+            {/* Modal Header */}
+            <View style={styles.modalBoxHeader}>
+              <TouchableOpacity onPress={() => setIsScheduleModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={20} color={colors.textLight} />
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                <Calendar size={20} color={colors.primary} />
+                <Text style={[styles.modalBoxTitle, { color: colors.text }]}>
+                  {scheduleView === 'calendar' ? 'تقویم کاری و روزهای فعال' : 'تنظیم ساعت و روزهای هفته'}
+                </Text>
+              </View>
+            </View>
+
+            {scheduleView === 'calendar' ? (
+              // VIEW 1: MONTHLY CALENDAR
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Month Navigator */}
+                <View style={[styles.calendarMonthHeader, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+                  <TouchableOpacity onPress={handlePrevMonth} style={styles.monthNavBtn}>
+                    <ChevronRight size={20} color={colors.text} />
+                  </TouchableOpacity>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.monthNavTitle, { color: colors.text }]}>
+                      {PERSIAN_MONTHS[calJm - 1]} {toPersianNumbers(calJy)}
+                    </Text>
+                    <Text style={[styles.monthNavSub, { color: colors.textLight }]}>
+                      برای تنظیم ساعت تدریس، روی هر روز کلیک کنید
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={handleNextMonth} style={styles.monthNavBtn}>
+                    <ChevronLeft size={20} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Weekday Labels (Sat to Fri) */}
+                <View style={styles.calendarWeekdaysRow}>
+                  {['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map((dayInitial, idx) => (
+                    <View key={idx} style={styles.calendarWeekdayCell}>
+                      <Text style={[styles.calendarWeekdayText, { color: idx === 6 ? '#ef4444' : colors.textLight }]}>
+                        {dayInitial}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Calendar Grid */}
+                <View style={styles.calendarGridWrap}>
+                  {getCalendarGrid(calJy, calJm).map((dayNum, cellIdx) => {
+                    if (dayNum === null) {
+                      return <View key={`empty-${cellIdx}`} style={styles.calendarDayCellEmpty} />;
+                    }
+                    const isToday = todayJalali.jy === calJy && todayJalali.jm === calJm && todayJalali.jd === dayNum;
+                    const dateKey = formatJalaliStandard(calJy, calJm, dayNum);
+                    const daySchedule = availableSchedule.find((s) => s.date === dateKey);
+                    const hasSlots = daySchedule && daySchedule.slots && daySchedule.slots.length > 0;
+
+                    return (
+                      <TouchableOpacity
+                        key={`day-${dayNum}`}
+                        style={[
+                          styles.calendarDayCell,
+                          {
+                            backgroundColor: hasSlots
+                              ? (isDark ? '#065f4633' : '#dcfce7')
+                              : (isDark ? '#1e293b55' : '#ffffff'),
+                            borderColor: isToday ? colors.primary : (hasSlots ? '#86efac' : colors.border),
+                            borderWidth: isToday ? 2 : 1,
+                          },
+                        ]}
+                        onPress={() => {
+                          setCalJd(dayNum);
+                          setDaySlots(daySchedule ? [...daySchedule.slots] : []);
+                          setRepeatWeekdays([]);
+                          setSlotInputHour('3');
+                          setScheduleView('daySlots');
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text
+                          style={[
+                            styles.calendarDayNum,
+                            {
+                              color: isToday ? colors.primary : (hasSlots ? '#15803d' : colors.text),
+                              fontFamily: isToday || hasSlots ? FONT_FAMILY.bold : FONT_FAMILY.medium,
+                            },
+                          ]}
+                        >
+                          {toPersianNumbers(dayNum)}
+                        </Text>
+                        {hasSlots ? (
+                          <View style={styles.slotDotBadge}>
+                            <View style={styles.greenDot} />
+                            <Text style={styles.slotCountText}>
+                              {toPersianNumbers(daySchedule.slots.length)}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={{ height: 14 }} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Legend and summary */}
+                <View style={[styles.calendarLegendCard, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendIndicator, { backgroundColor: '#dcfce7', borderColor: '#86efac' }]} />
+                    <Text style={[styles.legendText, { color: colors.text }]}>روزهای فعال دارای نوبت</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                    <View style={[styles.legendIndicator, { borderColor: colors.primary, borderWidth: 2 }]} />
+                    <Text style={[styles.legendText, { color: colors.text }]}>امروز</Text>
+                  </View>
+                </View>
+              </ScrollView>
+            ) : (
+              // VIEW 2: DAY SLOTS CONFIGURATION & REPEAT
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Day Header & Return to Month */}
+                <View style={styles.dayConfigHeader}>
+                  <TouchableOpacity
+                    onPress={() => setScheduleView('calendar')}
+                    style={[styles.backToCalBtn, { borderColor: colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <ChevronRight size={16} color={colors.primary} />
+                    <Text style={[styles.backToCalText, { color: colors.primary }]}>بازگشت به تقویم</Text>
+                  </TouchableOpacity>
+
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.dayConfigTitle, { color: colors.text }]}>
+                      {PERSIAN_DAY_NAMES[getDayWeekday(calJy, calJm, calJd)]} {toPersianNumbers(calJd)} {PERSIAN_MONTHS[calJm - 1]}
+                    </Text>
+                    <Text style={[styles.dayConfigSub, { color: colors.textLight }]}>
+                      مدیریت بازه‌های زمانی تدریس و رفع اشکال
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Existing Slots List */}
+                <View style={styles.sectionWrap}>
+                  <Text style={[styles.sectionHeading, { color: colors.text }]}>
+                    نوبت‌های ثبت‌شده برای این روز ({toPersianNumbers(daySlots.length)})
+                  </Text>
+                  {daySlots.length === 0 ? (
+                    <View style={[styles.emptySlotsNotice, { borderColor: colors.border }]}>
+                      <Text style={[styles.emptySlotsText, { color: colors.textLight }]}>
+                        هنوز هیچ بازه زمانی برای این روز ثبت نشده است. ساعت شروع را در زیر وارد کنید.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={{ gap: 8, marginTop: 8 }}>
+                      {daySlots.map((slot, sIdx) => (
+                        <View
+                          key={sIdx}
+                          style={[
+                            styles.slotItemRow,
+                            { backgroundColor: isDark ? '#064e3b25' : '#f0fdf4', borderColor: '#86efac' },
+                          ]}
+                        >
+                          <TouchableOpacity
+                            onPress={() => handleRemoveSlot(sIdx)}
+                            style={styles.deleteSlotBtn}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Trash2 size={16} color="#ef4444" />
+                          </TouchableOpacity>
+                          <View style={styles.slotItemInfo}>
+                            <View style={styles.oneAndHalfBadge}>
+                              <Text style={styles.oneAndHalfText}>۱.۵ ساعت</Text>
+                            </View>
+                            <Text style={[styles.slotItemText, { color: isDark ? '#a7f3d0' : '#14532d' }]}>
+                              {slot} ثبت شده
+                            </Text>
+                            <Clock size={16} color="#16a34a" />
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                {/* Add Slot Section */}
+                <View style={[styles.addSlotCard, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+                  <Text style={[styles.sectionHeading, { color: colors.text, marginBottom: 4 }]}>
+                    افزودن بازه زمانی جدید
+                  </Text>
+                  <Text style={[styles.addSlotHelper, { color: colors.textLight }]}>
+                    ساعت شروع را وارد کنید؛ مدت زمان جلسه به‌صورت خودکار ۱.۵ ساعت در نظر گرفته می‌شود:
+                  </Text>
+
+                  {/* Quick preset hour buttons */}
+                  <View style={styles.presetsRow}>
+                    {[
+                      { label: '۳ بعدازظهر', value: '3' },
+                      { label: '۴ و نیم عصر', value: '16:30' },
+                      { label: '۶ عصر', value: '18' },
+                      { label: '۸ شب', value: '20' },
+                    ].map((p) => (
+                      <TouchableOpacity
+                        key={p.value}
+                        style={[styles.presetChip, { borderColor: colors.border }]}
+                        onPress={() => setSlotInputHour(p.value)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.presetChipText, { color: colors.text }]}>{p.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Input row + calculate preview */}
+                  <View style={styles.slotInputRow}>
+                    <TouchableOpacity
+                      style={[styles.addSlotActionBtn, { backgroundColor: colors.primary }]}
+                      onPress={handleAddSlot}
+                      activeOpacity={0.85}
+                    >
+                      <Plus size={16} color="#ffffff" />
+                      <Text style={styles.addSlotActionText}>ثبت بازه</Text>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      style={[
+                        styles.slotHourTextInput,
+                        { backgroundColor: colors.surface, color: colors.text, borderColor: colors.border },
+                      ]}
+                      placeholder="ساعت شروع (مثلاً ۳ یا ۱۵)"
+                      placeholderTextColor={colors.textLight}
+                      value={slotInputHour}
+                      onChangeText={setSlotInputHour}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  {/* Real-time calculated feedback */}
+                  {slotInputHour.trim().length > 0 && (
+                    <View style={styles.calculatedPreviewRow}>
+                      <Clock size={14} color="#16a34a" />
+                      <Text style={styles.calculatedPreviewText}>
+                        زمان محاسبه‌شده: {calculateSlotRange(slotInputHour)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Repeat on Weekdays */}
+                <View style={[styles.repeatSectionCard, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+                  <Text style={[styles.sectionHeading, { color: colors.text, marginBottom: 4 }]}>
+                    تکرار برنامه در روزهای هفته (اختیاری)
+                  </Text>
+                  <Text style={[styles.repeatDesc, { color: colors.textLight }]}>
+                    روزهایی را که مایلید این ساعات برای کل این ماه تکرار شوند انتخاب کنید:
+                  </Text>
+
+                  <View style={styles.weekdaysSelectionRow}>
+                    {PERSIAN_DAY_NAMES.map((wName, wIdx) => {
+                      const isSelected = repeatWeekdays.includes(wIdx);
+                      return (
+                        <TouchableOpacity
+                          key={wIdx}
+                          style={[
+                            styles.weekdayPill,
+                            {
+                              backgroundColor: isSelected ? colors.primary : colors.surface,
+                              borderColor: isSelected ? colors.primary : colors.border,
+                            },
+                          ]}
+                          onPress={() => {
+                            if (isSelected) {
+                              setRepeatWeekdays((prev) => prev.filter((i) => i !== wIdx));
+                            } else {
+                              setRepeatWeekdays((prev) => [...prev, wIdx]);
+                            }
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.weekdayPillText,
+                              {
+                                color: isSelected ? '#ffffff' : colors.text,
+                                fontFamily: isSelected ? FONT_FAMILY.bold : FONT_FAMILY.medium,
+                              },
+                            ]}
+                          >
+                            {wName}
+                          </Text>
+                          {isSelected && (
+                            <Check size={12} color="#ffffff" strokeWidth={3} style={{ marginRight: 2 }} />
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Final Save Button */}
+                <TouchableOpacity
+                  style={[styles.saveScheduleBtn, { backgroundColor: '#16a34a' }]}
+                  onPress={handleSaveDaySchedule}
+                  disabled={savingSchedule}
+                  activeOpacity={0.85}
+                >
+                  {savingSchedule ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <>
+                      <Check size={18} color="#ffffff" />
+                      <Text style={styles.saveScheduleBtnText}>ذخیره و ثبت نهایی برنامه</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1400,112 +1816,422 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
 
-  // Online Card
-  onlineCard: {
-    borderRadius: 24,
+  // Active Days / Schedule Card
+  activeDaysCard: {
+    borderRadius: 22,
     borderWidth: 1.5,
     padding: 16,
-    gap: 14,
+    gap: 12,
   },
-  onlineHeaderRow: {
-    flexDirection: 'row-reverse',
+  activeDaysTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  onlineStatusTextCol: {
-    alignItems: 'flex-end',
-    flex: 1.2,
+  activeDaysBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  statusIndicatorRow: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusGlowDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  statusTitle: {
-    fontSize: 18,
+  activeDaysBadgeText: {
+    fontSize: 10.5,
     fontFamily: FONT_FAMILY.bold,
+    color: '#15803d',
   },
-  statusSubtitle: {
+  activeDaysHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  activeDaysTitle: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
+  },
+  activeDaysSub: {
     fontSize: 11,
     fontFamily: FONT_FAMILY.regular,
     marginTop: 2,
     textAlign: 'right',
   },
-  switchCol: {
+  activeDaysIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 6,
   },
-  switchHint: {
-    fontSize: 10,
+  activeDaysSlotsPreview: {
+    marginTop: 2,
+    gap: 6,
+  },
+  previewLabel: {
+    fontSize: 11,
     fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
   },
-  characterContainer: {
+  previewSlotChip: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-  },
-  characterImage: {
-    width: 76,
-    height: 86,
-  },
-  characterChevron: {
-    marginRight: -4,
-  },
-
-  // 4 Duration Pills
-  durationsRow: {
-    flexDirection: 'row-reverse',
-    gap: 8,
-  },
-  durationPill: {
-    flex: 1,
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 5,
-    paddingVertical: 9,
-    borderRadius: 14,
-    borderWidth: 1.2,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
   },
-  checkCircleSmall: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    backgroundColor: '#16a34a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  durationPillText: {
-    fontSize: 11.5,
+  previewSlotText: {
+    fontSize: 11,
     fontFamily: FONT_FAMILY.medium,
   },
+  emptyScheduleNotice: {
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  emptyScheduleText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  activeDaysFooterRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#bbf7d040',
+  },
+  openCalendarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  openCalendarBtnText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#15803d',
+  },
+  slotDurationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#bbf7d033',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  slotDurationText: {
+    fontSize: 10.5,
+    fontFamily: FONT_FAMILY.medium,
+    color: '#15803d',
+  },
 
-  // Timer Banner
-  timerBanner: {
+  // Calendar Modal View
+  calendarMonthHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 14,
+  },
+  monthNavBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  monthNavTitle: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  monthNavSub: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    marginTop: 2,
+  },
+  calendarWeekdaysRow: {
+    flexDirection: 'row-reverse',
+    marginBottom: 8,
+  },
+  calendarWeekdayCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  calendarWeekdayText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  calendarGridWrap: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  calendarDayCellEmpty: {
+    width: `${(100 - 6 * 1) / 7}%`,
+    height: 48,
+  },
+  calendarDayCell: {
+    width: `${(100 - 6 * 1) / 7}%`,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  calendarDayNum: {
+    fontSize: 13,
+  },
+  slotDotBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  greenDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#16a34a',
+  },
+  slotCountText: {
+    fontSize: 9.5,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#15803d',
+  },
+  calendarLegendCard: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-around',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  legendItem: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  legendIndicator: {
+    width: 14,
+    height: 14,
+    borderRadius: 4,
+  },
+  legendText: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+  },
+
+  // Day Slot Config View
+  dayConfigHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  backToCalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  backToCalText: {
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  dayConfigTitle: {
+    fontSize: 14.5,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  dayConfigSub: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    marginTop: 2,
+  },
+  sectionWrap: {
+    marginBottom: 16,
+  },
+  sectionHeading: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
+  },
+  emptySlotsNotice: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  emptySlotsText: {
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  slotItemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: 1,
   },
-  timerDigits: {
-    fontSize: 16,
-    fontFamily: FONT_FAMILY.bold,
-    letterSpacing: 1,
+  deleteSlotBtn: {
+    padding: 6,
   },
-  timerLabelRow: {
+  slotItemInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  oneAndHalfBadge: {
+    backgroundColor: '#bbf7d0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  oneAndHalfText: {
+    fontSize: 10,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#15803d',
+  },
+  slotItemText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  addSlotCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+  },
+  addSlotHelper: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'right',
+    marginTop: 2,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  presetsRow: {
+    flexDirection: 'row-reverse',
+    gap: 6,
+    marginBottom: 10,
+  },
+  presetChip: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  presetChipText: {
+    fontSize: 10.5,
+    fontFamily: FONT_FAMILY.medium,
+  },
+  slotInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  slotHourTextInput: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    fontSize: 12.5,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'right',
+  },
+  addSlotActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    gap: 4,
+  },
+  addSlotActionText: {
+    color: '#ffffff',
+    fontSize: 12.5,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  calculatedPreviewRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: '#dcfce740',
   },
-  timerLabel: {
+  calculatedPreviewText: {
     fontSize: 11.5,
-    fontFamily: FONT_FAMILY.medium,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#15803d',
+  },
+  repeatSectionCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 16,
+  },
+  repeatDesc: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'right',
+    marginTop: 2,
+    marginBottom: 10,
+    lineHeight: 17,
+  },
+  weekdaysSelectionRow: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  weekdayPill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  weekdayPillText: {
+    fontSize: 11,
+  },
+  saveScheduleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 6,
+    marginBottom: 10,
+  },
+  saveScheduleBtnText: {
+    color: '#ffffff',
+    fontSize: 13.5,
+    fontFamily: FONT_FAMILY.bold,
   },
 
   // Online Class Hero Card
