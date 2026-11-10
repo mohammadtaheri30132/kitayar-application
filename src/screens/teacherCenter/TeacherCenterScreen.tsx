@@ -46,6 +46,7 @@ import {
   Calendar,
   Trash2,
   Settings,
+  UserCheck,
 } from 'lucide-react-native';
 import * as jalaali from 'jalaali-js';
 import {
@@ -166,7 +167,7 @@ export const TeacherCenterScreen: React.FC = () => {
 
   // Teacher Profile & Wallet states
   const [teacherName, setTeacherName] = useState<string>('همکار گرامی');
-  const [teacherAvatar, setTeacherAvatar] = useState<string | null>(null);
+  const [teacherAvatar, setTeacherAvatar] = useState<string | null>('https://i.pravatar.cc/150?u=kitayar@teacher.com');
   const [walletBalance, setWalletBalance] = useState<number>(0);
 
   const handlePrevMonth = () => {
@@ -207,16 +208,14 @@ export const TeacherCenterScreen: React.FC = () => {
         const pd = profRes.value.data.data;
         if (pd.user?.fullName) setTeacherName(pd.user.fullName);
         else if (pd.fullName) setTeacherName(pd.fullName);
-        if (pd.avatar) setTeacherAvatar(pd.avatar);
+        const resolved = pd.avatar || pd.user?.avatar || (pd.user?._id ? `https://i.pravatar.cc/150?u=${pd.user._id}` : null);
+        if (resolved) setTeacherAvatar(resolved);
       }
 
       if (ovRes.status === 'fulfilled' && ovRes.value.data?.success) {
         const d = ovRes.value.data.data;
-        if (Array.isArray(d.profileSummary?.availableSchedule)) {
-          setAvailableSchedule(d.profileSummary.availableSchedule);
-        }
         if (d.profileSummary) {
-          if (!teacherName) setTeacherName(d.profileSummary.fullName || 'همکار گرامی');
+          if (!teacherName && d.profileSummary.fullName) setTeacherName(d.profileSummary.fullName);
           if (!teacherAvatar && d.profileSummary.avatar) setTeacherAvatar(d.profileSummary.avatar);
         }
         if (d.wallet?.balance !== undefined) {
@@ -296,18 +295,27 @@ export const TeacherCenterScreen: React.FC = () => {
 
 
 
+  const getFullAvatarUrl = (uri?: string | null) => {
+    if (!uri) {
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(teacherName || 'معلم')}&background=2563EB&color=fff&size=150`;
+    }
+    if (uri.startsWith('http')) return uri;
+    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
+    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* 1. TOP APP BAR (Wallet button on left & Profile info on right which opens main ProfileScreen) */}
+      {/* 1. TOP APP BAR (Complete Profile button on left & Profile info on right) */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeftActions}>
           <TouchableOpacity
-            style={styles.walletHeaderBtn}
-            onPress={() => navigation.navigate('TeacherWalletScreen')}
+            style={[styles.completeProfileBtn, { backgroundColor: isDark ? '#1e3a8a30' : '#eff6ff', borderColor: isDark ? '#1e40af' : '#bfdbfe' }]}
+            onPress={() => navigation.navigate('ProfileScreen')}
             activeOpacity={0.8}
           >
-            <Wallet size={14} color="#ffffff" style={{ marginLeft: 4 }} />
-            <Text style={styles.walletHeaderBtnText}>کیف پول</Text>
+            <UserCheck size={15} color="#2563eb" style={{ marginLeft: 5 }} />
+            <Text style={styles.completeProfileBtnText}>تکمیل پروفایل</Text>
           </TouchableOpacity>
         </View>
 
@@ -324,15 +332,11 @@ export const TeacherCenterScreen: React.FC = () => {
               موجودی کیف پول: {walletBalance.toLocaleString('fa-IR')} تومان
             </Text>
           </View>
-          {teacherAvatar ? (
-            <Image source={{ uri: teacherAvatar }} style={styles.teacherAvatarImg} />
-          ) : (
-            <View style={[styles.teacherAvatarPlaceholder, { backgroundColor: colors.primary }]}>
-              <Text style={styles.teacherAvatarLetter}>
-                {(teacherName || 'م').charAt(0)}
-              </Text>
-            </View>
-          )}
+          <Image
+            source={{ uri: getFullAvatarUrl(teacherAvatar) }}
+            style={styles.teacherAvatarImg}
+            resizeMode="cover"
+          />
         </TouchableOpacity>
       </View>
 
@@ -345,7 +349,7 @@ export const TeacherCenterScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.bannerContainer}
           activeOpacity={0.9}
-          onPress={() => navigation.navigate('TeacherScheduleScreen')}
+          onPress={() => navigation.navigate('OnlineClassesScreen')}
         >
           <Image
             source={require('../../assets/image/classBanner.png')}
@@ -380,121 +384,7 @@ export const TeacherCenterScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* 4. MAIN EMBEDDED CALENDAR (Green for active, Orange border for empty, Dot for booked) */}
-        <View style={[styles.mainCalendarCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.mainCalendarHeader}>
-            <TouchableOpacity onPress={handlePrevMonth} style={styles.calNavBtn}>
-              <ChevronRight size={20} color={colors.text} />
-            </TouchableOpacity>
-            <View style={{ alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
-                <Calendar size={18} color={colors.primary} />
-                <Text style={[styles.mainCalMonthTitle, { color: colors.text }]}>
-                  {PERSIAN_MONTHS[calJm - 1]} {toPersianNumbers(calJy)}
-                </Text>
-              </View>
-              <Text style={[styles.mainCalSub, { color: colors.textLight }]}>
-                تقویم فعالیت تدریس و روزهای فعال
-              </Text>
-            </View>
-            <TouchableOpacity onPress={handleNextMonth} style={styles.calNavBtn}>
-              <ChevronLeft size={20} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Weekday headers: ش تا ج */}
-          <View style={styles.calWeekdaysRow}>
-            {['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'].map((initial, i) => (
-              <View key={i} style={styles.calWeekdayCell}>
-                <Text style={[styles.calWeekdayText, { color: i === 6 ? '#ef4444' : colors.textLight }]}>
-                  {initial}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Days Grid: Green for active, orange border for empty, dot for booked */}
-          <View style={styles.calGridWrap}>
-            {getCalendarGrid(calJy, calJm).map((dayNum, cellIdx) => {
-              if (dayNum === null) {
-                return <View key={`empty-${cellIdx}`} style={styles.calDayCellEmpty} />;
-              }
-              const dateKey = formatJalaliStandard(calJy, calJm, dayNum);
-              const daySchedule = availableSchedule.find((s) => s.date === dateKey);
-              const hasSlots = daySchedule && daySchedule.slots && daySchedule.slots.length > 0;
-              const hasBooked = bookedDates.includes(dateKey);
-
-              return (
-                <TouchableOpacity
-                  key={`day-${dayNum}`}
-                  style={[
-                    styles.calDayCell,
-                    hasSlots
-                      ? {
-                          backgroundColor: isDark ? '#065f4633' : '#dcfce7',
-                          borderColor: '#16a34a',
-                          borderWidth: 1.5,
-                        }
-                      : {
-                          backgroundColor: colors.surface,
-                          borderColor: '#f97316',
-                          borderWidth: 1.5,
-                        },
-                  ]}
-                  onPress={() => navigation.navigate('TeacherScheduleScreen')}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.calDayNum,
-                      {
-                        color: hasSlots ? '#15803d' : colors.text,
-                        fontFamily: hasSlots ? FONT_FAMILY.bold : FONT_FAMILY.medium,
-                      },
-                    ]}
-                  >
-                    {toPersianNumbers(dayNum)}
-                  </Text>
-                  {hasBooked ? (
-                    <View style={styles.bookedDot} />
-                  ) : hasSlots ? (
-                    <View style={styles.activeSlotDot} />
-                  ) : (
-                    <View style={{ height: 6 }} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Color Legend */}
-          <View style={[styles.calLegendRow, { borderColor: colors.border }]}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendBox, { backgroundColor: '#dcfce7', borderColor: '#16a34a' }]} />
-              <Text style={[styles.legendText, { color: colors.text }]}>دارای فعالیت (سبز)</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendBox, { backgroundColor: 'transparent', borderColor: '#f97316' }]} />
-              <Text style={[styles.legendText, { color: colors.text }]}>روزهای خالی (بوردر نارنجی)</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#2563eb' }]} />
-              <Text style={[styles.legendText, { color: colors.text }]}>کلاس پر (نقطه)</Text>
-            </View>
-          </View>
-
-          {/* Manage Schedule Button */}
-          <TouchableOpacity
-            style={[styles.manageScheduleBtn, { backgroundColor: '#16a34a' }]}
-            onPress={() => navigation.navigate('TeacherScheduleScreen')}
-            activeOpacity={0.85}
-          >
-            <Calendar size={16} color="#ffffff" style={{ marginLeft: 6 }} />
-            <Text style={styles.manageScheduleBtnText}>تنظیم ساعت و روزهای هفته</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 5. ONLINE CLASS SECTION WITH 4 DEDICATED ACTION BOXES */}
+        {/* 4. ONLINE CLASS SECTION WITH 4 DEDICATED ACTION BOXES */}
         <View style={[styles.onlineClassHeroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.onlineClassHeroTop}>
             <View style={styles.onlineClassTextCol}>
@@ -571,11 +461,11 @@ export const TeacherCenterScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* 6. 3 ACTION CARDS (مدیریت جزوه‌ها، دروس و مقطع تدریس، کیف پول) */}
-        <View style={styles.threeCardsRow}>
+        {/* 5. 2 ACTION CARDS (مدیریت جزوه‌ها و کیف پول) */}
+        <View style={styles.twoCardsRow}>
           {/* Card 1: مدیریت جزوه‌ها */}
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.actionCardHalf, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate('TeacherMaterialsScreen')}
             activeOpacity={0.8}
           >
@@ -595,31 +485,9 @@ export const TeacherCenterScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
 
-          {/* Card 2: دروس و مقطع تدریس */}
+          {/* Card 2: کیف پول */}
           <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('ProfileScreen', { openTeachingModal: true })}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionCardImageWrap}>
-              <Image
-                source={require('../../assets/image/profile_badge_3d.png')}
-                style={styles.actionCard3DImage}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text }]}>دروس و مقطع تدریس</Text>
-            <Text style={[styles.actionCardSub, { color: colors.textLight }]} numberOfLines={2}>
-              تعیین دروس تخصصی و رزومه
-            </Text>
-            <View style={[styles.cardArrowCircle, { backgroundColor: '#8b5cf6' }]}>
-              <ChevronLeft size={16} color="#ffffff" strokeWidth={2.5} />
-            </View>
-          </TouchableOpacity>
-
-          {/* Card 3: کیف پول (حفظ شده در وسط صفحه) */}
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.actionCardHalf, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate('TeacherWalletScreen')}
             activeOpacity={0.8}
           >
@@ -630,9 +498,9 @@ export const TeacherCenterScreen: React.FC = () => {
                 resizeMode="contain"
               />
             </View>
-            <Text style={[styles.actionCardTitle, { color: colors.text }]}>کیف پول</Text>
+            <Text style={[styles.actionCardTitle, { color: colors.text }]}>کیف پول و درآمدها</Text>
             <Text style={[styles.actionCardSub, { color: colors.textLight }]} numberOfLines={2}>
-              مشاهده موجودی و درآمدها
+              مشاهده موجودی و تسویه‌حساب
             </Text>
             <View style={[styles.cardArrowCircle, { backgroundColor: '#2563eb' }]}>
               <ChevronLeft size={16} color="#ffffff" strokeWidth={2.5} />
@@ -1402,6 +1270,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
     gap: 10,
   },
+  twoCardsRow: {
+    flexDirection: 'row-reverse',
+    gap: 12,
+  },
+  actionCardHalf: {
+    flex: 1,
+    borderRadius: 22,
+    borderWidth: 1,
+    padding: 14,
+    alignItems: 'center',
+    position: 'relative',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
   actionCard: {
     flex: 1,
     borderRadius: 22,
@@ -1782,6 +1667,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  completeProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  completeProfileBtnText: {
+    color: '#2563eb',
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
   profileHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1984,18 +1882,20 @@ const styles = StyleSheet.create({
   teacherFullName: {
     fontSize: 14,
     fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
   },
   teacherWalletSubtitle: {
     fontSize: 11,
     fontFamily: FONT_FAMILY.bold,
     marginTop: 2,
+    textAlign: 'right',
   },
   teacherAvatarImg: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1.5,
-    borderColor: '#3b82f6',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
+    borderColor: '#2563eb',
   },
   teacherAvatarPlaceholder: {
     width: 38,

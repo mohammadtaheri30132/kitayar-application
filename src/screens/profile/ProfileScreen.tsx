@@ -187,8 +187,8 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   const [certificates, setCertificates] = useState<CertificateItem[]>([]);
   const [honors, setHonors] = useState<HonorItem[]>([]);
 
-  // Active Tab: 'posts' | 'resume' | 'notes'
-  const [activeTab, setActiveTab] = useState<'posts' | 'resume' | 'notes'>('resume');
+  // Active Tab: 'posts' | 'resume'
+  const [activeTab, setActiveTab] = useState<'posts' | 'resume'>('resume');
 
   // Posts State
   const [posts, setPosts] = useState<PostItem[]>([]);
@@ -972,16 +972,6 @@ export const ProfileScreen = ({ navigation, route }: any) => {
               پست‌ها ({posts.length})
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.tabBtn, activeTab === 'notes' && [styles.activeTabBtn, { borderBottomColor: colors.primary }]]}
-            onPress={() => setActiveTab('notes')}
-          >
-            <FolderOpen size={18} color={activeTab === 'notes' ? colors.primary : colors.textLight} />
-            <Text style={[styles.tabBtnText, { color: activeTab === 'notes' ? colors.primary : colors.textLight }]}>
-              جزوات و طرح درس
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* TAB 1: RESUME & EXPERIENCE (Dynamic Builder) */}
@@ -1372,17 +1362,6 @@ export const ProfileScreen = ({ navigation, route }: any) => {
                 ))}
               </View>
             )}
-          </View>
-        )}
-
-        {/* TAB 3: NOTES & PAMPHLETS */}
-        {activeTab === 'notes' && (
-          <View style={[styles.notesEmptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <FolderOpen size={48} color={colors.textLight} />
-            <Text style={[styles.notesEmptyTitle, { color: colors.text }]}>آرشیو جزوات و کاربرگ‌های کلاسی</Text>
-            <Text style={[styles.notesEmptyDesc, { color: colors.textLight }]}>
-              فایل‌های آموزشی، نمونه سوالات امتحانی و فرم‌های ارزشیابی کلاسی شما به زودی در این پوشه قابل دسترسی و مدیریت خواهند بود.
-            </Text>
           </View>
         )}
       </ScrollView>
