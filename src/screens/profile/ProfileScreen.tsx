@@ -49,6 +49,8 @@ import {
   Calendar,
   Layers,
   TrendingUp,
+  BookOpen,
+  Search,
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -125,7 +127,27 @@ const POPULAR_SKILL_SUGGESTIONS = [
   'مشاوره تحصیلی دانش‌آموزان',
 ];
 
-export const ProfileScreen = ({ navigation }: any) => {
+export const DEFAULT_TEACHING_SUBJECTS = [
+  'ریاضی',
+  'فیزیک',
+  'شیمی',
+  'زیست‌شناسی',
+  'عربی',
+  'زبان انگلیسی',
+  'ادبیات فارسی',
+  'هندسه',
+  'حسابان',
+  'علوم تجربی',
+  'دینی و معارف',
+  'جامعه‌شناسی',
+  'فلسفه و منطق',
+  'اقتصاد',
+  'تاریخ و جغرافیا',
+  'روان‌شناسی',
+  'کامپیوتر و برنامه‌نویسی',
+];
+
+export const ProfileScreen = ({ navigation, route }: any) => {
   const { logout } = useContext(AuthContext);
   const { colors, isDark } = useTheme();
 
@@ -140,6 +162,15 @@ export const ProfileScreen = ({ navigation }: any) => {
   const [avatarUri, setAvatarUri] = useState('https://i.pravatar.cc/150?u=kitayar@teacher.com');
   const [category, setCategory] = useState('آموزگار');
   const [position, setPosition] = useState('معلم');
+
+  // Teaching Grade Level & Subjects State
+  const [educationLevel, setEducationLevel] = useState<'elementary' | 'secondary' | 'both'>('elementary');
+  const [teachingSubjects, setTeachingSubjects] = useState<string[]>(['آموزگار ابتدایی']);
+  const [teachingModalVisible, setTeachingModalVisible] = useState(false);
+  const [tempEducationLevel, setTempEducationLevel] = useState<'elementary' | 'secondary' | 'both'>('elementary');
+  const [tempTeachingSubjects, setTempTeachingSubjects] = useState<string[]>(['آموزگار ابتدایی']);
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState('');
+  const [customTeachingSubjectInput, setCustomTeachingSubjectInput] = useState('');
 
   // Stats State (Live from Server)
   const [stats, setStats] = useState<TeacherStats>({
@@ -260,6 +291,15 @@ export const ProfileScreen = ({ navigation }: any) => {
         if (d.category) setCategory(d.category);
         if (d.position) setPosition(d.position);
 
+        if (d.educationLevel) {
+          setEducationLevel(d.educationLevel);
+          setTempEducationLevel(d.educationLevel);
+        }
+        if (Array.isArray(d.teachingSubjects) && d.teachingSubjects.length > 0) {
+          setTeachingSubjects(d.teachingSubjects);
+          setTempTeachingSubjects(d.teachingSubjects);
+        }
+
         if (d.resume) {
           if (Array.isArray(d.resume.experiences)) setExperiences(d.resume.experiences);
           if (Array.isArray(d.resume.education)) setEducation(d.resume.education);
@@ -299,6 +339,14 @@ export const ProfileScreen = ({ navigation }: any) => {
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    if (route?.params?.openTeachingModal) {
+      setTempEducationLevel(educationLevel);
+      setTempTeachingSubjects(teachingSubjects.length > 0 ? [...teachingSubjects] : ['ریاضی']);
+      setTeachingModalVisible(true);
+    }
+  }, [route?.params?.openTeachingModal, educationLevel, teachingSubjects]);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchProfile();
@@ -308,15 +356,16 @@ export const ProfileScreen = ({ navigation }: any) => {
   const completionPercentage = useMemo(() => {
     let score = 0;
     if (fullName && fullName.trim() && fullName !== 'معلم کیتایار') score += 10;
-    if (headline && headline.trim()) score += 15;
-    if (bio && bio.trim()) score += 15;
+    if (headline && headline.trim()) score += 10;
+    if (bio && bio.trim()) score += 10;
     if (schoolName && schoolName.trim()) score += 10;
+    if (teachingSubjects.length > 0) score += 10;
     if (experiences.length > 0) score += 20;
     if (education.length > 0) score += 15;
     if (skills.length > 0) score += 10;
     if (certificates.length > 0 || honors.length > 0) score += 5;
     return Math.min(100, score);
-  }, [fullName, headline, bio, schoolName, experiences, education, skills, certificates, honors]);
+  }, [fullName, headline, bio, schoolName, experiences, education, skills, certificates, honors, teachingSubjects]);
 
   // 3. Save Basic Profile Info
   const handleOpenEditProfile = () => {
@@ -509,6 +558,79 @@ export const ProfileScreen = ({ navigation }: any) => {
       }
     } catch (e) {
       showWarning('خطا در ذخیره مهارت');
+    }
+  };
+
+  // Teaching Grade Level & Subjects Handlers
+  const handleOpenTeachingModal = () => {
+    setTempEducationLevel(educationLevel);
+    setTempTeachingSubjects(
+      teachingSubjects.length > 0
+        ? [...teachingSubjects]
+        : educationLevel === 'elementary'
+        ? ['آموزگار ابتدایی (تمام دروس)']
+        : ['ریاضی']
+    );
+    setSubjectSearchQuery('');
+    setCustomTeachingSubjectInput('');
+    setTeachingModalVisible(true);
+  };
+
+  const handleToggleTeachingSubject = (subject: string) => {
+    if (tempTeachingSubjects.includes(subject)) {
+      if (tempTeachingSubjects.length === 1) {
+        showWarning('حداقل یک درس باید انتخاب شده باشد.');
+        return;
+      }
+      setTempTeachingSubjects((prev) => prev.filter((s) => s !== subject));
+    } else {
+      setTempTeachingSubjects((prev) => [...prev, subject]);
+    }
+  };
+
+  const handleAddCustomTeachingSubject = () => {
+    const trimmed = customTeachingSubjectInput.trim();
+    if (!trimmed) return;
+    if (tempTeachingSubjects.includes(trimmed)) {
+      showWarning('این درس قبلاً اضافه شده است.');
+      return;
+    }
+    setTempTeachingSubjects((prev) => [...prev, trimmed]);
+    setCustomTeachingSubjectInput('');
+    showSuccess(`درس «${trimmed}» افزوده شد.`);
+  };
+
+  const handleSaveTeachingSettings = async () => {
+    if (tempEducationLevel !== 'elementary' && tempTeachingSubjects.length === 0) {
+      showWarning('لطفاً حداقل یک درس تخصصی انتخاب نمایید.');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const finalSubjects =
+        tempEducationLevel === 'elementary'
+          ? ['آموزگار ابتدایی (تمام دروس)']
+          : tempTeachingSubjects;
+
+      const payload = {
+        educationLevel: tempEducationLevel,
+        teachingSubjects: finalSubjects,
+      };
+
+      await Promise.allSettled([
+        api.put('/teacher/profile', payload),
+        api.put('/teacher/center/workdesk-settings', payload),
+      ]);
+
+      setEducationLevel(tempEducationLevel);
+      setTeachingSubjects(finalSubjects);
+      setTeachingModalVisible(false);
+      showSuccess('مقطع تحصیلی و دروس تخصصی تدریس با موفقیت ذخیره شد.');
+    } catch (err) {
+      showWarning('خطا در ذخیره‌سازی دروس تدریس');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -886,6 +1008,74 @@ export const ProfileScreen = ({ navigation }: any) => {
                   ? 'عالی است! با افزودن گواهینامه‌های ضمن خدمت و افتخارات، رزومه خود را متمایز کنید.'
                   : '⭐ تبریک! رزومه آموزشی شما در بالاترین سطح استاندارد قرار دارد.'}
               </Text>
+            </View>
+
+            {/* 0. Teaching Grade & Specialized Subjects Section */}
+            <View style={[styles.resumeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <View style={styles.resumeCardHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <GraduationCap size={20} color={colors.primary} />
+                  <Text style={[styles.resumeCardTitle, { color: colors.text }]}>مقطع و دروس تخصصی تدریس</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.addBtn, { backgroundColor: `${colors.primary}15` }]}
+                  onPress={handleOpenTeachingModal}
+                >
+                  <Edit3 size={14} color={colors.primary} />
+                  <Text style={[styles.addBtnText, { color: colors.primary }]}>ویرایش</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Grade Badge */}
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginBottom: 10 }}>
+                <View
+                  style={[
+                    styles.levelBadgePill,
+                    {
+                      backgroundColor: isDark ? 'rgba(37,99,235,0.15)' : '#eff6ff',
+                      borderColor: isDark ? '#1e3a8a' : '#bfdbfe',
+                    },
+                  ]}
+                >
+                  <BookOpen size={14} color="#2563eb" style={{ marginLeft: 6 }} />
+                  <Text style={styles.levelBadgeText}>
+                    {educationLevel === 'elementary'
+                      ? 'آموزگار مقطع ابتدایی (تمام دروس پایه)'
+                      : educationLevel === 'both'
+                      ? 'مقطع ابتدایی و متوسطه'
+                      : 'دبیر دوره متوسطه (دروس تخصصی)'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Selected Subjects Chips */}
+              <View style={styles.skillsPillsContainer}>
+                {teachingSubjects.length === 0 ? (
+                  <View style={styles.emptySectionBox}>
+                    <Text style={[styles.emptySectionText, { color: colors.textLight }]}>
+                      دروس تخصصی خود را برای پاسخگویی به سوالات و تدریس انتخاب کنید.
+                    </Text>
+                    <TouchableOpacity style={styles.emptyActionBtn} onPress={handleOpenTeachingModal}>
+                      <Text style={[styles.emptyActionBtnText, { color: colors.primary }]}>+ انتخاب دروس تخصصی</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  teachingSubjects.map((sub, idx) => (
+                    <View
+                      key={idx}
+                      style={[
+                        styles.teachingSubjectChip,
+                        {
+                          backgroundColor: isDark ? 'rgba(16,185,129,0.15)' : '#dcfce7',
+                          borderColor: isDark ? '#065f46' : '#86efac',
+                        },
+                      ]}
+                    >
+                      <Text style={styles.teachingSubjectChipText}>✓ {sub}</Text>
+                    </View>
+                  ))
+                )}
+              </View>
             </View>
 
             {/* 1. Teaching Experience Section */}
@@ -1468,6 +1658,155 @@ export const ProfileScreen = ({ navigation }: any) => {
                 disabled={isSaving}
               >
                 {isSaving ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitBtnText}>ثبت مدرک در سرور</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* MODAL 3.5: Teaching Grade Level & Subjects */}
+      <Modal visible={teachingModalVisible} transparent animationType="slide" onRequestClose={() => setTeachingModalVisible(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, maxHeight: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>مقطع و دروس تخصصی تدریس</Text>
+              <TouchableOpacity onPress={() => setTeachingModalVisible(false)}>
+                <X size={22} color={colors.textLight} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>مقطع تحصیلی تدریس:</Text>
+
+              {/* Level Selector */}
+              <View style={styles.levelSelectorRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.levelPill,
+                    tempEducationLevel === 'elementary'
+                      ? styles.levelPillActive
+                      : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
+                  ]}
+                  onPress={() => setTempEducationLevel('elementary')}
+                >
+                  <Text style={[styles.levelPillText, tempEducationLevel === 'elementary' && styles.levelPillTextActive]}>
+                    ابتدایی (آموزگار)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.levelPill,
+                    tempEducationLevel === 'secondary'
+                      ? styles.levelPillActive
+                      : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
+                  ]}
+                  onPress={() => setTempEducationLevel('secondary')}
+                >
+                  <Text style={[styles.levelPillText, tempEducationLevel === 'secondary' && styles.levelPillTextActive]}>
+                    متوسطه (دبیر تخصصی)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.levelPill,
+                    tempEducationLevel === 'both'
+                      ? styles.levelPillActive
+                      : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
+                  ]}
+                  onPress={() => setTempEducationLevel('both')}
+                >
+                  <Text style={[styles.levelPillText, tempEducationLevel === 'both' && styles.levelPillTextActive]}>
+                    هر دو مقطع
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {tempEducationLevel === 'elementary' ? (
+                <View style={[styles.elementaryNoticeCard, { backgroundColor: isDark ? '#1e3a8a25' : '#eff6ff', borderColor: isDark ? '#1e40af' : '#bfdbfe' }]}>
+                  <BookOpen size={18} color="#2563eb" style={{ marginLeft: 8 }} />
+                  <Text style={[styles.elementaryNoticeText, { color: isDark ? '#93c5fd' : '#1e40af' }]}>
+                    در مقطع ابتدایی، شما به‌عنوان آموزگار به تمامی دروس پایه‌های اول تا ششم دسترسی دارید.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.inputLabel, { color: colors.text, marginTop: 14 }]}>
+                    دروس تخصصی تدریس و حل مسئله (چند درس قابل انتخاب است):
+                  </Text>
+
+                  {/* Search Subject Input */}
+                  <View style={[styles.subjectSearchRow, { borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}>
+                    <Search size={16} color={colors.textLight} />
+                    <TextInput
+                      style={[styles.subjectSearchInput, { color: colors.text }]}
+                      placeholder="جستجوی درس (مثال: ریاضی، شیمی، زبان...)"
+                      placeholderTextColor={colors.textLight}
+                      value={subjectSearchQuery}
+                      onChangeText={setSubjectSearchQuery}
+                    />
+                  </View>
+
+                  {/* Add Custom Subject */}
+                  <View style={styles.addCustomSkillRow}>
+                    <TouchableOpacity
+                      style={[styles.addCustomSkillBtn, { backgroundColor: colors.primary }]}
+                      onPress={handleAddCustomTeachingSubject}
+                    >
+                      <Text style={styles.addCustomSkillBtnText}>افزودن</Text>
+                    </TouchableOpacity>
+                    <TextInput
+                      style={[styles.customSkillInput, { color: colors.text, borderColor: colors.border, backgroundColor: isDark ? '#0f172a' : '#f8fafc' }]}
+                      value={customTeachingSubjectInput}
+                      onChangeText={setCustomTeachingSubjectInput}
+                      placeholder="نام درس جدید..."
+                      placeholderTextColor={colors.textLight}
+                      onSubmitEditing={handleAddCustomTeachingSubject}
+                    />
+                  </View>
+
+                  {/* Chips Grid */}
+                  <View style={styles.skillsPillsContainer}>
+                    {DEFAULT_TEACHING_SUBJECTS.concat(
+                      tempTeachingSubjects.filter((s) => !DEFAULT_TEACHING_SUBJECTS.includes(s))
+                    )
+                      .filter((s) => !subjectSearchQuery.trim() || s.includes(subjectSearchQuery.trim()))
+                      .map((sub, idx) => {
+                        const isSelected = tempTeachingSubjects.includes(sub);
+                        return (
+                          <TouchableOpacity
+                            key={idx}
+                            style={[
+                              styles.suggestedSkillPill,
+                              isSelected
+                                ? { backgroundColor: '#16a34a', borderColor: '#16a34a' }
+                                : { borderColor: colors.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc' },
+                            ]}
+                            onPress={() => handleToggleTeachingSubject(sub)}
+                          >
+                            <Text style={[styles.suggestedSkillText, { color: isSelected ? '#fff' : colors.text }]}>
+                              {isSelected ? '✓ ' : '+ '} {sub}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalSubmitBtn, { backgroundColor: colors.primary }]}
+                onPress={handleSaveTeachingSettings}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSubmitBtnText}>ذخیره مقطع و دروس تدریس</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -2648,6 +2987,93 @@ const styles = StyleSheet.create({
     fontFamily: 'IRANSansX',
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  // Teaching Grade & Subjects Styles
+  levelBadgePill: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  levelBadgeText: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563eb',
+  },
+  teachingSubjectChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  teachingSubjectChipText: {
+    fontFamily: 'IRANSansX',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803d',
+  },
+  levelSelectorRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  levelPill: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelPillActive: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+  levelPillText: {
+    fontFamily: 'IRANSansX',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  levelPillTextActive: {
+    color: '#ffffff',
+  },
+  elementaryNoticeCard: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 10,
+  },
+  elementaryNoticeText: {
+    fontFamily: 'IRANSansX',
+    flex: 1,
+    fontSize: 11.5,
+    textAlign: 'right',
+    lineHeight: 18,
+  },
+  subjectSearchRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginBottom: 10,
+    gap: 8,
+  },
+  subjectSearchInput: {
+    fontFamily: 'IRANSansX',
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 12,
+    textAlign: 'right',
   },
 });
 

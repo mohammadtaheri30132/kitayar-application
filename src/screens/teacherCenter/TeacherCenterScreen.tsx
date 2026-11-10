@@ -193,13 +193,22 @@ export const TeacherCenterScreen: React.FC = () => {
   const fetchServerData = async () => {
     try {
       setRefreshing(true);
-      const [ovRes, convRes, reqRes, wallRes, clsRes] = await Promise.allSettled([
+      const [ovRes, convRes, reqRes, wallRes, clsRes, profRes] = await Promise.allSettled([
         api.get('/teacher/center/overview'),
         api.get('/chat/conversations'),
         api.get('/teacher/center/requests?tab=pending&limit=5'),
         api.get('/teacher/center/wallet'),
         api.get('/teacher/center/classes'),
+        api.get('/teacher/profile'),
       ]);
+
+      // Always sync profile photo & full name directly from main profile
+      if (profRes.status === 'fulfilled' && profRes.value.data?.success) {
+        const pd = profRes.value.data.data;
+        if (pd.user?.fullName) setTeacherName(pd.user.fullName);
+        else if (pd.fullName) setTeacherName(pd.fullName);
+        if (pd.avatar) setTeacherAvatar(pd.avatar);
+      }
 
       if (ovRes.status === 'fulfilled' && ovRes.value.data?.success) {
         const d = ovRes.value.data.data;
@@ -207,8 +216,8 @@ export const TeacherCenterScreen: React.FC = () => {
           setAvailableSchedule(d.profileSummary.availableSchedule);
         }
         if (d.profileSummary) {
-          setTeacherName(d.profileSummary.fullName || 'همکار گرامی');
-          setTeacherAvatar(d.profileSummary.avatar || null);
+          if (!teacherName) setTeacherName(d.profileSummary.fullName || 'همکار گرامی');
+          if (!teacherAvatar && d.profileSummary.avatar) setTeacherAvatar(d.profileSummary.avatar);
         }
         if (d.wallet?.balance !== undefined) {
           setWalletBalance(d.wallet.balance);
@@ -289,18 +298,9 @@ export const TeacherCenterScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* 1. TOP APP BAR (Avatar, Name, Wallet balance underneath & Profile Edit + Wallet buttons opposite) */}
+      {/* 1. TOP APP BAR (Wallet button on left & Profile info on right which opens main ProfileScreen) */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerLeftActions}>
-          <TouchableOpacity
-            style={[styles.profileHeaderBtn, { borderColor: colors.border, backgroundColor: isDark ? '#1e293b' : '#eff6ff' }]}
-            onPress={() => navigation.navigate('TeacherProfileSettingsScreen')}
-            activeOpacity={0.8}
-          >
-            <User size={14} color="#2563eb" style={{ marginLeft: 4 }} />
-            <Text style={styles.profileHeaderBtnText}>ویرایش پروفایل</Text>
-          </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.walletHeaderBtn}
             onPress={() => navigation.navigate('TeacherWalletScreen')}
@@ -311,7 +311,11 @@ export const TeacherCenterScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.teacherHeaderInfo}>
+        <TouchableOpacity
+          style={styles.teacherHeaderInfo}
+          onPress={() => navigation.navigate('ProfileScreen')}
+          activeOpacity={0.8}
+        >
           <View style={styles.teacherTextCol}>
             <Text style={[styles.teacherFullName, { color: colors.text }]}>
               {teacherName || 'همکار گرامی'}
@@ -329,7 +333,7 @@ export const TeacherCenterScreen: React.FC = () => {
               </Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -594,7 +598,7 @@ export const TeacherCenterScreen: React.FC = () => {
           {/* Card 2: دروس و مقطع تدریس */}
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('TeacherProfileSettingsScreen')}
+            onPress={() => navigation.navigate('ProfileScreen', { openTeachingModal: true })}
             activeOpacity={0.8}
           >
             <View style={styles.actionCardImageWrap}>
