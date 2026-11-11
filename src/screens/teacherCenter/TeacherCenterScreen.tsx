@@ -48,6 +48,7 @@ import {
   Trash2,
   Settings,
   UserCheck,
+  Lock,
 } from 'lucide-react-native';
 import * as jalaali from 'jalaali-js';
 import {
@@ -168,7 +169,7 @@ export const TeacherCenterScreen: React.FC = () => {
 
   // Teacher Profile & Wallet states
   const [teacherName, setTeacherName] = useState<string>('همکار گرامی');
-  const [teacherAvatar, setTeacherAvatar] = useState<string | null>('https://i.pravatar.cc/150?u=kitayar@teacher.com');
+  const [teacherAvatar, setTeacherAvatar] = useState<string | null>(null);
   const [walletBalance, setWalletBalance] = useState<number>(0);
 
   // Onboarding & Requirement checklist status
@@ -229,8 +230,12 @@ export const TeacherCenterScreen: React.FC = () => {
         const ps = profRes.value.data.stats;
         if (pd.user?.fullName) setTeacherName(pd.user.fullName);
         else if (pd.fullName) setTeacherName(pd.fullName);
-        const resolved = pd.avatar || pd.user?.avatar || (pd.user?._id ? `https://i.pravatar.cc/150?u=${pd.user._id}` : null);
-        if (resolved) setTeacherAvatar(resolved);
+        const resolved = pd.avatar || pd.user?.avatar || null;
+        if (resolved && !resolved.includes('pravatar.cc') && !resolved.includes('ui-avatars.com')) {
+          setTeacherAvatar(resolved);
+        } else {
+          setTeacherAvatar(null);
+        }
 
         hasResume = Boolean(
           (pd.bio && pd.bio.trim().length > 0) ||
@@ -266,7 +271,9 @@ export const TeacherCenterScreen: React.FC = () => {
         const d = ovRes.value.data.data;
         if (d.profileSummary) {
           if (!teacherName && d.profileSummary.fullName) setTeacherName(d.profileSummary.fullName);
-          if (!teacherAvatar && d.profileSummary.avatar) setTeacherAvatar(d.profileSummary.avatar);
+          if (d.profileSummary.avatar && !d.profileSummary.avatar.includes('pravatar') && !d.profileSummary.avatar.includes('ui-avatars')) {
+            setTeacherAvatar(d.profileSummary.avatar);
+          }
         }
         if (d.wallet?.balance !== undefined) {
           setWalletBalance(d.wallet.balance);
@@ -346,12 +353,22 @@ export const TeacherCenterScreen: React.FC = () => {
 
 
   const getFullAvatarUrl = (uri?: string | null) => {
-    if (!uri) {
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(teacherName || 'معلم')}&background=2563EB&color=fff&size=150`;
+    if (!uri || uri.includes('pravatar.cc') || uri.includes('ui-avatars.com')) {
+      return null;
     }
     if (uri.startsWith('http')) return uri;
     const base = api.defaults.baseURL || 'https://api.kitayar.ir';
     return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+  };
+
+  const isProfileCompleted = onboardingStatus.hasResume && onboardingStatus.hasEducation;
+
+  const handleOnlineClassBoxPress = (screenName: string) => {
+    if (!isProfileCompleted) {
+      showWarning('لطفاً اطلاعات خود را تکمیل کنید');
+      return;
+    }
+    navigation.navigate(screenName);
   };
 
   const completedStepsCount = [
@@ -389,11 +406,17 @@ export const TeacherCenterScreen: React.FC = () => {
               موجودی کیف پول: {walletBalance.toLocaleString('fa-IR')} تومان
             </Text>
           </View>
-          <Image
-            source={{ uri: getFullAvatarUrl(teacherAvatar) }}
-            style={styles.teacherAvatarImg}
-            resizeMode="cover"
-          />
+          {getFullAvatarUrl(teacherAvatar) ? (
+            <Image
+              source={{ uri: getFullAvatarUrl(teacherAvatar)! }}
+              style={styles.teacherAvatarImg}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.teacherAvatarPlaceholder, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: colors.primary, borderWidth: 1.5 }]}>
+              <User size={22} color={colors.primary} />
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -579,17 +602,27 @@ export const TeacherCenterScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
 
-        {/* 4. ONLINE CLASS SECTION WITH 4 DEDICATED ACTION BOXES */}
-        <View style={[styles.onlineClassHeroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {/* 4. ONLINE CLASS SECTION WITH 4 DEDICATED ACTION BOXES (LOCKED UNTIL PROFILE COMPLETED) */}
+        <View style={[styles.onlineClassHeroCard, { backgroundColor: colors.surface, borderColor: !isProfileCompleted ? (isDark ? '#7f1d1d' : '#fecaca') : colors.border }]}>
           <View style={styles.onlineClassHeroTop}>
             <View style={styles.onlineClassTextCol}>
-              <Text style={[styles.onlineClassTitle, { color: colors.text }]}>کلاس‌های آنلاین اختصاصی</Text>
+              <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.onlineClassTitle, { color: colors.text }]}>کلاس‌های آنلاین اختصاصی</Text>
+                {!isProfileCompleted && (
+                  <View style={styles.lockedSectionBadge}>
+                    <Lock size={12} color="#dc2626" />
+                    <Text style={styles.lockedSectionBadgeText}>قفل شده</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.onlineClassSub, { color: colors.textLight }]}>
-                برگزاری جلسات رفع اشکال زنده، ایجاد کلاس مجازی، گفتگوها و تنظیمات تدریس
+                {!isProfileCompleted
+                  ? 'این بخش تا زمان تکمیل رزومه و مشخصات تدریس در پروفایل قفل است.'
+                  : 'برگزاری جلسات رفع اشکال زنده، ایجاد کلاس مجازی، گفتگوها و تنظیمات تدریس'}
               </Text>
             </View>
-            <View style={[styles.onlineClassIconCircle, { backgroundColor: isDark ? '#1e3a8a40' : '#eff6ff' }]}>
-              <Video size={24} color="#2563eb" />
+            <View style={[styles.onlineClassIconCircle, { backgroundColor: !isProfileCompleted ? (isDark ? '#450a0a' : '#fef2f2') : (isDark ? '#1e3a8a40' : '#eff6ff') }]}>
+              {!isProfileCompleted ? <Lock size={22} color="#dc2626" /> : <Video size={24} color="#2563eb" />}
             </View>
           </View>
 
@@ -597,8 +630,12 @@ export const TeacherCenterScreen: React.FC = () => {
           <View style={styles.fourBoxesGrid}>
             {/* Box 1: مدیریت کلاس‌ها */}
             <TouchableOpacity
-              style={[styles.featureBox, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: '#bfdbfe' }]}
-              onPress={() => navigation.navigate('OnlineClassesScreen')}
+              style={[
+                styles.featureBox, 
+                { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: '#bfdbfe' },
+                !isProfileCompleted && { opacity: 0.55 }
+              ]}
+              onPress={() => handleOnlineClassBoxPress('OnlineClassesScreen')}
               activeOpacity={0.8}
             >
               <View style={[styles.featureBoxIconCircle, { backgroundColor: '#dbeafe' }]}>
@@ -610,8 +647,12 @@ export const TeacherCenterScreen: React.FC = () => {
 
             {/* Box 2: ایجاد کلاس مجازی */}
             <TouchableOpacity
-              style={[styles.featureBox, { backgroundColor: isDark ? '#064e3b20' : '#f0fdf4', borderColor: '#bbf7d0' }]}
-              onPress={() => navigation.navigate('CreateVirtualClassScreen')}
+              style={[
+                styles.featureBox, 
+                { backgroundColor: isDark ? '#064e3b20' : '#f0fdf4', borderColor: '#bbf7d0' },
+                !isProfileCompleted && { opacity: 0.55 }
+              ]}
+              onPress={() => handleOnlineClassBoxPress('CreateVirtualClassScreen')}
               activeOpacity={0.8}
             >
               <View style={[styles.featureBoxIconCircle, { backgroundColor: '#dcfce7' }]}>
@@ -623,8 +664,12 @@ export const TeacherCenterScreen: React.FC = () => {
 
             {/* Box 3: گفتگوها (with Badge) */}
             <TouchableOpacity
-              style={[styles.featureBox, { backgroundColor: isDark ? '#3b076420' : '#faf5ff', borderColor: '#e9d5ff' }]}
-              onPress={() => navigation.navigate('TeacherConversationsScreen')}
+              style={[
+                styles.featureBox, 
+                { backgroundColor: isDark ? '#3b076420' : '#faf5ff', borderColor: '#e9d5ff' },
+                !isProfileCompleted && { opacity: 0.55 }
+              ]}
+              onPress={() => handleOnlineClassBoxPress('TeacherConversationsScreen')}
               activeOpacity={0.8}
             >
               {conversations.length > 0 && (
@@ -643,8 +688,12 @@ export const TeacherCenterScreen: React.FC = () => {
 
             {/* Box 4: تنظیمات */}
             <TouchableOpacity
-              style={[styles.featureBox, { backgroundColor: isDark ? '#451a0320' : '#fffbeb', borderColor: '#fde68a' }]}
-              onPress={() => navigation.navigate('OnlineClassSettingsScreen')}
+              style={[
+                styles.featureBox, 
+                { backgroundColor: isDark ? '#451a0320' : '#fffbeb', borderColor: '#fde68a' },
+                !isProfileCompleted && { opacity: 0.55 }
+              ]}
+              onPress={() => handleOnlineClassBoxPress('OnlineClassSettingsScreen')}
               activeOpacity={0.8}
             >
               <View style={[styles.featureBoxIconCircle, { backgroundColor: '#fef3c7' }]}>
@@ -2177,6 +2226,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 10,
     fontFamily: FONT_FAMILY.bold,
+  },
+  lockedSectionBadge: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fee2e2',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+  },
+  lockedSectionBadgeText: {
+    fontSize: 10.5,
+    fontFamily: FONT_FAMILY.bold,
+    color: '#dc2626',
   },
   teacherHeaderInfo: {
     flexDirection: 'row',

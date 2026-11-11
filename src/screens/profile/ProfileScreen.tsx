@@ -16,7 +16,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { showConfirm, showWarning, showSuccess } from '../../components/feedback';
+import { showConfirm, showWarning, showSuccess, showError } from '../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../api/axiosConfig';
 import { AuthContext } from '../../context/AuthContext';
@@ -53,10 +53,12 @@ import {
   BookOpen,
   Search,
   Camera,
+  User,
 } from 'lucide-react-native';
 import ImagePicker from 'react-native-image-crop-picker';
 import { communityService } from '../../services/community/communityService';
 import { FONT_FAMILY } from '../../theme/typography';
+import { toPersianNumbers } from '../../utils/date/jalaliHelper';
 
 const { width } = Dimensions.get('window');
 const GRID_ITEM_SIZE = (width - 36) / 3;
@@ -164,7 +166,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   const [bio, setBio] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
-  const [avatarUri, setAvatarUri] = useState('https://i.pravatar.cc/150?u=kitayar@teacher.com');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [category, setCategory] = useState('آموزگار');
   const [position, setPosition] = useState('معلم');
@@ -210,6 +212,9 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   const [aboutUsModalVisible, setAboutUsModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
+  const [editingPost, setEditingPost] = useState<PostItem | null>(null);
+  const [editPostContent, setEditPostContent] = useState('');
+  const [isUpdatingPost, setIsUpdatingPost] = useState(false);
   const [createPostVisible, setCreatePostVisible] = useState(false);
 
   // Resume Modals
@@ -289,7 +294,13 @@ export const ProfileScreen = ({ navigation, route }: any) => {
         if (d.user?.username) setPhoneNumber(d.user.username);
         if (d.headline) setHeadline(d.headline);
         if (d.bio) setBio(d.bio);
-        if (d.avatar) setAvatarUri(d.avatar);
+        if (d.avatar && !d.avatar.includes('pravatar') && !d.avatar.includes('ui-avatars')) {
+          setAvatarUri(d.avatar);
+        } else if (d.user?.avatar && !d.user.avatar.includes('pravatar') && !d.user.avatar.includes('ui-avatars')) {
+          setAvatarUri(d.user.avatar);
+        } else {
+          setAvatarUri(null);
+        }
         if (d.coverImage) setCoverUri(d.coverImage);
         if (d.city) setCity(d.city);
         if (d.province) setProvince(d.province);
@@ -381,10 +392,62 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   }, [fullName, headline, bio, schoolName, experiences, education, skills, certificates, honors, teachingSubjects]);
 
   const getFullUrl = (uri?: string | null) => {
-    if (!uri) return null;
+    if (!uri || uri.includes('pravatar.cc') || uri.includes('ui-avatars.com')) return null;
     if (uri.startsWith('http')) return uri;
     const base = api.defaults.baseURL || 'https://api.kitayar.ir';
     return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
+  };
+
+  const handleDeletePost = (post: PostItem) => {
+    showConfirm({
+      title: 'حذف پست',
+      message: 'آیا از حذف این پست اطمینان دارید؟ این عملیات غیرقابل بازگشت است.',
+      confirmText: 'حذف پست',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          await communityService.deletePost(post.id);
+          setPosts((prev) => prev.filter((p) => p.id !== post.id));
+          setStats((prev) => ({ ...prev, postsCount: Math.max(0, prev.postsCount - 1) }));
+          setSelectedPost(null);
+          showSuccess('پست با موفقیت حذف شد.');
+        } catch {
+          showError('خطا در حذف پست. لطفاً دوباره تلاش کنید.');
+        }
+      },
+    });
+  };
+
+  const handleOpenEditPost = (post: PostItem) => {
+    setEditingPost(post);
+    setEditPostContent(post.title);
+  };
+
+  const handleSaveEditPost = async () => {
+    if (!editingPost) return;
+    if (!editPostContent.trim()) {
+      showWarning('توضیحات پست نمی‌تواند خالی باشد.');
+      return;
+    }
+
+    try {
+      setIsUpdatingPost(true);
+      await communityService.updatePost(editingPost.id, { content: editPostContent.trim() });
+      setPosts((prev) =>
+        prev.map((p) => (p.id === editingPost.id ? { ...p, title: editPostContent.trim() } : p))
+      );
+      if (selectedPost && selectedPost.id === editingPost.id) {
+        setSelectedPost({ ...selectedPost, title: editPostContent.trim() });
+      }
+      setEditingPost(null);
+      showSuccess('توضیحات پست با موفقیت ویرایش شد.');
+    } catch {
+      showError('خطا در ویرایش توضیحات پست.');
+    } finally {
+      setIsUpdatingPost(false);
+    }
   };
 
   const handlePickCoverImage = async () => {
@@ -937,7 +1000,13 @@ export const ProfileScreen = ({ navigation, route }: any) => {
 
           {/* Avatar */}
           <View style={[styles.avatarWrapper, { borderColor: colors.surface, backgroundColor: colors.surface }]}>
-            <Image source={{ uri: getFullUrl(avatarUri)! }} style={styles.avatarImage} resizeMode="cover" />
+            {getFullUrl(avatarUri) ? (
+              <Image source={{ uri: getFullUrl(avatarUri)! }} style={styles.avatarImage} resizeMode="cover" />
+            ) : (
+              <View style={[styles.avatarImage, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', justifyContent: 'center', alignItems: 'center' }]}>
+                <User size={38} color={colors.primary} />
+              </View>
+            )}
             <TouchableOpacity
               style={styles.changeAvatarBtn}
               onPress={handlePickAvatar}
@@ -2161,6 +2230,152 @@ export const ProfileScreen = ({ navigation, route }: any) => {
           </View>
         </View>
       </Modal>
+
+      {/* Modal: View & Manage Post (Edit Caption & Delete) */}
+      <Modal
+        visible={!!selectedPost && !editingPost}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedPost(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface, maxHeight: '90%' }]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>مدیریت و مشاهده پست</Text>
+              <TouchableOpacity onPress={() => setSelectedPost(null)}>
+                <X size={20} color={colors.textLight} />
+              </TouchableOpacity>
+            </View>
+
+            {selectedPost && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.postModalScrollContent}>
+                {/* Media Image / Thumbnail */}
+                {selectedPost.mediaUrl ? (
+                  <View style={styles.postModalMediaWrap}>
+                    <Image
+                      source={{ uri: selectedPost.mediaUrl }}
+                      style={styles.postModalImage}
+                      resizeMode="cover"
+                    />
+                    {selectedPost.type === 'video' && (
+                      <View style={styles.postModalVideoBadge}>
+                        <Play size={24} color="#ffffff" fill="#ffffff" />
+                      </View>
+                    )}
+                  </View>
+                ) : null}
+
+                {/* Caption / Content */}
+                <View style={[styles.postCaptionBox, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+                  <Text style={[styles.postCaptionLabel, { color: colors.textLight }]}>متن و توضیحات پست:</Text>
+                  <Text style={[styles.postCaptionText, { color: colors.text }]}>
+                    {selectedPost.title}
+                  </Text>
+                </View>
+
+                {/* Likes info */}
+                <View style={styles.postStatsRow}>
+                  <Text style={[styles.postStatsText, { color: colors.textLight }]}>
+                    ♥ پسندیده شده توسط {toPersianNumbers(selectedPost.likes)} نفر از همکاران
+                  </Text>
+                </View>
+
+                {/* Action Buttons: Edit Caption & Delete Post */}
+                <View style={styles.postActionButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.postEditBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handleOpenEditPost(selectedPost)}
+                    activeOpacity={0.85}
+                  >
+                    <Edit3 size={17} color="#ffffff" style={{ marginLeft: 6 }} />
+                    <Text style={styles.postEditBtnText}>ویرایش توضیحات</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.postDeleteBtn}
+                    onPress={() => handleDeletePost(selectedPost)}
+                    activeOpacity={0.85}
+                  >
+                    <Trash2 size={17} color="#ef4444" style={{ marginLeft: 6 }} />
+                    <Text style={styles.postDeleteBtnText}>حذف پست</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal: Edit Post Caption */}
+      <Modal
+        visible={!!editingPost}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditingPost(null)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>ویرایش توضیحات پست</Text>
+                <TouchableOpacity onPress={() => setEditingPost(null)} disabled={isUpdatingPost}>
+                  <X size={20} color={colors.textLight} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.postEditModalBody}>
+                <Text style={[styles.postCaptionLabel, { color: colors.text, marginTop: 8 }]}>متن و توضیحات جدید:</Text>
+                <TextInput
+                  style={[
+                    styles.postEditTextArea,
+                    {
+                      color: colors.text,
+                      borderColor: colors.border,
+                      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                    },
+                  ]}
+                  value={editPostContent}
+                  onChangeText={setEditPostContent}
+                  multiline
+                  textAlignVertical="top"
+                  placeholder="توضیحات جدید پست را بنویسید..."
+                  placeholderTextColor={colors.textLight}
+                  editable={!isUpdatingPost}
+                />
+
+                <View style={styles.postEditActionsRow}>
+                  <TouchableOpacity
+                    style={[styles.postEditSaveBtn, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveEditPost}
+                    disabled={isUpdatingPost}
+                    activeOpacity={0.85}
+                  >
+                    {isUpdatingPost ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text style={styles.postEditSaveBtnText}>ذخیره تغییرات</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.postEditCancelBtn, { borderColor: colors.border }]}
+                    onPress={() => setEditingPost(null)}
+                    disabled={isUpdatingPost}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.postEditCancelBtnText, { color: colors.textLight }]}>انصراف</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -3021,6 +3236,140 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontSize: 12,
     textAlign: 'right',
+  },
+
+  // Post View & Edit Modals
+  postModalScrollContent: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  postModalMediaWrap: {
+    width: '100%',
+    height: 220,
+    borderRadius: 14,
+    overflow: 'hidden',
+    marginBottom: 16,
+    position: 'relative',
+    backgroundColor: '#0f172a',
+  },
+  postModalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  postModalVideoBadge: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -22 }, { translateY: -22 }],
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postCaptionBox: {
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  postCaptionLabel: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+    textAlign: 'right',
+    marginBottom: 6,
+  },
+  postCaptionText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'right',
+    lineHeight: 22,
+  },
+  postStatsRow: {
+    marginTop: 10,
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  postStatsText: {
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.regular,
+  },
+  postActionButtonsRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+  },
+  postEditBtn: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  postEditBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  postDeleteBtn: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fca5a5',
+    backgroundColor: '#fef2f2',
+  },
+  postDeleteBtnText: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  postEditModalBody: {
+    padding: 16,
+    paddingBottom: 24,
+  },
+  postEditTextArea: {
+    height: 120,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    textAlign: 'right',
+    fontFamily: FONT_FAMILY.regular,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  postEditActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+  },
+  postEditSaveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postEditSaveBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  postEditCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postEditCancelBtnText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.regular,
   },
 });
 

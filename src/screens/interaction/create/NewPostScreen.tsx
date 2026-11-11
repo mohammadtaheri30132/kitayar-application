@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 56,
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -267,14 +267,13 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 60,
   },
-  // Large Dashed Square Area
+  // Full-width Dashed Media Area
   mediaSquareArea: {
     width: '100%',
-    aspectRatio: 1,
-    maxHeight: 280,
+    height: 200,
     borderWidth: 2,
     borderStyle: 'dashed',
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',

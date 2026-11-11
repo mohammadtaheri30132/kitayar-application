@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Share, I18nManager } from 'react-native';
-import { MoreVertical, Heart, MessageCircle, Share2, Bookmark, Pin, Flag, Trash2 } from 'lucide-react-native';
+import { MoreVertical, Heart, MessageCircle, Share2, Bookmark, Pin, Flag, Trash2, Edit3 } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { CommunityPostItem, communityService } from '../../../services/community/communityService';
 import { formatRelativeTime, toPersianDigits } from '../../../utils/communityHelpers';
@@ -10,10 +10,11 @@ interface Props {
   onPress: () => void;
   currentUserId?: string;
   onDeletePress?: () => void;
+  onEditPress?: () => void;
   onReportPress?: () => void;
 }
 
-const PostCard = ({ post, onPress, currentUserId, onDeletePress, onReportPress }: Props) => {
+const PostCard = ({ post, onPress, currentUserId, onDeletePress, onEditPress, onReportPress }: Props) => {
   const { colors } = useTheme();
   
   const [isLiked, setIsLiked] = useState(!!post.isLiked);
@@ -114,10 +115,19 @@ const PostCard = ({ post, onPress, currentUserId, onDeletePress, onReportPress }
         </View>
 
         <View style={styles.headerActions}>
-          {isOwnPost && onDeletePress ? (
-            <TouchableOpacity onPress={onDeletePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Trash2 color={colors.textLight} size={18} />
-            </TouchableOpacity>
+          {isOwnPost ? (
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 10 }}>
+              {onEditPress ? (
+                <TouchableOpacity onPress={onEditPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Edit3 color={colors.textLight} size={18} />
+                </TouchableOpacity>
+              ) : null}
+              {onDeletePress ? (
+                <TouchableOpacity onPress={onDeletePress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Trash2 color={colors.textLight} size={18} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
           ) : onReportPress ? (
             <TouchableOpacity onPress={onReportPress} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Flag color={colors.textLight} size={16} />

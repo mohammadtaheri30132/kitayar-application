@@ -222,6 +222,11 @@ export const communityService = {
     await api.delete(`/teacher/community/posts/${id}`);
   },
 
+  updatePost: async (id: string, data: { content: string }): Promise<CommunityPostItem> => {
+    const res = await api.put(`/teacher/community/posts/${id}`, data);
+    return res.data?.data;
+  },
+
   toggleLikePost: async (id: string): Promise<{ liked: boolean; likeCount: number }> => {
     const res = await api.post(`/teacher/community/posts/${id}/like`);
     return res.data?.data;

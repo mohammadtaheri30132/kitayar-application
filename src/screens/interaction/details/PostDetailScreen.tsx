@@ -9,11 +9,12 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ActivityIndicator, 
+  Modal,
   I18nManager 
 } from 'react-native';
-import { showError, showSuccess, showConfirm } from '../../../components/feedback';
+import { showError, showSuccess, showConfirm, showWarning } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Send, ChevronRight, ChevronLeft, Flag, Trash2 } from 'lucide-react-native';
+import { Send, ChevronRight, ChevronLeft, Flag, Trash2, Edit3, X } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { AuthContext } from '../../../context/AuthContext';
 import PostCard from '../components/PostCard';
@@ -37,6 +38,53 @@ const PostDetailScreen = ({ route, navigation }: any) => {
   const [inputText, setInputText] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const handleDeletePost = () => {
+    showConfirm({
+      title: 'حذف پست',
+      message: 'آیا از حذف این پست اطمینان دارید؟ این عملیات غیرقابل بازگشت است.',
+      confirmText: 'حذف پست',
+      cancelText: 'انصراف',
+      isDestructive: true,
+      icon: 'delete',
+      onConfirm: async () => {
+        try {
+          await communityService.deletePost(postId);
+          showSuccess('پست با موفقیت حذف شد.');
+          navigation.goBack();
+        } catch {
+          showError('امکان حذف پست وجود ندارد.');
+        }
+      },
+    });
+  };
+
+  const handleOpenEditPost = () => {
+    if (!post) return;
+    setEditContent(post.content || '');
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveEditPost = async () => {
+    if (!editContent.trim()) {
+      showWarning('توضیحات پست نمی‌تواند خالی باشد.');
+      return;
+    }
+    try {
+      setIsSavingEdit(true);
+      await communityService.updatePost(postId, { content: editContent.trim() });
+      setPost(prev => prev ? { ...prev, content: editContent.trim() } : prev);
+      setIsEditModalVisible(false);
+      showSuccess('توضیحات پست با موفقیت ویرایش شد.');
+    } catch {
+      showError('خطا در ویرایش توضیحات پست.');
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   useEffect(() => {
     getUserIdFromToken().then(id => setCurrentUserId(id));
@@ -91,7 +139,7 @@ const PostDetailScreen = ({ route, navigation }: any) => {
       confirmText: 'حذف',
       cancelText: 'انصراف',
       isDestructive: true,
-      icon: Trash2,
+      icon: 'delete',
       onConfirm: async () => {
         try {
           await communityService.deleteComment(commentId);
@@ -117,7 +165,7 @@ const PostDetailScreen = ({ route, navigation }: any) => {
       confirmText: 'ارسال گزارش',
       cancelText: 'انصراف',
       isDestructive: false,
-      icon: Flag,
+      icon: 'warning',
       onConfirm: async () => {
         try {
           await communityService.reportContent({
@@ -142,6 +190,8 @@ const PostDetailScreen = ({ route, navigation }: any) => {
           post={post} 
           currentUserId={currentUserId || undefined}
           onPress={() => {}} 
+          onDeletePress={handleDeletePost}
+          onEditPress={handleOpenEditPost}
           onReportPress={() => handleReport('post', post._id)}
         />
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -267,6 +317,74 @@ const PostDetailScreen = ({ route, navigation }: any) => {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Edit Post Caption Modal */}
+      <Modal
+        visible={isEditModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>ویرایش متن و توضیحات پست</Text>
+                <TouchableOpacity onPress={() => setIsEditModalVisible(false)} disabled={isSavingEdit}>
+                  <X size={20} color={colors.textLight} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalBody}>
+                <TextInput
+                  style={[
+                    styles.editTextInput,
+                    {
+                      color: colors.text,
+                      borderColor: colors.border,
+                      backgroundColor: colors.background,
+                    },
+                  ]}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  multiline
+                  textAlignVertical="top"
+                  placeholder="توضیحات پست خود را بنویسید..."
+                  placeholderTextColor={colors.textLight}
+                  editable={!isSavingEdit}
+                />
+
+                <View style={styles.modalBtnRow}>
+                  <TouchableOpacity
+                    style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]}
+                    onPress={handleSaveEditPost}
+                    disabled={isSavingEdit}
+                    activeOpacity={0.85}
+                  >
+                    {isSavingEdit ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.modalSaveBtnText}>ذخیره تغییرات</Text>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                    onPress={() => setIsEditModalVisible(false)}
+                    disabled={isSavingEdit}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[styles.modalCancelBtnText, { color: colors.textLight }]}>انصراف</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -367,7 +485,73 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  modalTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+  },
+  modalBody: {
+    padding: 16,
+  },
+  editTextInput: {
+    height: 120,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    textAlign: 'right',
+    fontFamily: 'IRANSansX',
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  modalBtnRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSaveBtnText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    fontFamily: 'IRANSansX',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 13,
+    fontFamily: 'IRANSansX',
+  },
 });
 
 export default PostDetailScreen;
