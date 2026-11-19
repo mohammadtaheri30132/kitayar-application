@@ -30,6 +30,7 @@ import {
   Briefcase,
   FolderOpen,
   Play,
+  Pause,
   Video,
   Phone,
   MessageSquare,
@@ -59,6 +60,8 @@ import ImagePicker from 'react-native-image-crop-picker';
 import { communityService } from '../../services/community/communityService';
 import { FONT_FAMILY } from '../../theme/typography';
 import { toPersianNumbers } from '../../utils/date/jalaliHelper';
+import { resolveCommunityMediaUrl, isVideoUrl, getVideoThumbUrl } from '../../utils/communityHelpers';
+import KitayarVideo from '../../components/KitayarVideo';
 
 const { width } = Dimensions.get('window');
 const GRID_ITEM_SIZE = (width - 36) / 3;
@@ -212,6 +215,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
   const [aboutUsModalVisible, setAboutUsModalVisible] = useState(false);
   const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<PostItem | null>(null);
+  const [postVideoPaused, setPostVideoPaused] = useState<boolean>(true);
   const [editingPost, setEditingPost] = useState<PostItem | null>(null);
   const [editPostContent, setEditPostContent] = useState('');
   const [isUpdatingPost, setIsUpdatingPost] = useState(false);
@@ -333,16 +337,25 @@ export const ProfileScreen = ({ navigation, route }: any) => {
 
       if (postsRes.status === 'fulfilled' && postsRes.value.data?.success) {
         const rawPosts = postsRes.value.data.data || [];
-        const mapped: PostItem[] = rawPosts.map((p: any) => ({
-          id: p._id || p.id,
-          type: p.images && p.images.length > 0 && p.images[0].endsWith('.mp4') ? 'video' : 'image',
-          mediaUrl: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500&auto=format&fit=crop',
-          thumbnailUrl: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500&auto=format&fit=crop',
-          title: p.content || 'پست آموزشی و تدریس',
-          likes: p.likeCount || 0,
-          views: p.viewCount || 0,
-          date: 'اخیر',
-        }));
+        const fallbackImg = 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=500&auto=format&fit=crop';
+        const mapped: PostItem[] = rawPosts.map((p: any) => {
+          const rawMedia = p.images && p.images[0] ? p.images[0] : '';
+          const resolvedMedia = resolveCommunityMediaUrl(rawMedia) || fallbackImg;
+          const postIsVideo = isVideoUrl(rawMedia);
+          const resolvedThumb = postIsVideo
+            ? (getVideoThumbUrl(rawMedia) || fallbackImg)
+            : resolvedMedia;
+          return {
+            id: p._id || p.id,
+            type: postIsVideo ? 'video' : 'image',
+            mediaUrl: resolvedMedia,
+            thumbnailUrl: resolvedThumb,
+            title: p.content || 'پست آموزشی و تدریس',
+            likes: p.likeCount || 0,
+            views: p.viewCount || 0,
+            date: 'اخیر',
+          };
+        });
         setPosts(mapped);
       }
     } catch (error) {
@@ -391,12 +404,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
     return Math.min(100, score);
   }, [fullName, headline, bio, schoolName, experiences, education, skills, certificates, honors, teachingSubjects]);
 
-  const getFullUrl = (uri?: string | null) => {
-    if (!uri || uri.includes('pravatar.cc') || uri.includes('ui-avatars.com')) return null;
-    if (uri.startsWith('http')) return uri;
-    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
-    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
-  };
+  const getFullUrl = (uri?: string | null) => resolveCommunityMediaUrl(uri);
 
   const handleDeletePost = (post: PostItem) => {
     showConfirm({
@@ -1498,7 +1506,7 @@ export const ProfileScreen = ({ navigation, route }: any) => {
                 </Text>
                 <TouchableOpacity
                   style={[styles.primaryActionBtn, { backgroundColor: colors.primary, marginTop: 14 }]}
-                  onPress={() => setCreatePostVisible(true)}
+                  onPress={() => navigation.navigate('NewPostScreen')}
                 >
                   <Plus size={16} color="#fff" />
                   <Text style={styles.primaryActionText}>ارسال اولین پست</Text>
@@ -1509,8 +1517,11 @@ export const ProfileScreen = ({ navigation, route }: any) => {
                 {posts.map((post) => (
                   <TouchableOpacity
                     key={post.id}
-                    style={[styles.gridItem, { backgroundColor: colors.surface }]}
-                    onPress={() => setSelectedPost(post)}
+                    style={[styles.gridItem, { backgroundColor: post.type === 'video' ? '#0f172a' : colors.surface }]}
+                    onPress={() => {
+                      setPostVideoPaused(false);
+                      setSelectedPost(post);
+                    }}
                     activeOpacity={0.85}
                   >
                     <Image source={{ uri: post.thumbnailUrl }} style={styles.gridImage} />
@@ -2250,18 +2261,32 @@ export const ProfileScreen = ({ navigation, route }: any) => {
 
             {selectedPost && (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.postModalScrollContent}>
-                {/* Media Image / Thumbnail */}
+                {/* Media Image or Video Player */}
                 {selectedPost.mediaUrl ? (
                   <View style={styles.postModalMediaWrap}>
-                    <Image
-                      source={{ uri: selectedPost.mediaUrl }}
-                      style={styles.postModalImage}
-                      resizeMode="cover"
-                    />
-                    {selectedPost.type === 'video' && (
-                      <View style={styles.postModalVideoBadge}>
-                        <Play size={24} color="#ffffff" fill="#ffffff" />
-                      </View>
+                    {selectedPost.type === 'video' ? (
+                      <TouchableOpacity
+                        style={styles.postModalImage}
+                        onPress={() => setPostVideoPaused((p) => !p)}
+                        activeOpacity={0.95}
+                      >
+                        <KitayarVideo
+                          src={selectedPost.mediaUrl}
+                          paused={postVideoPaused}
+                          style={styles.postModalImage}
+                        />
+                        {postVideoPaused ? (
+                          <View style={styles.postModalVideoBadge}>
+                            <Play size={24} color="#ffffff" fill="#ffffff" />
+                          </View>
+                        ) : null}
+                      </TouchableOpacity>
+                    ) : (
+                      <Image
+                        source={{ uri: selectedPost.mediaUrl }}
+                        style={styles.postModalImage}
+                        resizeMode="cover"
+                      />
                     )}
                   </View>
                 ) : null}

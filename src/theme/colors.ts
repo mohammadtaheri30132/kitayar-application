@@ -7,6 +7,7 @@ export const lightColors = {
   text: '#1e293b', // متن اصلی
   textLight: '#64748b', // متن فرعی
   textMuted: '#94a3b8', // متن بسیار کم‌رنگ / placeholder
+  textOnPrimary: '#ffffff',
   error: '#ef4444', // خطاها
   errorBackground: '#fef2f2',
   border: '#e2e8f0', // حاشیه‌ها
@@ -34,6 +35,7 @@ export const darkColors = {
   text: '#f8fafc', // متن اصلی
   textLight: '#94a3b8', // متن فرعی
   textMuted: '#64748b',
+  textOnPrimary: '#ffffff',
   error: '#f87171', // خطاها
   errorBackground: 'rgba(239, 68, 68, 0.15)',
   border: '#334155', // حاشیه‌ها

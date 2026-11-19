@@ -61,6 +61,7 @@ import {
 } from '../../utils/date/jalaliHelper';
 import { FONT_FAMILY } from '../../theme/typography';
 import { showSuccess, showWarning, showError } from '../../components/feedback';
+import { resolveCommunityMediaUrl } from '../../utils/communityHelpers';
 
 const { width } = Dimensions.get('window');
 
@@ -352,14 +353,7 @@ export const TeacherCenterScreen: React.FC = () => {
 
 
 
-  const getFullAvatarUrl = (uri?: string | null) => {
-    if (!uri || uri.includes('pravatar.cc') || uri.includes('ui-avatars.com')) {
-      return null;
-    }
-    if (uri.startsWith('http')) return uri;
-    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
-    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
-  };
+  const getFullAvatarUrl = (uri?: string | null) => resolveCommunityMediaUrl(uri);
 
   const isProfileCompleted = onboardingStatus.hasResume && onboardingStatus.hasEducation;
 

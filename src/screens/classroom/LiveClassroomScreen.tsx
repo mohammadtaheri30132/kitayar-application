@@ -11,8 +11,9 @@ import {
   Platform,
   NativeModules,
   ScrollView,
+  Clipboard,
+  Share,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import {
   Mic,
   Video as VideoIcon,
@@ -24,20 +25,24 @@ import {
   ShieldCheck,
   RefreshCw,
   Sparkles,
+  Copy,
+  Share2,
+  Laptop,
+  Check,
 } from 'lucide-react-native';
 import { api, BASE_URL } from '../../api/axiosConfig';
-
-const WebViewComponent = WebView as any;
+import { getToken } from '../../utils/storage';
+import { useTheme } from '../../context/ThemeContext';
+import { FONT_FAMILY } from '../../theme/typography';
 
 export default function LiveClassroomScreen({ navigation, route }: any) {
+  const { colors: themeColors } = useTheme();
   const { sessionId, bookingCode, title = 'کلاس آنلاین رفع اشکال' } = route?.params || {};
 
   const [loading, setLoading] = useState(true);
   const [tokenData, setTokenData] = useState<any>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [useEmbeddedWebView, setUseEmbeddedWebView] = useState(false);
-
-  const webViewRef = useRef<WebView>(null);
+  const [copiedWebLink, setCopiedWebLink] = useState(false);
 
   // Timer
   useEffect(() => {
@@ -53,7 +58,22 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Launch Native Kotlin Activity or Embedded WebRTC Classroom
+
+  const launchNative = async (url: string, data?: any) => {
+    const authToken = await getToken();
+    await NativeModules.KitayarClassroom.openClassroom({
+      roomUrl: url,
+      roomId: data?.roomId || tokenData?.roomId || sessionId || '',
+      title: data?.title || tokenData?.title || title || 'کلاس آنلاین',
+      isTeacher: true,
+      sessionId: sessionId || '',
+      token: authToken || '',
+      ticketCode: data?.ticketCode || tokenData?.ticketCode || '',
+      userName: data?.participant?.name || tokenData?.participant?.name || '',
+    });
+  };
+
+  // Launch the fully native Kotlin classroom (no WebView)
   const openNativeClassroom = async (customUrl?: string) => {
     const roomTarget = tokenData?.roomId || sessionId || 'test-room';
     const url =
@@ -68,19 +88,13 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
 
     if (Platform.OS === 'android' && NativeModules.KitayarClassroom?.openClassroom) {
       try {
-        await NativeModules.KitayarClassroom.openClassroom({
-          roomUrl: url,
-          title: tokenData?.title || title || 'کلاس آنلاین کیتایار',
-          isTeacher: true,
-          sessionId: sessionId || '',
-        });
+        await launchNative(url);
       } catch (err: any) {
         console.error('Launch Native Classroom Error:', err);
-        Alert.alert('خطا در اجرای کلاس نیتیو', err?.message || 'لطفاً از حالت تحت وب استفاده کنید.');
-        setUseEmbeddedWebView(true);
+        Alert.alert('خطا در اجرای کلاس', err?.message || 'ورود به کلاس ممکن نشد.');
       }
     } else {
-      setUseEmbeddedWebView(true);
+      Alert.alert('پشتیبانی نشده', 'کلاس آنلاین نیتیو فعلاً فقط روی اندروید پشتیبانی می‌شود.');
     }
   };
 
@@ -92,7 +106,7 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
       try {
         setLoading(true);
         const res = await api.post(`/classroom/rooms/${sessionId}/token`, {
-          clientPlatform: Platform.OS === 'android' ? 'android_emulator' : 'mobile',
+          clientPlatform: Platform.OS,
         });
 
         if (res.data?.success && res.data?.data) {
@@ -109,12 +123,7 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
           // Automatically launch the high-performance native Kotlin Activity on Android
           if (Platform.OS === 'android' && NativeModules.KitayarClassroom?.openClassroom && directUrl) {
             try {
-              await NativeModules.KitayarClassroom.openClassroom({
-                roomUrl: directUrl,
-                title: data.title || title || 'کلاس آنلاین کیتایار',
-                isTeacher: true,
-                sessionId: sessionId || '',
-              });
+              await launchNative(directUrl, data);
             } catch (openErr) {
               console.warn('Native auto-launch notice:', openErr);
             }
@@ -169,6 +178,23 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
   const directUrl =
     tokenData?.directUrl ||
     `https://class.kitayar.ir/classroom/native/${encodeURIComponent(roomTarget)}?role=teacher&platform=app`;
+  const webJoinUrl = tokenData?.webJoinUrl as string | undefined;
+
+  const handleCopyWebLink = () => {
+    if (!webJoinUrl) return;
+    Clipboard.setString(webJoinUrl);
+    setCopiedWebLink(true);
+    setTimeout(() => setCopiedWebLink(false), 2500);
+  };
+
+  const handleShareWebLink = async () => {
+    if (!webJoinUrl) return;
+    try {
+      await Share.share({
+        message: `لینک اختصاصی ورود به کلاس آنلاین «${tokenData?.title || title}» در مرورگر:\n${webJoinUrl}`,
+      });
+    } catch {}
+  };
 
   if (loading) {
     return (
@@ -214,31 +240,7 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
       </View>
 
       {/* Content Stage: Either Native Control Center or Embedded WebView */}
-      {useEmbeddedWebView ? (
-        <View style={styles.stageContainer}>
-          <WebViewComponent
-            ref={webViewRef}
-            source={{ uri: directUrl }}
-            style={styles.webView}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            mediaPlaybackRequiresUserAction={false}
-            allowsInlineMediaPlayback={true}
-            originWhitelist={['*']}
-            mixedContentMode="always"
-          />
-          <TouchableOpacity
-            style={styles.switchToNativeFloatBtn}
-            onPress={() => {
-              setUseEmbeddedWebView(false);
-              openNativeClassroom();
-            }}
-          >
-            <Sparkles size={16} color="#ffffff" />
-            <Text style={styles.switchToNativeFloatText}>انتقال به محیط نیتیو تمام‌صفحه</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
+      {(
         <ScrollView contentContainerStyle={styles.lobbyContent} showsVerticalScrollIndicator={false}>
           {/* Main Action Banner */}
           <View style={styles.bannerCard}>
@@ -312,17 +314,49 @@ export default function LiveClassroomScreen({ navigation, route }: any) {
               onPress={() => openNativeClassroom()}
               activeOpacity={0.8}
             >
-              <RefreshCw size={18} color="#94a3b8" />
+              <RefreshCw size={18} color={themeColors.textMuted} />
               <Text style={styles.refreshBtnText}>اتصال مجدد به کلاس</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.embeddedToggleBtn}
-              onPress={() => setUseEmbeddedWebView(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.embeddedToggleBtnText}>نمایش در نمای ادغام‌شده (پیش‌نمایش)</Text>
-            </TouchableOpacity>
+            {webJoinUrl ? (
+              <View style={styles.webLinkCard}>
+                <View style={styles.webLinkHeader}>
+                  <Laptop size={16} color={themeColors.info} />
+                  <Text style={[styles.webLinkTitle, { color: themeColors.info }]}>
+                    ورود در مرورگر (لپ‌تاپ / وب)
+                  </Text>
+                </View>
+                <Text style={styles.webLinkDesc}>
+                  لینک اختصاصی خود را برای تدریس از مرورگر لپ‌تاپ کپی کنید. با ورود در دستگاه جدید، دستگاه قبلی به‌طور خودکار قطع می‌شود.
+                </Text>
+                <View style={styles.webLinkRow}>
+                  <TouchableOpacity
+                    style={[styles.webCopyBtn, { backgroundColor: themeColors.primary }]}
+                    onPress={handleCopyWebLink}
+                    activeOpacity={0.85}
+                  >
+                    {copiedWebLink ? (
+                      <Check size={15} color={themeColors.textOnPrimary} />
+                    ) : (
+                      <Copy size={15} color={themeColors.textOnPrimary} />
+                    )}
+                    <Text style={[styles.webBtnText, { color: themeColors.textOnPrimary }]}>
+                      {copiedWebLink ? 'کپی شد ✓' : 'کپی لینک وب'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.webShareBtn}
+                    onPress={handleShareWebLink}
+                    activeOpacity={0.85}
+                  >
+                    <Share2 size={15} color={themeColors.info} />
+                    <Text style={[styles.webShareBtnText, { color: themeColors.info }]}>
+                      اشتراک‌گذاری
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : null}
           </View>
 
           {/* End Call Button */}
@@ -567,6 +601,62 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '600',
+  },
+  webLinkCard: {
+    borderRadius: 10,
+    backgroundColor: '#070b14',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    padding: 12,
+    gap: 8,
+  },
+  webLinkHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  webLinkTitle: {
+    fontSize: 12.5,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  webLinkDesc: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    lineHeight: 18,
+    textAlign: 'right',
+  },
+  webLinkRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginTop: 2,
+  },
+  webCopyBtn: {
+    flex: 1.2,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  webBtnText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  webShareBtn: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+    backgroundColor: '#1e293b',
+  },
+  webShareBtnText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
   },
   embeddedToggleBtn: {
     alignItems: 'center',

@@ -1,22 +1,32 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
-import { requireNativeComponent, UIManager, findNodeHandle } from 'react-native';
+import { requireNativeComponent, UIManager, findNodeHandle, StyleProp, ViewStyle } from 'react-native';
 
-const NativeVideoView = requireNativeComponent('KitayarVideoView');
+const NativeVideoView = requireNativeComponent<any>('KitayarVideoView');
 
-const KitayarVideo = forwardRef(({ src, paused, onProgress, style }, ref) => {
-  const nativeRef = useRef(null);
+export interface KitayarVideoHandle {
+  seek: (seconds: number) => void;
+}
+
+export interface KitayarVideoProps {
+  src: string;
+  paused?: boolean;
+  onProgress?: (event: { currentTime: number }) => void;
+  style?: StyleProp<ViewStyle>;
+}
+
+const KitayarVideo = forwardRef<KitayarVideoHandle, KitayarVideoProps>(({ src, paused, onProgress, style }, ref) => {
+  const nativeRef = useRef<any>(null);
 
   useImperativeHandle(ref, () => ({
-    seek: (seconds) => {
-      UIManager.dispatchViewManagerCommand(
-        findNodeHandle(nativeRef.current),
-        'seek',
-        [seconds]
-      );
-    }
+    seek: (seconds: number) => {
+      const node = findNodeHandle(nativeRef.current);
+      if (node != null) {
+        UIManager.dispatchViewManagerCommand(node, 'seek' as unknown as number, [seconds]);
+      }
+    },
   }));
 
-  const _onProgress = (event) => {
+  const _onProgress = (event: { nativeEvent: { currentTime: number } }) => {
     if (onProgress) {
       onProgress(event.nativeEvent);
     }

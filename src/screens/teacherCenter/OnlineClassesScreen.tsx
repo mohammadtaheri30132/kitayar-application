@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,9 @@ import {
   Linking,
   Image,
   Alert,
+  Clipboard,
+  Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -37,6 +40,10 @@ import {
   DollarSign,
   ShieldCheck,
   ChevronLeft,
+  Copy,
+  Share2,
+  Laptop,
+  Check,
 } from 'lucide-react-native';
 
 export const OnlineClassesScreen: React.FC = () => {
@@ -45,6 +52,7 @@ export const OnlineClassesScreen: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'upcoming' | 'history'>('pending');
 
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
@@ -53,6 +61,9 @@ export const OnlineClassesScreen: React.FC = () => {
 
   // Action states
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [webLinkLoadingId, setWebLinkLoadingId] = useState<string | null>(null);
+  const [copiedBookingId, setCopiedBookingId] = useState<string | null>(null);
+  const webLinkCache = useRef<Record<string, string>>({});
 
   // Rejection modal
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
@@ -61,23 +72,32 @@ export const OnlineClassesScreen: React.FC = () => {
 
   const fetchBookings = async () => {
     try {
+      setFetchError(null);
       const [pendingRes, upcomingRes, historyRes] = await Promise.allSettled([
         api.get('/teacher/center/class-requests?tab=pending'),
         api.get('/teacher/center/class-requests?tab=upcoming'),
         api.get('/teacher/center/class-requests?tab=history'),
       ]);
 
+      let anySucceeded = false;
       if (pendingRes.status === 'fulfilled' && pendingRes.value.data?.success) {
         setPendingBookings(pendingRes.value.data.data || []);
+        anySucceeded = true;
       }
       if (upcomingRes.status === 'fulfilled' && upcomingRes.value.data?.success) {
         setUpcomingBookings(upcomingRes.value.data.data || []);
+        anySucceeded = true;
       }
       if (historyRes.status === 'fulfilled' && historyRes.value.data?.success) {
         setHistoryBookings(historyRes.value.data.data || []);
+        anySucceeded = true;
+      }
+      if (!anySucceeded) {
+        setFetchError('خطا در دریافت لیست کلاس‌ها از سرور. اتصال اینترنت خود را بررسی کنید.');
       }
     } catch (err: any) {
       console.error('Error fetching teacher class bookings:', err);
+      setFetchError('خطا در دریافت لیست کلاس‌ها از سرور.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -175,6 +195,52 @@ export const OnlineClassesScreen: React.FC = () => {
     });
   };
 
+  const getTeacherWebLink = async (bookingId: string): Promise<string | null> => {
+    if (webLinkCache.current[bookingId]) {
+      return webLinkCache.current[bookingId];
+    }
+    try {
+      setWebLinkLoadingId(bookingId);
+      const res = await api.post(`/classroom/rooms/${bookingId}/token`, {
+        clientPlatform: Platform.OS,
+        linkOnly: true,
+      });
+      const url = res.data?.data?.webJoinUrl || res.data?.data?.directUrl;
+      if (url) {
+        webLinkCache.current[bookingId] = url;
+        return url;
+      }
+      showError('دریافت لینک ورود در مرورگر ناموفق بود.');
+      return null;
+    } catch (err: any) {
+      showError(err.response?.data?.message || 'امکان دریافت لینک وب وجود ندارد.');
+      return null;
+    } finally {
+      setWebLinkLoadingId(null);
+    }
+  };
+
+  const handleCopyWebLink = async (item: any) => {
+    const url = await getTeacherWebLink(item._id);
+    if (!url) return;
+    Clipboard.setString(url);
+    setCopiedBookingId(item._id);
+    showSuccess('لینک اختصاصی کلاس کپی شد؛ برای ورود از مرورگر لپ‌تاپ استفاده کنید.');
+    setTimeout(() => {
+      setCopiedBookingId((prev) => (prev === item._id ? null : prev));
+    }, 2500);
+  };
+
+  const handleShareWebLink = async (item: any) => {
+    const url = await getTeacherWebLink(item._id);
+    if (!url) return;
+    try {
+      await Share.share({
+        message: `لینک اختصاصی ورود به کلاس آنلاین «${item.topic || item.subjectName || 'کیتایار'}» در مرورگر:\n${url}`,
+      });
+    } catch {}
+  };
+
   const formatScheduledDate = (isoString: string) => {
     return formatPersianDate(isoString);
   };
@@ -195,11 +261,30 @@ export const OnlineClassesScreen: React.FC = () => {
             <Text style={[styles.statusBadgeText, { color: '#15803d' }]}>تایید شده / آماده ورود</Text>
           </View>
         );
+      case 'in_progress':
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: colors.successBackground, borderColor: colors.success }]}>
+            <Video size={12} color={colors.success} />
+            <Text style={[styles.statusBadgeText, { color: colors.success }]}>در حال برگزاری</Text>
+          </View>
+        );
       case 'completed':
         return (
-          <View style={[styles.statusBadge, { backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }]}>
-            <ShieldCheck size={12} color="#1d4ed8" />
-            <Text style={[styles.statusBadgeText, { color: '#1d4ed8' }]}>برگزار شد و تسویه شد</Text>
+          <View style={[styles.statusBadge, { backgroundColor: colors.infoBackground, borderColor: colors.border }]}>
+            <ShieldCheck size={12} color={colors.info} />
+            <Text style={[styles.statusBadgeText, { color: colors.info }]}>برگزار شد و تسویه شد</Text>
+          </View>
+        );
+      case 'cancelled':
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+            <Text style={[styles.statusBadgeText, { color: colors.textLight }]}>لغو شده</Text>
+          </View>
+        );
+      case 'expired':
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
+            <Text style={[styles.statusBadgeText, { color: colors.textLight }]}>منقضی شده</Text>
           </View>
         );
       case 'rejected':
@@ -289,23 +374,45 @@ export const OnlineClassesScreen: React.FC = () => {
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[colors.primary]} />}
         >
+          {/* Quick Create Virtual Class CTA */}
+          <TouchableOpacity
+            style={[styles.createVirtualCta, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('CreateVirtualClassScreen')}
+            activeOpacity={0.85}
+          >
+            <Plus size={18} color={colors.card} style={{ marginStart: 6 }} />
+            <Text style={styles.createVirtualCtaText}>ایجاد کلاس مجازی جدید و دعوت دانش‌آموزان</Text>
+          </TouchableOpacity>
+
           {/* Quick Notice Banner if settings can be adjusted */}
           <TouchableOpacity
-            style={[styles.settingsNoticeCard, { backgroundColor: isDark ? '#1e293b' : '#eff6ff', borderColor: isDark ? '#334155' : '#bfdbfe' }]}
+            style={[styles.settingsNoticeCard, { backgroundColor: colors.infoBackground, borderColor: colors.border }]}
             onPress={() => navigation.navigate('OnlineClassSettingsScreen')}
             activeOpacity={0.85}
           >
-            <ChevronLeft size={18} color="#2563eb" />
+            <ChevronLeft size={18} color={colors.info} />
             <View style={styles.settingsNoticeTextCol}>
-              <Text style={[styles.settingsNoticeTitle, { color: isDark ? '#93c5fd' : '#1e3a8a' }]}>
-                تنظیم نرخ و زمان‌بندی جلسات
+              <Text style={[styles.settingsNoticeTitle, { color: colors.text }]}>
+                تنظیم برنامه زمانی هفتگی و نرخ جلسات
               </Text>
-              <Text style={[styles.settingsNoticeSub, { color: isDark ? '#cbd5e1' : '#3b82f6' }]}>
-                تغییر قیمت پایه ۹۰ دقیقه و فعال/غیرفعال کردن مدت‌های مختلف
+              <Text style={[styles.settingsNoticeSub, { color: colors.info }]}>
+                مدیریت بازه‌های آزاد هفتگی، دروس تخصصی و شهریه پایه کلاس آنلاین
               </Text>
             </View>
-            <Settings size={22} color="#2563eb" style={{ marginLeft: 8 }} />
+            <Settings size={22} color={colors.info} style={{ marginStart: 8 }} />
           </TouchableOpacity>
+
+          {fetchError && (
+            <View style={[styles.errorBanner, { backgroundColor: colors.errorBackground, borderColor: colors.error }]}>
+              <Text style={[styles.errorBannerText, { color: colors.error }]}>{fetchError}</Text>
+              <TouchableOpacity
+                style={[styles.retryBtn, { backgroundColor: colors.error }]}
+                onPress={fetchBookings}
+              >
+                <Text style={styles.retryBtnText}>تلاش مجدد</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {currentList.length === 0 ? (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -328,19 +435,42 @@ export const OnlineClassesScreen: React.FC = () => {
               const dt = formatScheduledDate(item.scheduledAt);
               const isProcessing = processingId === item._id;
               const earnings = item.pricing?.teacherEarnings || 0;
-              const studentName = item.studentId?.fullName || 'دانش‌آموز';
+              const isTeacherInvite = item.source === 'teacher_invitation';
+              const studentName = isTeacherInvite
+                ? `${toPersianDigits(item.invitedStudents?.length || item.members?.length || 0)} دانش‌آموز دعوت‌شده`
+                : item.studentId?.fullName || 'دانش‌آموز';
               const capacity = item.capacity || 1;
+              const canJoin = ['confirmed', 'in_progress'].includes(item.status);
 
               return (
                 <View
                   key={item._id}
                   style={[styles.bookingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  {/* Top Row: Status badge & Booking Code */}
+                  {/* Top Row: Status badge & Booking Code + Source */}
                   <View style={styles.bookingCardHeader}>
-                    <Text style={[styles.bookingCode, { color: colors.textLight }]}>
-                      کد رزرو: {item.bookingCode}
-                    </Text>
+                    <View style={styles.codeSourceWrap}>
+                      <Text style={[styles.bookingCode, { color: colors.textLight }]}>
+                        کد: {item.bookingCode}
+                      </Text>
+                      <View
+                        style={[
+                          styles.sourceChip,
+                          {
+                            backgroundColor: isTeacherInvite ? colors.infoBackground : colors.surfaceVariant,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.sourceChipText,
+                            { color: isTeacherInvite ? colors.info : colors.textLight },
+                          ]}
+                        >
+                          {isTeacherInvite ? 'کلاس مجازی معلم' : 'درخواست دانش‌آموز'}
+                        </Text>
+                      </View>
+                    </View>
                     {renderStatusBadge(item.status)}
                   </View>
 
@@ -442,32 +572,97 @@ export const OnlineClassesScreen: React.FC = () => {
 
                   {activeTab === 'upcoming' && (
                     <View style={styles.upcomingActionsCol}>
-                      <TouchableOpacity
-                        style={[styles.joinClassBtn, { backgroundColor: '#2563eb' }]}
-                        onPress={() => handleJoinClass(item)}
-                        activeOpacity={0.85}
-                      >
-                        <Video size={18} color="#ffffff" style={{ marginLeft: 8 }} />
-                        <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
-                      </TouchableOpacity>
+                      {canJoin && (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.joinClassBtn, { backgroundColor: colors.primary }]}
+                            onPress={() => handleJoinClass(item)}
+                            activeOpacity={0.85}
+                          >
+                            <Video size={18} color={colors.card} style={{ marginStart: 8 }} />
+                            <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
+                          </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={[styles.completeClassBtn, { borderColor: '#16a34a' }, isProcessing && { opacity: 0.6 }]}
-                        onPress={() => handleCompleteClass(item._id, item.topic)}
-                        disabled={isProcessing}
-                        activeOpacity={0.8}
-                      >
-                        {isProcessing ? (
-                          <ActivityIndicator size="small" color="#16a34a" />
-                        ) : (
-                          <>
-                            <CheckCircle2 size={16} color="#16a34a" style={{ marginLeft: 6 }} />
-                            <Text style={[styles.completeClassBtnText, { color: '#16a34a' }]}>
-                              پایان کلاس و تسویه حساب
+                          <View
+                            style={[
+                              styles.webLinkStrip,
+                              {
+                                backgroundColor: colors.infoBackground,
+                                borderColor: colors.border,
+                              },
+                            ]}
+                          >
+                            <View style={styles.webLinkStripHeader}>
+                              <Laptop size={15} color={colors.info} />
+                              <Text style={[styles.webLinkStripTitle, { color: colors.info }]}>
+                                لینک ورود در مرورگر (لپ‌تاپ / وب)
+                              </Text>
+                            </View>
+                            <Text style={[styles.webLinkStripHint, { color: colors.textLight }]}>
+                              فقط آخرین دستگاه متصل در کلاس باقی می‌ماند و دستگاه قبلی به‌طور خودکار قطع می‌شود.
                             </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
+                            <View style={styles.webLinkActionsRow}>
+                              <TouchableOpacity
+                                style={[
+                                  styles.webLinkCopyBtn,
+                                  { backgroundColor: colors.primary },
+                                  webLinkLoadingId === item._id && { opacity: 0.6 },
+                                ]}
+                                onPress={() => handleCopyWebLink(item)}
+                                disabled={webLinkLoadingId === item._id}
+                                activeOpacity={0.85}
+                              >
+                                {webLinkLoadingId === item._id ? (
+                                  <ActivityIndicator size="small" color={colors.textOnPrimary} />
+                                ) : copiedBookingId === item._id ? (
+                                  <Check size={14} color={colors.textOnPrimary} />
+                                ) : (
+                                  <Copy size={14} color={colors.textOnPrimary} />
+                                )}
+                                <Text style={[styles.webLinkBtnText, { color: colors.textOnPrimary }]}>
+                                  {copiedBookingId === item._id ? 'کپی شد ✓' : 'کپی لینک وب'}
+                                </Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={[
+                                  styles.webLinkShareBtn,
+                                  { backgroundColor: colors.surface, borderColor: colors.border },
+                                  webLinkLoadingId === item._id && { opacity: 0.6 },
+                                ]}
+                                onPress={() => handleShareWebLink(item)}
+                                disabled={webLinkLoadingId === item._id}
+                                activeOpacity={0.85}
+                              >
+                                <Share2 size={14} color={colors.info} />
+                                <Text style={[styles.webLinkBtnText, { color: colors.info }]}>
+                                  اشتراک‌گذاری
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        </>
+                      )}
+
+                      {!isTeacherInvite && (
+                        <TouchableOpacity
+                          style={[styles.completeClassBtn, { borderColor: colors.success }, isProcessing && { opacity: 0.6 }]}
+                          onPress={() => handleCompleteClass(item._id, item.title || item.topic)}
+                          disabled={isProcessing}
+                          activeOpacity={0.8}
+                        >
+                          {isProcessing ? (
+                            <ActivityIndicator size="small" color={colors.success} />
+                          ) : (
+                            <>
+                              <CheckCircle2 size={16} color={colors.success} style={{ marginStart: 6 }} />
+                              <Text style={[styles.completeClassBtnText, { color: colors.success }]}>
+                                پایان کلاس و تسویه حساب
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                 </View>
@@ -508,10 +703,19 @@ export const OnlineClassesScreen: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalConfirmRejectBtn, { backgroundColor: '#ef4444' }]}
+                style={[
+                  styles.modalConfirmRejectBtn,
+                  { backgroundColor: colors.error },
+                  processingId === rejectingBookingId && { opacity: 0.6 },
+                ]}
+                disabled={processingId === rejectingBookingId}
                 onPress={handleConfirmReject}
               >
-                <Text style={styles.modalConfirmRejectText}>تایید رد درخواست</Text>
+                {processingId === rejectingBookingId ? (
+                  <ActivityIndicator size="small" color={colors.card} />
+                ) : (
+                  <Text style={styles.modalConfirmRejectText}>تایید رد درخواست</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -800,6 +1004,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: FONT_FAMILY.bold,
   },
+  webLinkStrip: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+  },
+  webLinkStripHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+  },
+  webLinkStripTitle: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  webLinkStripHint: {
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.regular,
+    lineHeight: 17,
+    textAlign: 'right',
+  },
+  webLinkActionsRow: {
+    flexDirection: 'row-reverse',
+    gap: 8,
+    marginTop: 2,
+  },
+  webLinkCopyBtn: {
+    flex: 1.2,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  webLinkShareBtn: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  webLinkBtnText: {
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
   completeClassBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -872,6 +1125,58 @@ const styles = StyleSheet.create({
   modalConfirmRejectText: {
     color: '#ffffff',
     fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  createVirtualCta: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  createVirtualCtaText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  errorBanner: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.medium,
+    textAlign: 'right',
+  },
+  retryBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  retryBtnText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  codeSourceWrap: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  sourceChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  sourceChipText: {
+    fontSize: 10,
     fontFamily: FONT_FAMILY.bold,
   },
 });

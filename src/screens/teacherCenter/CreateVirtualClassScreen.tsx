@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Clipboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../api/axiosConfig';
 import {
@@ -18,15 +18,17 @@ import {
   Video,
   Wallet,
   Users,
-  BookOpen,
   Plus,
   Minus,
   CheckCircle2,
   Copy,
   ExternalLink,
+  UserPlus,
+  X,
 } from 'lucide-react-native';
 import { FONT_FAMILY } from '../../theme/typography';
 import { toPersianNumbers } from '../../utils/date/jalaliHelper';
+import { toEnglishDigits } from '../../components/WeeklyScheduleManager';
 import { showSuccess, showError, showWarning } from '../../components/feedback';
 
 
@@ -39,6 +41,11 @@ export const CreateVirtualClassScreen: React.FC = () => {
   const [className, setClassName] = useState('');
   const [subject, setSubject] = useState('ریاضی');
   const [studentCount, setStudentCount] = useState<number>(1);
+  const [invitedStudents, setInvitedStudents] = useState<Array<{ phoneNumber: string; fullName: string }>>([]);
+  const [invitePhoneInput, setInvitePhoneInput] = useState('');
+  const [inviteNameInput, setInviteNameInput] = useState('');
+  const [searchingPhone, setSearchingPhone] = useState(false);
+
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
@@ -58,11 +65,57 @@ export const CreateVirtualClassScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchWallet();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchWallet();
+    }, [])
+  );
 
-  const totalCost = studentCount * FEE_PER_STUDENT;
+  const handlePhoneInputChange = async (val: string) => {
+    setInvitePhoneInput(val);
+    const clean = toEnglishDigits(val).replace(/[^0-9]/g, '');
+    if (clean.length === 11 && clean.startsWith('09')) {
+      try {
+        setSearchingPhone(true);
+        const res = await api.get(`/teacher/center/search-student?phone=${clean}`);
+        if (res.data?.success && res.data.exists && res.data.user?.fullName) {
+          setInviteNameInput(res.data.user.fullName);
+        }
+      } catch {
+      } finally {
+        setSearchingPhone(false);
+      }
+    }
+  };
+
+  const handleAddInvitedStudent = () => {
+    const clean = toEnglishDigits(invitePhoneInput).replace(/[^0-9]/g, '');
+    if (clean.length < 10) {
+      showWarning('لطفاً شماره موبایل معتبر دانش‌آموز را وارد کنید.');
+      return;
+    }
+    if (invitedStudents.some((s) => s.phoneNumber === clean)) {
+      showWarning('این شماره قبلاً به لیست دعوت اضافه شده است.');
+      return;
+    }
+    const nextList = [
+      ...invitedStudents,
+      { phoneNumber: clean, fullName: inviteNameInput.trim() || 'دانش‌آموز دعوت‌شده' },
+    ];
+    setInvitedStudents(nextList);
+    if (nextList.length > studentCount) {
+      setStudentCount(Math.min(25, nextList.length));
+    }
+    setInvitePhoneInput('');
+    setInviteNameInput('');
+  };
+
+  const handleRemoveInvitedStudent = (phone: string) => {
+    setInvitedStudents((prev) => prev.filter((s) => s.phoneNumber !== phone));
+  };
+
+  const effectiveCount = Math.max(studentCount, invitedStudents.length || 1);
+  const totalCost = effectiveCount * FEE_PER_STUDENT;
   const isBalanceSufficient = walletBalance >= totalCost;
 
   const handleCreate = async () => {
@@ -79,12 +132,15 @@ export const CreateVirtualClassScreen: React.FC = () => {
       setSubmitting(true);
       const res = await api.post('/teacher/center/virtual-classroom', {
         name: className.trim(),
+        title: className.trim(),
         subject: subject.trim(),
-        maxStudents: studentCount,
+        maxStudents: effectiveCount,
+        studentCount: effectiveCount,
+        invitedStudents,
       });
 
       if (res.data?.success) {
-        showSuccess('کلاس مجازی با موفقیت ایجاد و مبلغ از کیف پول کسر شد.');
+        showSuccess('کلاس مجازی با موفقیت ایجاد و برای دانش‌آموزان دعوت‌شده ثبت شد.');
         setCreatedClass(res.data.data);
         setWalletBalance((prev) => Math.max(0, prev - totalCost));
       } else {
@@ -138,38 +194,55 @@ export const CreateVirtualClassScreen: React.FC = () => {
 
         {createdClass ? (
           /* SUCCESS RESULT CARD */
-          <View style={[styles.successCard, { backgroundColor: isDark ? '#064e3b20' : '#f0fdf4', borderColor: '#86efac' }]}>
-            <CheckCircle2 size={40} color="#16a34a" />
-            <Text style={[styles.successTitle, { color: isDark ? '#a7f3d0' : '#14532d' }]}>
+          <View style={[styles.successCard, { backgroundColor: colors.successBackground, borderColor: colors.success }]}>
+            <CheckCircle2 size={40} color={colors.success} />
+            <Text style={[styles.successTitle, { color: colors.text }]}>
               کلاس مجازی «{createdClass.title}» ایجاد شد!
             </Text>
             <Text style={[styles.successSub, { color: colors.textLight }]}>
-              لینک زیر را با دانش‌آموزان به اشتراک بگذارید تا وارد سایت نوکیتا شوند:
+              این کلاس در فهرست «مدیریت کلاس‌های آنلاین» شما و بخش «کلاس‌های من» دانش‌آموزان دعوت‌شده نمایش داده می‌شود.
             </Text>
 
-            <View style={[styles.linkBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <TouchableOpacity onPress={() => copyToClipboard(createdClass.joinUrl)} style={styles.copyBtn}>
-                <Copy size={18} color={colors.primary} />
-              </TouchableOpacity>
-              <Text style={[styles.linkText, { color: colors.primary }]} numberOfLines={1}>
-                {createdClass.joinUrl}
-              </Text>
-            </View>
+            {createdClass.joinUrl ? (
+              <View style={[styles.linkBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <TouchableOpacity onPress={() => copyToClipboard(createdClass.joinUrl)} style={styles.copyBtn}>
+                  <Copy size={18} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={[styles.linkText, { color: colors.primary }]} numberOfLines={1}>
+                  {createdClass.joinUrl}
+                </Text>
+              </View>
+            ) : null}
 
             <View style={styles.successActionsRow}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.success }]}
+                onPress={() =>
+                  navigation.navigate('LiveClassroomScreen', {
+                    sessionId: createdClass._id,
+                    bookingCode: createdClass.bookingCode,
+                    title: createdClass.title,
+                  })
+                }
+                activeOpacity={0.85}
+              >
+                <Video size={16} color={colors.card} />
+                <Text style={styles.actionBtnText}>ورود به کلاس آنلاین</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}
                 onPress={() => navigation.navigate('OnlineClassesScreen')}
                 activeOpacity={0.85}
               >
-                <ExternalLink size={16} color="#ffffff" />
-                <Text style={styles.actionBtnText}>مشاهده در مدیریت کلاس‌ها</Text>
+                <ExternalLink size={16} color={colors.card} />
+                <Text style={styles.actionBtnText}>مدیریت کلاس‌ها</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtnSecondary, { borderColor: colors.border }]}
                 onPress={() => {
                   setCreatedClass(null);
                   setClassName('');
+                  setInvitedStudents([]);
                 }}
                 activeOpacity={0.85}
               >
@@ -226,12 +299,12 @@ export const CreateVirtualClassScreen: React.FC = () => {
                 </TouchableOpacity>
                 <View style={styles.counterDisplay}>
                   <Text style={[styles.counterNumber, { color: colors.text }]}>
-                    {toPersianNumbers(studentCount)} نفر
+                    {toPersianNumbers(effectiveCount)} نفر
                   </Text>
                 </View>
                 <TouchableOpacity
                   style={[styles.counterBtn, { borderColor: colors.border }]}
-                  onPress={() => setStudentCount((c) => Math.max(1, c - 1))}
+                  onPress={() => setStudentCount((c) => Math.max(invitedStudents.length || 1, c - 1))}
                   activeOpacity={0.7}
                 >
                   <Minus size={18} color={colors.text} />
@@ -239,17 +312,78 @@ export const CreateVirtualClassScreen: React.FC = () => {
               </View>
             </View>
 
+            {/* Invite Students by Phone Number */}
+            <View style={styles.inputGroup}>
+              <Text style={[styles.inputLabel, { color: colors.text }]}>
+                دعوت مستقیم دانش‌آموزان (اختیاری - نمایش در لیست کلاس‌های دانش‌آموز در نوکیتا):
+              </Text>
+              <View style={styles.inviteRow}>
+                <TouchableOpacity
+                  style={[styles.inviteAddBtn, { backgroundColor: colors.primary }]}
+                  onPress={handleAddInvitedStudent}
+                  activeOpacity={0.8}
+                >
+                  <UserPlus size={16} color={colors.card} />
+                  <Text style={styles.inviteAddBtnText}>افزودن</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={[
+                    styles.textInput,
+                    { flex: 1, backgroundColor: colors.surfaceVariant, color: colors.text, borderColor: colors.border },
+                  ]}
+                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+                  placeholderTextColor={colors.textLight}
+                  value={invitePhoneInput}
+                  onChangeText={handlePhoneInputChange}
+                  keyboardType="phone-pad"
+                  textAlign="right"
+                />
+              </View>
+              <TextInput
+                style={[
+                  styles.textInput,
+                  { backgroundColor: colors.surfaceVariant, color: colors.text, borderColor: colors.border, marginTop: 6 },
+                ]}
+                placeholder={searchingPhone ? 'در حال استعلام نام دانش‌آموز...' : 'نام دانش‌آموز (اختیاری)'}
+                placeholderTextColor={colors.textLight}
+                value={inviteNameInput}
+                onChangeText={setInviteNameInput}
+                textAlign="right"
+              />
+
+              {invitedStudents.length > 0 && (
+                <View style={styles.invitedChipsWrap}>
+                  {invitedStudents.map((st) => (
+                    <View
+                      key={st.phoneNumber}
+                      style={[
+                        styles.invitedChip,
+                        { backgroundColor: colors.infoBackground, borderColor: colors.border },
+                      ]}
+                    >
+                      <TouchableOpacity onPress={() => handleRemoveInvitedStudent(st.phoneNumber)}>
+                        <X size={14} color={colors.error} />
+                      </TouchableOpacity>
+                      <Text style={[styles.invitedChipText, { color: colors.text }]}>
+                        {st.fullName} ({toPersianNumbers(st.phoneNumber)})
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
             {/* Price Calculation Summary */}
-            <View style={[styles.costSummaryCard, { backgroundColor: isDark ? '#1e293b' : '#f8fafc', borderColor: colors.border }]}>
+            <View style={[styles.costSummaryCard, { backgroundColor: colors.surfaceVariant, borderColor: colors.border }]}>
               <View style={styles.costRow}>
                 <Text style={[styles.costValue, { color: colors.text }]}>
-                  {toPersianNumbers(studentCount)} × ۵۰,۰۰۰ تومان
+                  {toPersianNumbers(effectiveCount)} × ۵۰,۰۰۰ تومان
                 </Text>
                 <Text style={[styles.costLabel, { color: colors.textLight }]}>محاسبه هزینه:</Text>
               </View>
               <View style={[styles.costDivider, { backgroundColor: colors.border }]} />
               <View style={styles.costRow}>
-                <Text style={[styles.totalCostValue, { color: isBalanceSufficient ? '#16a34a' : '#ef4444' }]}>
+                <Text style={[styles.totalCostValue, { color: isBalanceSufficient ? colors.success : colors.error }]}>
                   {toPersianNumbers(totalCost.toLocaleString('fa-IR'))} تومان
                 </Text>
                 <Text style={[styles.totalCostLabel, { color: colors.text }]}>مبلغ قابل پرداخت:</Text>
@@ -536,6 +670,47 @@ const styles = StyleSheet.create({
   actionBtnSecondaryText: {
     fontSize: 12.5,
     fontFamily: FONT_FAMILY.medium,
+  },
+  inviteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  inviteAddBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingStart: 12,
+    paddingEnd: 12,
+    paddingVertical: 11,
+    borderRadius: 12,
+    gap: 4,
+  },
+  inviteAddBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  invitedChipsWrap: {
+    flexDirection: 'row-reverse',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  invitedChip: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingStart: 10,
+    paddingEnd: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  invitedChipText: {
+    fontSize: 11.5,
+    fontFamily: FONT_FAMILY.medium,
+    fontVariant: ['tabular-nums'],
   },
 });
 

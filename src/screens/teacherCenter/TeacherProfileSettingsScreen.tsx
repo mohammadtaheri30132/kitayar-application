@@ -30,6 +30,7 @@ import ImagePicker from 'react-native-image-crop-picker';
 import { communityService } from '../../services/community/communityService';
 import { FONT_FAMILY } from '../../theme/typography';
 import { showSuccess, showError, showWarning } from '../../components/feedback';
+import { resolveCommunityMediaUrl } from '../../utils/communityHelpers';
 
 export const TeacherProfileSettingsScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
@@ -81,12 +82,7 @@ export const TeacherProfileSettingsScreen: React.FC = () => {
     fetchProfile();
   }, []);
 
-  const getFullUrl = (uri?: string | null) => {
-    if (!uri) return null;
-    if (uri.startsWith('http')) return uri;
-    const base = api.defaults.baseURL || 'https://api.kitayar.ir';
-    return `${base}${uri.startsWith('/') ? '' : '/'}${uri}`;
-  };
+  const getFullUrl = (uri?: string | null) => resolveCommunityMediaUrl(uri);
 
   const handlePickCover = async () => {
     try {

@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Share, I18nManager } from 'react-native';
-import { MoreVertical, Heart, MessageCircle, Share2, Bookmark, Pin, Flag, Trash2, Edit3 } from 'lucide-react-native';
+import { MoreVertical, Heart, MessageCircle, Share2, Bookmark, Pin, Flag, Trash2, Edit3, Play, Pause } from 'lucide-react-native';
 import { useTheme } from '../../../context/ThemeContext';
 import { CommunityPostItem, communityService } from '../../../services/community/communityService';
-import { formatRelativeTime, toPersianDigits } from '../../../utils/communityHelpers';
+import {
+  formatRelativeTime,
+  toPersianDigits,
+  resolveCommunityMediaUrl,
+  isVideoUrl,
+  getVideoThumbUrl,
+} from '../../../utils/communityHelpers';
+import KitayarVideo from '../../../components/KitayarVideo';
 
 interface Props {
   post: CommunityPostItem | any;
@@ -21,12 +28,16 @@ const PostCard = ({ post, onPress, currentUserId, onDeletePress, onEditPress, on
   const [likeCount, setLikeCount] = useState(post.likeCount || post.likes || 0);
   const [isSaved, setIsSaved] = useState(!!post.isSaved);
   const [isPending, setIsPending] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
 
   const authorName = post.author?.name || 'معلم کیتایار';
-  const authorAvatar = post.author?.avatar;
+  const authorAvatar = resolveCommunityMediaUrl(post.author?.avatar);
   const authorRole = post.author?.role || 'دبیر';
   const postContent = post.content || post.text || '';
   const postImages = post.images || (post.image ? [post.image] : []);
+  const primaryMediaUrl = postImages.length > 0 ? resolveCommunityMediaUrl(postImages[0]) : null;
+  const mediaIsVideo = isVideoUrl(primaryMediaUrl);
+  const videoThumbUrl = mediaIsVideo ? getVideoThumbUrl(primaryMediaUrl) : null;
   const isPinned = !!post.isPinned;
   const isOwnPost = currentUserId && (post.author?._id === currentUserId || post.author?.id === currentUserId);
 
@@ -142,15 +153,54 @@ const PostCard = ({ post, onPress, currentUserId, onDeletePress, onEditPress, on
           {postContent}
         </Text>
 
-        {/* Post Image */}
-        {postImages.length > 0 && (
-          <Image 
-            source={{ uri: postImages[0] }} 
-            style={styles.postImage} 
-            resizeMode="cover" 
+        {/* Post Image or Video */}
+        {primaryMediaUrl && !mediaIsVideo && (
+          <Image
+            source={{ uri: primaryMediaUrl }}
+            style={styles.postImage}
+            resizeMode="cover"
           />
         )}
       </TouchableOpacity>
+
+      {primaryMediaUrl && mediaIsVideo && (
+        <TouchableOpacity
+          style={styles.videoWrapper}
+          onPress={() => setIsPlayingVideo((prev) => !prev)}
+          activeOpacity={0.92}
+        >
+          {isPlayingVideo ? (
+            <>
+              <KitayarVideo
+                src={primaryMediaUrl}
+                paused={false}
+                style={styles.postImage}
+              />
+              <View style={styles.videoStatePill}>
+                <Pause size={13} color="#fff" />
+                <Text style={styles.videoStateText}>توقف</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.videoPosterBox}>
+              {videoThumbUrl ? (
+                <Image
+                  source={{ uri: videoThumbUrl }}
+                  style={styles.videoThumbBg}
+                  resizeMode="cover"
+                />
+              ) : null}
+              <View style={styles.videoPlayCircle}>
+                <Play size={26} color="#fff" fill="#fff" />
+              </View>
+              <View style={styles.videoStatePill}>
+                <Play size={12} color="#fff" fill="#fff" />
+                <Text style={styles.videoStateText}>پخش ویدیوی آموزشی</Text>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
 
       {/* Footer Actions */}
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
@@ -272,6 +322,55 @@ const styles = StyleSheet.create({
     height: 220,
     marginBottom: 12,
     backgroundColor: '#f3f4f6',
+  },
+  videoWrapper: {
+    width: '100%',
+    height: 220,
+    marginBottom: 12,
+    backgroundColor: '#0f172a',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  videoPosterBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0f172a',
+  },
+  videoThumbBg: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    start: 0,
+    end: 0,
+    opacity: 0.78,
+  },
+  videoPlayCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoStatePill: {
+    position: 'absolute',
+    bottom: 10,
+    start: 12,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  videoStateText: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontFamily: 'IRANSansX',
   },
   footer: {
     flexDirection: I18nManager.isRTL ? 'row' : 'row-reverse',

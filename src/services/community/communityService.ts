@@ -257,8 +257,13 @@ export const communityService = {
     await api.post('/teacher/community/report', data);
   },
 
-  // Upload attachment (image or document)
-  uploadAttachment: async (fileUri: string, fileName: string, mimeType: string = 'image/jpeg'): Promise<string> => {
+  // Upload attachment (image, compressed video, or document)
+  uploadAttachment: async (
+    fileUri: string,
+    fileName: string,
+    mimeType: string = 'image/jpeg',
+    onUploadProgress?: (percent: number) => void
+  ): Promise<string> => {
     const normalizedUri =
       Platform.OS === 'android' && !fileUri.startsWith('file://') && !fileUri.startsWith('content://')
         ? `file://${fileUri}`
@@ -273,8 +278,18 @@ export const communityService = {
 
     const res = await api.post('/teacher/community/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000, // 5 min for large raw video upload + server FFmpeg optimization
+      onUploadProgress: (evt) => {
+        if (onUploadProgress && evt.total) {
+          onUploadProgress(Math.min(100, Math.round((evt.loaded * 100) / evt.total)));
+        }
+      },
     });
 
-    return res.data?.url;
+    const uploadedUrl = res.data?.data?.url || res.data?.url;
+    if (!uploadedUrl) {
+      throw new Error('آدرس فایل بارگذاری‌شده از سرور دریافت نشد');
+    }
+    return uploadedUrl;
   },
 };

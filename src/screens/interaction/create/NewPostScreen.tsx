@@ -10,6 +10,7 @@ import {
   ActivityIndicator, 
   KeyboardAvoidingView,
   Platform,
+  NativeModules,
 } from 'react-native';
 import { showError, showWarning, showSuccess } from '../../../components/feedback';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -19,8 +20,11 @@ import ImagePicker from 'react-native-image-crop-picker';
 import { communityService } from '../../../services/community/communityService';
 import { FONT_FAMILY } from '../../../theme/typography';
 import { toPersianNumbers } from '../../../utils/date/jalaliHelper';
+import { isVideoUrl } from '../../../utils/communityHelpers';
 
+const { VideoPickerModule } = NativeModules;
 const MAX_CHARS = 1000;
+const MAX_VIDEO_BYTES = 150 * 1024 * 1024;
 
 const NewPostScreen = ({ navigation }: any) => {
   const { colors, isDark } = useTheme();
@@ -34,24 +38,39 @@ const NewPostScreen = ({ navigation }: any) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgressText, setUploadProgressText] = useState('');
 
-  const handleSelectMedia = async () => {
+  const handleSelectMedia = async (mode: 'any' | 'photo' | 'video' = 'any') => {
     try {
-      const media = await ImagePicker.openPicker({
-        mediaType: 'any',
-        cropping: false,
-      });
-
-      const isVideo = media.mime?.startsWith('video/') || false;
-      const isImage = !isVideo;
-
-      // Size validations
-      if (isImage && media.size && media.size > 2 * 1024 * 1024) {
-        showWarning('حجم تصویر نباید بیشتر از ۲ مگابایت باشد.');
+      if (mode === 'video' && Platform.OS === 'android' && VideoPickerModule?.pickVideo) {
+        const rawUri: string = await VideoPickerModule.pickVideo();
+        if (!rawUri) return;
+        setLocalMediaUri(rawUri);
+        setIsVideoType(true);
+        setMediaSize(0);
+        setMediaFileName(`video_${Date.now()}.mp4`);
+        setMediaMime('video/mp4');
         return;
       }
 
-      if (isVideo && media.size && media.size > 30 * 1024 * 1024) {
-        showWarning('حجم ویدیو نباید بیشتر از ۳۰ مگابایت باشد.');
+      const media = await ImagePicker.openPicker({
+        mediaType: mode,
+        cropping: false,
+        compressVideoPreset: 'Passthrough',
+      });
+
+      const isVideo =
+        media.mime?.startsWith('video/') ||
+        isVideoUrl(media.path) ||
+        isVideoUrl(media.filename);
+      const isImage = !isVideo;
+
+      // Size validations (images 5MB, raw video up to 150MB uploaded to server for lossless-feel compression)
+      if (isImage && media.size && media.size > 5 * 1024 * 1024) {
+        showWarning('حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+        return;
+      }
+
+      if (isVideo && media.size && media.size > MAX_VIDEO_BYTES) {
+        showWarning('حجم ویدیوی انتخاب‌شده نباید بیشتر از ۱۵۰ مگابایت باشد.');
         return;
       }
 
@@ -87,21 +106,36 @@ const NewPostScreen = ({ navigation }: any) => {
       const images: string[] = [];
 
       if (localMediaUri) {
-        setUploadProgressText(isVideoType ? 'در حال فشرده‌سازی و بارگذاری ویدیو...' : 'در حال بهینه‌سازی و بارگذاری تصویر...');
+        setUploadProgressText(
+          isVideoType
+            ? 'در حال بارگذاری ویدیو در سرور...'
+            : 'در حال بارگذاری و بهینه‌سازی تصویر...'
+        );
         const uploadedUrl = await communityService.uploadAttachment(
           localMediaUri,
           mediaFileName,
-          mediaMime
+          mediaMime,
+          (percent) => {
+            if (isVideoType) {
+              setUploadProgressText(
+                percent < 100
+                  ? `در حال بارگذاری ویدیو در سرور... ${toPersianNumbers(percent)}٪`
+                  : 'ویدیو بارگذاری شد • در حال کم‌حجم‌سازی در سرور (بدون افت کیفیت)...'
+              );
+            }
+          }
         );
-        if (uploadedUrl) {
-          images.push(uploadedUrl);
-        }
+        images.push(uploadedUrl);
       }
 
       setUploadProgressText('در حال ذخیره و انتشار پست...');
       await communityService.createPost({
-        content: text.trim(),
+        content: text.trim() || (isVideoType ? 'ویدیوی آموزشی و نمونه تدریس' : 'پست آموزشی جدید'),
         images,
+        attachments:
+          isVideoType && images.length > 0
+            ? [{ url: images[0], type: 'video', name: mediaFileName, size: mediaSize }] as any
+            : undefined,
       });
 
       showSuccess('پست شما با موفقیت منتشر شد.');
@@ -140,7 +174,7 @@ const NewPostScreen = ({ navigation }: any) => {
                 backgroundColor: isDark ? '#1e293b' : '#f8fafc' 
               }
             ]}
-            onPress={handleSelectMedia}
+            onPress={() => handleSelectMedia('any')}
             disabled={isSubmitting}
             activeOpacity={0.85}
           >
@@ -151,11 +185,13 @@ const NewPostScreen = ({ navigation }: any) => {
                     <View style={styles.videoIconCircle}>
                       <Film size={44} color="#ffffff" />
                     </View>
-                    <Text style={[styles.videoFilenameText, { color: colors.text }]} numberOfLines={1}>
+                    <Text style={[styles.videoFilenameText, { color: '#ffffff' }]} numberOfLines={1}>
                       {mediaFileName}
                     </Text>
-                    <Text style={[styles.videoSizeText, { color: colors.textLight }]}>
-                      حجم فایل: {toPersianNumbers((mediaSize / (1024 * 1024)).toFixed(1))} مگابایت (ویدیو)
+                    <Text style={[styles.videoSizeText, { color: '#cbd5e1' }]}>
+                      {mediaSize > 0
+                        ? `حجم اولیه: ${toPersianNumbers((mediaSize / (1024 * 1024)).toFixed(1))} مگابایت • کاهش حجم خودکار در سرور`
+                        : 'ویدیو آماده بارگذاری و بهینه‌سازی در سرور'}
                     </Text>
                   </View>
                 ) : (
@@ -179,16 +215,38 @@ const NewPostScreen = ({ navigation }: any) => {
                   افزودن تصویر یا ویدیو
                 </Text>
                 <Text style={[styles.uploadSubtitle, { color: colors.textLight }]}>
-                  روی این کادر ضربه بزنید تا عکس یا ویدیو موردنظرتان را انتخاب کنید
+                  روی این کادر ضربه بزنید یا یکی از گزینه‌های زیر را انتخاب کنید
                 </Text>
                 <View style={styles.sizeNoticeBadge}>
                   <Text style={styles.sizeNoticeText}>
-                    حداکثر عکس: ۲ مگابایت • حداکثر ویدیو: ۳۰ مگابایت
+                    بارگذاری در سرور + کم‌حجم‌سازی خودکار ویدیو بدون افت کیفیت (تا ۱۵۰ مگابایت)
                   </Text>
                 </View>
               </View>
             )}
           </TouchableOpacity>
+
+          <View style={styles.quickMediaRow}>
+            <TouchableOpacity
+              style={[styles.quickMediaBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => handleSelectMedia('photo')}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+            >
+              <ImageIcon size={17} color={colors.primary} />
+              <Text style={[styles.quickMediaBtnText, { color: colors.text }]}>انتخاب تصویر</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.quickMediaBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => handleSelectMedia('video')}
+              disabled={isSubmitting}
+              activeOpacity={0.8}
+            >
+              <Video size={17} color={colors.primary} />
+              <Text style={[styles.quickMediaBtnText, { color: colors.text }]}>انتخاب ویدیو</Text>
+            </TouchableOpacity>
+          </View>
 
           {/* 2. BOTTOM TEXT INPUT FOR CAPTION / DESCRIPTION */}
           <Text style={[styles.inputLabel, { color: colors.text }]}>توضیحات و متن پست:</Text>
@@ -417,6 +475,26 @@ const styles = StyleSheet.create({
   submitBtnText: {
     color: '#ffffff',
     fontSize: 14,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  quickMediaRow: {
+    flexDirection: 'row-reverse',
+    gap: 10,
+    marginTop: -8,
+    marginBottom: 18,
+  },
+  quickMediaBtn: {
+    flex: 1,
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  quickMediaBtnText: {
+    fontSize: 12.5,
     fontFamily: FONT_FAMILY.bold,
   },
 });

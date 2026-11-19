@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, Image } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Dimensions, Image, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { 
@@ -52,6 +53,8 @@ const DashboardScreen = ({ navigation }: any) => {
   // Teacher Overview & Active Classes
   const [teacherOverview, setTeacherOverview] = useState<any>(null);
   const [activeClasses, setActiveClasses] = useState<any[]>([]);
+  const [pendingClassCount, setPendingClassCount] = useState<number>(0);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const dateStr = formatJalaliDate(jy, jm, jd, true);
   const persianDateStr = toPersianNumbers(dateStr);
@@ -184,21 +187,45 @@ const DashboardScreen = ({ navigation }: any) => {
         }
       } catch (e) {}
 
-      // 8. Active class requests
+      // 8. Active class requests & pending count
       try {
         const classReqsRes = await api.get('/teacher/center/class-requests');
         if (classReqsRes.data?.success && Array.isArray(classReqsRes.data.data)) {
-          setActiveClasses(
-            classReqsRes.data.data.filter((c: any) => ['confirmed', 'in_progress'].includes(c.status))
-          );
+          const list = classReqsRes.data.data;
+          setActiveClasses(list.filter((c: any) => ['confirmed', 'in_progress'].includes(c.status)));
+          setPendingClassCount(list.filter((c: any) => c.status === 'paid_pending_teacher').length);
         }
       } catch (e) {}
     } catch (err) {
       console.warn('Error fetching data:', err);
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const refreshOnlineWorkbenchStatus = useCallback(async () => {
+    try {
+      const [overviewRes, classReqsRes] = await Promise.allSettled([
+        api.get('/teacher/center/overview'),
+        api.get('/teacher/center/class-requests'),
+      ]);
+      if (overviewRes.status === 'fulfilled' && overviewRes.value.data?.success) {
+        setTeacherOverview(overviewRes.value.data.data);
+      }
+      if (classReqsRes.status === 'fulfilled' && classReqsRes.value.data?.success && Array.isArray(classReqsRes.value.data.data)) {
+        const list = classReqsRes.value.data.data;
+        setActiveClasses(list.filter((c: any) => ['confirmed', 'in_progress'].includes(c.status)));
+        setPendingClassCount(list.filter((c: any) => c.status === 'paid_pending_teacher').length);
+      }
+    } catch {}
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshOnlineWorkbenchStatus();
+    }, [refreshOnlineWorkbenchStatus])
+  );
 
   const handleClaimAndChat = async (q: any) => {
     try {
@@ -362,7 +389,20 @@ const DashboardScreen = ({ navigation }: any) => {
         showHomeActions={true}
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              fetchData();
+            }}
+            colors={[colors.primary]}
+          />
+        }
+      >
         
         {/* HERO BANNER */}
         <TouchableOpacity
@@ -377,36 +417,65 @@ const DashboardScreen = ({ navigation }: any) => {
           />
         </TouchableOpacity>
 
-        {/* ACTIVE ONLINE CLASSES WIDGET */}
-        {activeClasses.length > 0 && (
-          <View style={[styles.activeClassWidget, { backgroundColor: isDark ? '#1e293b' : '#f0fdf4', borderColor: '#10b981' }]}>
-            <View style={styles.activeClassWidgetHeader}>
-              <View style={styles.activeClassLiveBadge}>
-                <View style={styles.livePulseDot} />
-                <Text style={styles.activeClassLiveText}>کلاس آنلاین فعال</Text>
-              </View>
-              <Text style={[styles.activeClassTitle, { color: colors.text }]}>
-                {activeClasses[0].topic || activeClasses[0].subjectName || 'جلسه رفع اشکال آنلاین'}
-              </Text>
-            </View>
-            <Text style={[styles.activeClassMeta, { color: colors.textLight }]}>
-              دانش‌آموز: {activeClasses[0].studentId?.fullName || 'دانش‌آموز'} | ظرفیت: {activeClasses[0].capacity || 1} نفر
+        {/* PENDING ONLINE CLASS REQUESTS ALERT BAR */}
+        {pendingClassCount > 0 && (
+          <TouchableOpacity
+            style={[
+              styles.pendingRequestsBanner,
+              { backgroundColor: colors.warningBackground, borderColor: colors.warning },
+            ]}
+            onPress={() => navigation.navigate('OnlineClassesScreen')}
+            activeOpacity={0.85}
+          >
+            <ChevronLeft size={18} color={colors.warning} />
+            <Text style={[styles.pendingRequestsBannerText, { color: colors.text }]}>
+              {toPersianNumbers(pendingClassCount)} درخواست کلاس آنلاین جدید در انتظار تایید شماست
             </Text>
-            <TouchableOpacity
-              style={styles.joinClassBtn}
-              onPress={() => {
-                navigation.navigate('LiveClassroomScreen', {
-                  sessionId: activeClasses[0]._id,
-                  bookingCode: activeClasses[0].bookingCode,
-                  title: activeClasses[0].topic,
-                });
-              }}
-            >
-              <Video color="#ffffff" size={16} />
-              <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         )}
+
+        {/* ACTIVE ONLINE CLASSES WIDGETS */}
+        {activeClasses.length > 0 &&
+          activeClasses.slice(0, 3).map((cls) => (
+            <View
+              key={cls._id}
+              style={[
+                styles.activeClassWidget,
+                { backgroundColor: colors.successBackground, borderColor: colors.success },
+              ]}
+            >
+              <View style={styles.activeClassWidgetHeader}>
+                <View style={[styles.activeClassLiveBadge, { backgroundColor: colors.surface }]}>
+                  <View style={[styles.activeClassGreenDot, { backgroundColor: colors.success }]} />
+                  <Text style={[styles.activeClassLiveText, { color: colors.success }]}>
+                    {cls.status === 'in_progress' ? 'در حال برگزاری' : 'کلاس آنلاین تاییدشده'}
+                  </Text>
+                </View>
+                <Text style={[styles.activeClassTitle, { color: colors.text }]} numberOfLines={1}>
+                  {cls.title || cls.topic || cls.subjectName || 'جلسه رفع اشکال آنلاین'}
+                </Text>
+              </View>
+              <Text style={[styles.activeClassMeta, { color: colors.textLight }]}>
+                {cls.source === 'teacher_invitation'
+                  ? `کلاس مجازی معلم (${toPersianNumbers(cls.invitedStudents?.length || 0)} دعوت‌شده)`
+                  : `دانش‌آموز: ${cls.studentId?.fullName || 'دانش‌آموز'}`}{' '}
+                | ظرفیت: {toPersianNumbers(cls.capacity || 1)} نفر
+              </Text>
+              <TouchableOpacity
+                style={[styles.joinClassBtn, { backgroundColor: colors.success }]}
+                onPress={() => {
+                  navigation.navigate('LiveClassroomScreen', {
+                    sessionId: cls._id,
+                    bookingCode: cls.bookingCode,
+                    title: cls.title || cls.topic,
+                  });
+                }}
+              >
+                <Video color={colors.card} size={16} />
+                <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
 
         {/* ADMIN ANNOUNCEMENTS */}
         {announcements.length > 0 && announcements.map(ann => (
@@ -1601,11 +1670,32 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   activeClassWidget: {
-    marginHorizontal: 16,
     marginBottom: 14,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1.5,
+  },
+  activeClassGreenDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pendingRequestsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    gap: 8,
+  },
+  pendingRequestsBannerText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: 'Estedad-FD-Bold',
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
   },
   activeClassWidgetHeader: {
     flexDirection: 'row-reverse',
