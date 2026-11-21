@@ -39,6 +39,7 @@ class ClassroomMesh(
         PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
     )
     private val peers = HashMap<String, PeerConnection>()
+    val remoteVideoTracks = HashMap<String, VideoTrack>()
     private val pendingCandidates = HashMap<String, MutableList<IceCandidate>>()
 
     private val localAudioSource: org.webrtc.AudioSource
@@ -106,7 +107,10 @@ class ClassroomMesh(
 
             override fun onTrack(transceiver: RtpTransceiver) {
                 val t = transceiver.receiver.track()
-                if (t is VideoTrack) onRemoteVideo(peerId, t)
+                if (t is VideoTrack) {
+                    remoteVideoTracks[peerId] = t
+                    onRemoteVideo(peerId, t)
+                }
             }
 
             override fun onConnectionChange(newState: PeerConnection.PeerConnectionState) {
@@ -122,7 +126,13 @@ class ClassroomMesh(
             override fun onRemoveStream(p0: MediaStream?) {}
             override fun onDataChannel(p0: DataChannel?) {}
             override fun onRenegotiationNeeded() {}
-            override fun onAddTrack(p0: RtpReceiver?, p1: Array<out MediaStream>?) {}
+            override fun onAddTrack(p0: RtpReceiver?, p1: Array<out MediaStream>?) {
+                val t = p0?.track()
+                if (t is VideoTrack) {
+                    remoteVideoTracks[peerId] = t
+                    onRemoteVideo(peerId, t)
+                }
+            }
         }) ?: throw IllegalStateException("PeerConnection creation failed")
 
         pc.addTrack(localAudioTrack, listOf("kitayar"))
@@ -147,6 +157,13 @@ class ClassroomMesh(
         pc.setRemoteDescription(object : SimpleSdp() {
             override fun onSetSuccess() {
                 flushCandidates(peerId, pc)
+                pc.transceivers?.forEach { tr ->
+                    val t = tr.receiver?.track()
+                    if (t is VideoTrack) {
+                        remoteVideoTracks[peerId] = t
+                        onRemoteVideo(peerId, t)
+                    }
+                }
                 pc.createAnswer(object : SimpleSdp() {
                     override fun onCreateSuccess(desc: SessionDescription) {
                         pc.setLocalDescription(SimpleSdp(), desc)
@@ -161,7 +178,16 @@ class ClassroomMesh(
         val pc = peers[peerId] ?: return
         val remote = SessionDescription(SessionDescription.Type.ANSWER, sdp.optString("sdp"))
         pc.setRemoteDescription(object : SimpleSdp() {
-            override fun onSetSuccess() = flushCandidates(peerId, pc)
+            override fun onSetSuccess() {
+                flushCandidates(peerId, pc)
+                pc.transceivers?.forEach { tr ->
+                    val t = tr.receiver?.track()
+                    if (t is VideoTrack) {
+                        remoteVideoTracks[peerId] = t
+                        onRemoteVideo(peerId, t)
+                    }
+                }
+            }
         }, remote)
     }
 
@@ -179,7 +205,20 @@ class ClassroomMesh(
         pendingCandidates.remove(peerId)?.forEach { pc.addIceCandidate(it) }
     }
 
+    fun getRemoteVideoTrack(peerId: String): VideoTrack? {
+        remoteVideoTracks[peerId]?.let { return it }
+        peers[peerId]?.transceivers?.forEach { tr ->
+            val trk = tr.receiver?.track()
+            if (trk is VideoTrack) {
+                remoteVideoTracks[peerId] = trk
+                return trk
+            }
+        }
+        return null
+    }
+
     fun removePeer(peerId: String) {
+        remoteVideoTracks.remove(peerId)
         pendingCandidates.remove(peerId)
         peers.remove(peerId)?.close()
     }

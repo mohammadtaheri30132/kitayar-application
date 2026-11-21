@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import {
   View,
   Text,
@@ -44,7 +44,37 @@ import {
   Share2,
   Laptop,
   Check,
+  MessageSquare,
 } from 'lucide-react-native';
+
+/** Countdown timer showing minutes:seconds until waitingExpiresAt */
+const PendingCountdown = memo(({ expiresAt, colors }: { expiresAt?: string; colors: any }) => {
+  const [secsLeft, setSecsLeft] = useState(() => {
+    if (!expiresAt) return 0;
+    return Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000));
+  });
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const id = setInterval(() => {
+      setSecsLeft(Math.max(0, Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [expiresAt]);
+
+  if (!expiresAt || secsLeft <= 0) return null;
+  const mins = Math.floor(secsLeft / 60).toString().padStart(2, '0');
+  const secs = (secsLeft % 60).toString().padStart(2, '0');
+  const isUrgent = secsLeft < 300; // last 5 min
+  return (
+    <View style={{ flexDirection: 'row-reverse', alignItems: 'center', marginTop: 10, gap: 6, backgroundColor: isUrgent ? '#fef2f2' : '#fffbeb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: isUrgent ? '#fca5a5' : '#fde68a' }}>
+      <Clock size={14} color={isUrgent ? '#dc2626' : '#d97706'} />
+      <Text style={{ fontFamily: 'Vazirmatn-Medium', fontSize: 12, color: isUrgent ? '#dc2626' : '#d97706', fontVariant: ['tabular-nums'] }}>
+        {`${mins}:${secs}`} مانده برای پاسخ
+      </Text>
+    </View>
+  );
+});
 
 export const OnlineClassesScreen: React.FC = () => {
   const { colors, isDark } = useTheme();
@@ -53,6 +83,11 @@ export const OnlineClassesScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+
+  // Rules Modal State
+  const [rulesModalVisible, setRulesModalVisible] = useState(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  const [selectedClassForRules, setSelectedClassForRules] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'upcoming' | 'history'>('pending');
 
   const [pendingBookings, setPendingBookings] = useState<any[]>([]);
@@ -188,10 +223,39 @@ export const OnlineClassesScreen: React.FC = () => {
   };
 
   const handleJoinClass = (item: any) => {
+    // Lock check: unlock 5 minutes before scheduled start
+    if (item.scheduledAt) {
+      const scheduledTime = new Date(item.scheduledAt).getTime();
+      const unlockTime = scheduledTime - 5 * 60 * 1000;
+      const now = Date.now();
+      if (now < unlockTime) {
+        const remainingMinutes = Math.ceil((unlockTime - now) / 60000);
+        showError(`کلاس ۵ دقیقه قبل از زمان مقرر باز می‌شود (${toPersianDigits(remainingMinutes)} دقیقه باقی‌مانده)`);
+        return;
+      }
+    }
+
+    if (!rulesAccepted) {
+      setSelectedClassForRules(item);
+      setRulesModalVisible(true);
+      return;
+    }
+
+    proceedToLiveClassroom(item);
+  };
+
+  const proceedToLiveClassroom = (item: any) => {
     navigation.navigate('LiveClassroomScreen', {
       sessionId: item._id,
       bookingCode: item.bookingCode,
       title: item.topic || item.subjectName || 'کلاس آنلاین رفع اشکال',
+    });
+  };
+
+  const handleOpenStudentChat = (item: any) => {
+    navigation.navigate('TeacherChatScreen', {
+      bookingId: item._id,
+      title: `گفتگو با ${item.studentId?.fullName || item.studentName || 'دانش‌آموز'}`,
     });
   };
 
@@ -245,7 +309,15 @@ export const OnlineClassesScreen: React.FC = () => {
     return formatPersianDate(isoString);
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string, item?: any) => {
+    if (item?.teacherNoShow || item?.cancellationReason === 'عدم حضور معلم') {
+      return (
+        <View style={[styles.statusBadge, { backgroundColor: '#fee2e2', borderColor: '#fca5a5' }]}>
+          <AlertCircle size={12} color="#dc2626" />
+          <Text style={[styles.statusBadgeText, { color: '#b91c1c' }]}>عدم حضور دبیر (جریمه)</Text>
+        </View>
+      );
+    }
     switch (status) {
       case 'paid_pending_teacher':
         return (
@@ -471,7 +543,7 @@ export const OnlineClassesScreen: React.FC = () => {
                         </Text>
                       </View>
                     </View>
-                    {renderStatusBadge(item.status)}
+                    {renderStatusBadge(item.status, item)}
                   </View>
 
                   {/* Student & Subject row */}
@@ -541,7 +613,9 @@ export const OnlineClassesScreen: React.FC = () => {
 
                   {/* Action Buttons depending on Tab */}
                   {activeTab === 'pending' && (
-                    <View style={styles.actionsRow}>
+                    <>
+                      <PendingCountdown expiresAt={item.waitingExpiresAt} colors={colors} />
+                      <View style={styles.actionsRow}>
                       <TouchableOpacity
                         style={[styles.rejectBtn, isProcessing && { opacity: 0.6 }]}
                         onPress={() => openRejectModal(item._id)}
@@ -568,6 +642,7 @@ export const OnlineClassesScreen: React.FC = () => {
                         )}
                       </TouchableOpacity>
                     </View>
+                    </>
                   )}
 
                   {activeTab === 'upcoming' && (
@@ -581,6 +656,20 @@ export const OnlineClassesScreen: React.FC = () => {
                           >
                             <Video size={18} color={colors.card} style={{ marginStart: 8 }} />
                             <Text style={styles.joinClassBtnText}>ورود به کلاس آنلاین</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[
+                              styles.chatWithStudentBtn,
+                              { backgroundColor: colors.infoBackground, borderColor: colors.border },
+                            ]}
+                            onPress={() => handleOpenStudentChat(item)}
+                            activeOpacity={0.85}
+                          >
+                            <MessageSquare size={16} color={colors.info} style={{ marginStart: 8 }} />
+                            <Text style={[styles.chatWithStudentBtnText, { color: colors.info }]}>
+                              ارتباط با دانش‌آموز
+                            </Text>
                           </TouchableOpacity>
 
                           <View
@@ -665,6 +754,22 @@ export const OnlineClassesScreen: React.FC = () => {
                       )}
                     </View>
                   )}
+
+                  {activeTab === 'history' && item.status === 'completed' && (
+                    <TouchableOpacity
+                      style={[
+                        styles.chatWithStudentBtn,
+                        { backgroundColor: colors.infoBackground, borderColor: colors.border, marginTop: 8 },
+                      ]}
+                      onPress={() => handleOpenStudentChat(item)}
+                      activeOpacity={0.85}
+                    >
+                      <MessageSquare size={16} color={colors.info} style={{ marginStart: 8 }} />
+                      <Text style={[styles.chatWithStudentBtnText, { color: colors.info }]}>
+                        ارتباط با دانش‌آموز (تا ۲۴ ساعت پس از پایان)
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })
@@ -718,6 +823,48 @@ export const OnlineClassesScreen: React.FC = () => {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      {/* Teacher Classroom Rules Modal */}
+      <Modal visible={rulesModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.rulesModalCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.rulesModalHeader}>
+              <Text style={[styles.rulesModalTitle, { color: colors.text }]}>قوانین حضور دبیر در کلاس آنلاین</Text>
+              <TouchableOpacity onPress={() => setRulesModalVisible(false)} activeOpacity={0.7}>
+                <XCircle size={22} color={colors.textLight} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.rulesModalScroll} showsVerticalScrollIndicator={false}>
+              {[
+                'حضور به موقع در ساعت مقرر الزامی است.',
+                'کلاس ۵ دقیقه پیش از شروع باز می‌شود و می‌توانید جهت تست صدا و تصویر زودتر وارد شوید.',
+                'مهلت مجاز تاخیر دبیر حداکثر ۳۰ دقیقه است؛ پس از ۳۰ دقیقه، کلاس به صورت خودکار لغو شده، وجه به دانش‌آموز مسترد و ۱ عدم حضور در رزومه شما ثبت می‌گردد.',
+                'امکان چت با دانش‌آموز تا ۲۴ ساعت پس از پایان کلاس فعال خواهد بود.',
+                'مدت زمان تدریس از زمان ورود شما محاسبه شده و ۵ دقیقه بافر اینترنت به آن افزوده می‌شود.',
+              ].map((rule, idx) => (
+                <View key={idx} style={[styles.ruleItemRow, { backgroundColor: isDark ? '#1e293b' : '#f8fafc' }]}>
+                  <Text style={[styles.ruleItemIndex, { color: colors.primary }]}>{toPersianDigits(idx + 1)}.</Text>
+                  <Text style={[styles.ruleItemText, { color: colors.text }]}>{rule}</Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.confirmRulesBtn, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                setRulesAccepted(true);
+                setRulesModalVisible(false);
+                if (selectedClassForRules) {
+                  proceedToLiveClassroom(selectedClassForRules);
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.confirmRulesBtnText}>تایید قوانین و ورود به کلاس</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1177,6 +1324,74 @@ const styles = StyleSheet.create({
   },
   sourceChipText: {
     fontSize: 10,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  chatWithStudentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  chatWithStudentBtnText: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  rulesModalCard: {
+    width: '100%',
+    maxHeight: '80%',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  rulesModalHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  rulesModalTitle: {
+    fontSize: 15,
+    fontFamily: FONT_FAMILY.bold,
+  },
+  rulesModalScroll: {
+    maxHeight: 280,
+    marginBottom: 16,
+  },
+  ruleItemRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+    padding: 10,
+    borderRadius: 12,
+  },
+  ruleItemIndex: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.bold,
+    marginStart: 6,
+  },
+  ruleItemText: {
+    flex: 1,
+    fontSize: 12.5,
+    fontFamily: FONT_FAMILY.medium,
+    lineHeight: 20,
+    textAlign: 'right',
+  },
+  confirmRulesBtn: {
+    paddingVertical: 13,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmRulesBtnText: {
+    color: '#ffffff',
+    fontSize: 13.5,
     fontFamily: FONT_FAMILY.bold,
   },
 });

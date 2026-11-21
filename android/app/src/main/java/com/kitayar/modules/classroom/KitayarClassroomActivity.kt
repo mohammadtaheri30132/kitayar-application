@@ -115,7 +115,15 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
         mesh = ClassroomMesh(
             this,
             sendSignal = { type, target, payload -> sendSignal(type, target, payload) },
-            onRemoteVideo = { peerId, track -> main.post { showRemoteVideo(peerId, track) } },
+            onRemoteVideo = { peerId, track ->
+                main.post {
+                    val p = participants[peerId]
+                    val camEnabled = p?.optBoolean("cameraEnabled") ?: false
+                    if (camEnabled || !wantTeacher || remoteVideoPeer == peerId) {
+                        showRemoteVideo(peerId, track)
+                    }
+                }
+            },
             onPeerState = { _, _ -> }
         )
         setContentView(buildUi())
@@ -370,8 +378,16 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
             "microphone_state_changed", "permission_state_changed" -> onMicChanged(p)
             "camera_state_changed" -> {
                 val id = p.optString("peerId")
-                participants[id]?.put("cameraEnabled", p.optBoolean("enabled"))
-                if (!p.optBoolean("enabled") && remoteVideoPeer == id) hideRemoteVideo()
+                val enabled = p.optBoolean("enabled")
+                participants[id]?.put("cameraEnabled", enabled)
+                if (enabled) {
+                    val track = mesh?.getRemoteVideoTrack(id)
+                    if (track != null) {
+                        showRemoteVideo(id, track)
+                    }
+                } else {
+                    if (remoteVideoPeer == id) hideRemoteVideo()
+                }
             }
             "hand_raise_changed" -> participants[p.optString("peerId")]?.put("handRaised", p.optBoolean("raised"))
             "speaker_status_changed", "moderator_status_changed" -> onRoleChanged(p, msg.optString("type"))
@@ -381,6 +397,19 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
                 p.optString("reason", "از کلاس خارج شدید."),
                 p.optString("code") == "DUPLICATE_DEVICE"
             )
+            "class_end_warning" -> {
+                val warnMsg = p.optString("message", "تنها ۵ دقیقه تا پایان کلاس آنلاین باقی مانده است ⏳")
+                toast(warnMsg)
+            }
+            "teacher_presence" -> {
+                val present = p.optBoolean("present")
+                val graceMin = p.optInt("teacherGraceMinutes", 30)
+                if (!wantTeacher && !present) {
+                    showTeacherWaitingDialog(graceMin)
+                } else if (present) {
+                    dismissTeacherWaitingDialog()
+                }
+            }
             "room_ended" -> {
                 ended = true
                 try { signaling?.close() } catch (_: Exception) {}
@@ -421,6 +450,14 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
         statusTv.text = "متصل"; statusTv.setTextColor(ClassroomTheme.primary)
         if (micOn) send(JSONObject().put("type", "set_microphone").put("roomId", roomId).put("enabled", true))
         updateCount(); updateButtons(); refreshTools()
+
+        p.optJSONObject("teacherPresence")?.let { tp ->
+            val present = tp.optBoolean("present")
+            val graceMin = tp.optInt("teacherGraceMinutes", 30)
+            if (!wantTeacher && !present) {
+                showTeacherWaitingDialog(graceMin)
+            }
+        }
     }
 
     private fun onMicChanged(p: JSONObject) {
@@ -600,9 +637,12 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
     }
 
     private fun showRemoteVideo(peerId: String, track: VideoTrack) {
-        remoteTrack?.removeSink(remoteRenderer)
-        remoteTrack = track; remoteVideoPeer = peerId
-        track.addSink(remoteRenderer)
+        if (remoteTrack != track) {
+            remoteTrack?.removeSink(remoteRenderer)
+            remoteTrack = track
+            track.addSink(remoteRenderer)
+        }
+        remoteVideoPeer = peerId
         remoteRenderer.visibility = View.VISIBLE
     }
 
@@ -654,6 +694,27 @@ class KitayarClassroomActivity : AppCompatActivity(), ClassroomSignaling.Listene
             }
         }
         builder.show()
+    }
+
+    private var teacherWaitingDialog: AlertDialog? = null
+
+    private fun showTeacherWaitingDialog(graceMinutes: Int) {
+        if (wantTeacher || isFinishing || isDestroyed || teacherWaitingDialog?.isShowing == true) return
+        val builder = AlertDialog.Builder(this)
+            .setCancelable(true)
+            .setTitle("در انتظار ورود معلم")
+            .setMessage("معلم هنوز وارد کلاس نشده است.\n\nطبق قوانین کیتایار، معلم حداکثر تا $graceMinutes دقیقه پس از ساعت شروع می‌تواند وارد شود. در صورت عدم حضور، کلاس لغو شده و ۱۰۰٪ مبلغ پرداختی به کیف پول شما واریز خواهد شد.")
+            .setPositiveButton("متوجه شدم (صبر می‌کنم)") { d, _ -> d.dismiss() }
+        teacherWaitingDialog = builder.create()
+        teacherWaitingDialog?.show()
+    }
+
+    private fun dismissTeacherWaitingDialog() {
+        if (teacherWaitingDialog?.isShowing == true) {
+            teacherWaitingDialog?.dismiss()
+            toast("معلم وارد کلاس شد. کلاس آغاز گردید.")
+        }
+        teacherWaitingDialog = null
     }
 
     private fun endLocal() { ended = true; finish() }

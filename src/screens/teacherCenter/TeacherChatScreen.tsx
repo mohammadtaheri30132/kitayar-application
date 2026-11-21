@@ -45,7 +45,13 @@ export const TeacherChatScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const { conversationId, title } = route.params || {};
+  const { conversationId: propConvId, title, bookingId } = route.params || {};
+
+  const [activeConvId, setActiveConvId] = useState<string | null>(propConvId || null);
+  const [chatBookingInfo, setChatBookingInfo] = useState<{
+    isChatExpired?: boolean;
+    chatExpiresAt?: string;
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<any[]>([]);
@@ -105,10 +111,30 @@ export const TeacherChatScreen: React.FC = () => {
     }
   }, [isRecording, pulseAnim]);
 
+  useEffect(() => {
+    if (!bookingId) return;
+    const loadBookingChat = async () => {
+      try {
+        const res = await api.get(`/chat/online-class/${bookingId}`);
+        if (res.data?.success && res.data.data) {
+          if (res.data.data.conversation?._id) {
+            setActiveConvId(res.data.data.conversation._id);
+          }
+          if (res.data.data.booking) {
+            setChatBookingInfo(res.data.data.booking);
+          }
+        }
+      } catch (err: any) {
+        console.warn('Error fetching teacher online class conversation:', err);
+      }
+    };
+    loadBookingChat();
+  }, [bookingId]);
+
   const fetchMessages = async () => {
-    if (!conversationId) return;
+    if (!activeConvId) return;
     try {
-      const response = await api.get(`/chat/conversations/${conversationId}/messages`);
+      const response = await api.get(`/chat/conversations/${activeConvId}/messages`);
       if (response.data?.success) {
         setMessages(response.data.data || []);
       }
@@ -132,20 +158,26 @@ export const TeacherChatScreen: React.FC = () => {
 
   useEffect(() => {
     fetchProfile();
-    fetchMessages();
-    const interval = setInterval(fetchMessages, 4000);
-    return () => clearInterval(interval);
-  }, [conversationId]);
+    if (activeConvId) {
+      fetchMessages();
+      const interval = setInterval(fetchMessages, 4000);
+      return () => clearInterval(interval);
+    }
+  }, [activeConvId]);
 
   const handleSendMessage = async () => {
+    if (chatBookingInfo?.isChatExpired) {
+      showError('مهلت ارسال پیام در این کلاس (۲۴ ساعت پس از پایان کلاس) به پایان رسیده است.');
+      return;
+    }
     const text = inputText.trim();
-    if (!text || sending) return;
+    if (!text || sending || !activeConvId) return;
 
     try {
       setSending(true);
       setInputText('');
 
-      const response = await api.post(`/chat/conversations/${conversationId}/messages`, {
+      const response = await api.post(`/chat/conversations/${activeConvId}/messages`, {
         content: text,
         type: 'text',
       });
@@ -249,7 +281,7 @@ export const TeacherChatScreen: React.FC = () => {
 
       if (uploadRes.data?.success && uploadRes.data.data?.url) {
         const mediaUrl = uploadRes.data.data.url;
-        const msgRes = await api.post(`/chat/conversations/${conversationId}/messages`, {
+        const msgRes = await api.post(`/chat/conversations/${activeConvId}/messages`, {
           type: 'voice',
           mediaUrl,
           mediaDuration: recordDuration,
@@ -294,7 +326,7 @@ export const TeacherChatScreen: React.FC = () => {
 
       if (uploadRes.data?.success && uploadRes.data.data?.url) {
         const mediaUrl = uploadRes.data.data.url;
-        const msgRes = await api.post(`/chat/conversations/${conversationId}/messages`, {
+        const msgRes = await api.post(`/chat/conversations/${activeConvId}/messages`, {
           type,
           mediaUrl,
           content: defaultCaption,
@@ -380,12 +412,30 @@ export const TeacherChatScreen: React.FC = () => {
       </View>
 
       {/* Retention info banner */}
-      <View style={[styles.retentionBanner, { backgroundColor: isDark ? '#1e293b' : '#f0f9ff', borderBottomColor: isDark ? '#334155' : '#bae6fd' }]}>
-        <Clock size={12} color="#0284c7" style={{ marginLeft: 4 }} />
-        <Text style={[styles.retentionBannerText, { color: isDark ? '#93c5fd' : '#0369a1' }]}>
-          این گفتگو تا ۲ روز پس از پایان در دسترس شما خواهد بود.
-        </Text>
-      </View>
+      {chatBookingInfo ? (
+        chatBookingInfo.isChatExpired ? (
+          <View style={[styles.retentionBanner, { backgroundColor: '#fee2e2', borderBottomColor: '#fca5a5' }]}>
+            <Clock size={12} color="#dc2626" style={{ marginLeft: 4 }} />
+            <Text style={[styles.retentionBannerText, { color: '#b91c1c', fontWeight: '700' }]}>
+              مهلت گفتگوی اختصاصی این کلاس (۲۴ ساعت پس از پایان کلاس) به اتمام رسیده است 🔒
+            </Text>
+          </View>
+        ) : (
+          <View style={[styles.retentionBanner, { backgroundColor: '#ecfdf5', borderBottomColor: '#a7f3d0' }]}>
+            <Clock size={12} color="#059669" style={{ marginLeft: 4 }} />
+            <Text style={[styles.retentionBannerText, { color: '#047857', fontWeight: '600' }]}>
+              گفتگوی اختصاصی با دانش‌آموز تا ۲۴ ساعت پس از پایان کلاس فعال است.
+            </Text>
+          </View>
+        )
+      ) : (
+        <View style={[styles.retentionBanner, { backgroundColor: isDark ? '#1e293b' : '#f0f9ff', borderBottomColor: isDark ? '#334155' : '#bae6fd' }]}>
+          <Clock size={12} color="#0284c7" style={{ marginLeft: 4 }} />
+          <Text style={[styles.retentionBannerText, { color: isDark ? '#93c5fd' : '#0369a1' }]}>
+            این گفتگو تا ۲ روز پس از پایان در دسترس شما خواهد بود.
+          </Text>
+        </View>
+      )}
 
       {/* Native RecyclerView Chat Messages List */}
       <KeyboardAvoidingView
@@ -407,16 +457,35 @@ export const TeacherChatScreen: React.FC = () => {
         )}
 
         {/* Bottom Input Row & Voice Recording */}
-        <View
-          style={[
-            styles.inputBar,
-            {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingBottom: isKeyboardVisible ? 10 : Math.max(insets.bottom, 10),
-            },
-          ]}
-        >
+        {chatBookingInfo?.isChatExpired ? (
+          <View
+            style={[
+              styles.inputBar,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                paddingBottom: isKeyboardVisible ? 10 : Math.max(insets.bottom, 10),
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 14,
+              },
+            ]}
+          >
+            <Text style={{ fontFamily: FONT_FAMILY.medium, fontSize: 12, color: colors.textLight || '#64748b' }}>
+              امکان ارسال پیام جدید در این گفتگو مسدود شده است 🔒
+            </Text>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.inputBar,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+                paddingBottom: isKeyboardVisible ? 10 : Math.max(insets.bottom, 10),
+              },
+            ]}
+          >
           {isRecording ? (
             <View style={styles.recordingRow}>
               <TouchableOpacity
@@ -513,6 +582,7 @@ export const TeacherChatScreen: React.FC = () => {
             </View>
           )}
         </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* Attachment Selection Modal */}
