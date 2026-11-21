@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -35,6 +35,7 @@ import {
   Video,
   FileText,
   Clock,
+  AlertCircle,
 } from 'lucide-react-native';
 
 const { AudioRecorderModule, FilePickerModule, VideoPickerModule } = NativeModules;
@@ -54,6 +55,7 @@ export const TeacherChatScreen: React.FC = () => {
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
@@ -111,30 +113,14 @@ export const TeacherChatScreen: React.FC = () => {
     }
   }, [isRecording, pulseAnim]);
 
-  useEffect(() => {
-    if (!bookingId) return;
-    const loadBookingChat = async () => {
-      try {
-        const res = await api.get(`/chat/online-class/${bookingId}`);
-        if (res.data?.success && res.data.data) {
-          if (res.data.data.conversation?._id) {
-            setActiveConvId(res.data.data.conversation._id);
-          }
-          if (res.data.data.booking) {
-            setChatBookingInfo(res.data.data.booking);
-          }
-        }
-      } catch (err: any) {
-        console.warn('Error fetching teacher online class conversation:', err);
-      }
-    };
-    loadBookingChat();
-  }, [bookingId]);
-
-  const fetchMessages = async () => {
-    if (!activeConvId) return;
+  const fetchMessages = useCallback(async (convIdToUse?: string) => {
+    const id = convIdToUse || activeConvId;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await api.get(`/chat/conversations/${activeConvId}/messages`);
+      const response = await api.get(`/chat/conversations/${id}/messages`);
       if (response.data?.success) {
         setMessages(response.data.data || []);
       }
@@ -143,13 +129,50 @@ export const TeacherChatScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeConvId]);
+
+  const loadBookingChat = useCallback(async () => {
+    if (!bookingId) return;
+    try {
+      setLoading(true);
+      setInitError(null);
+      const res = await api.get(`/chat/online-class/${bookingId}`);
+      if (res.data?.success && res.data.data) {
+        const convId = res.data.data.conversationId || res.data.data.conversation?._id || res.data.data.conversation;
+        if (convId) {
+          setActiveConvId(convId);
+          fetchMessages(convId);
+        } else {
+          setInitError('شناسه گفتگو دریافت نشد');
+          setLoading(false);
+        }
+        if (res.data.data.booking) {
+          setChatBookingInfo(res.data.data.booking);
+        }
+      } else {
+        setInitError(res.data?.message || 'خطا در بارگذاری اطلاعات چت');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'خطا در برقراری ارتباط با چت کلاس';
+      console.warn('Error fetching teacher online class conversation:', err);
+      setInitError(msg);
+      setLoading(false);
+    }
+  }, [bookingId, fetchMessages]);
+
+  useEffect(() => {
+    if (bookingId) {
+      loadBookingChat();
+    }
+  }, [bookingId, loadBookingChat]);
 
   const fetchProfile = async () => {
     try {
-      const res = await api.get('/teacher/profile/me');
-      if (res.data?.data?.user) {
-        setCurrentUserId(res.data.data.user._id || res.data.data.user);
+      const res = await api.get('/auth/me');
+      const uid = res.data?.data?._id || res.data?.data?.user?._id;
+      if (uid) {
+        setCurrentUserId(uid.toString());
       }
     } catch (err) {
       // Fallback
@@ -159,11 +182,22 @@ export const TeacherChatScreen: React.FC = () => {
   useEffect(() => {
     fetchProfile();
     if (activeConvId) {
-      fetchMessages();
-      const interval = setInterval(fetchMessages, 4000);
+      fetchMessages(activeConvId);
+      const interval = setInterval(() => fetchMessages(activeConvId), 4000);
       return () => clearInterval(interval);
+    } else if (!bookingId) {
+      setLoading(false);
+      setInitError('شناسه چت یا کلاس مشخص نشده است.');
     }
-  }, [activeConvId]);
+  }, [activeConvId, bookingId, fetchMessages]);
+
+  // Safety timeout: ensure loading spinner is never stuck indefinitely
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 6000);
+    return () => clearTimeout(safetyTimer);
+  }, []);
 
   const handleSendMessage = async () => {
     if (chatBookingInfo?.isChatExpired) {
@@ -442,9 +476,33 @@ export const TeacherChatScreen: React.FC = () => {
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {loading ? (
+        {initError ? (
+          <View style={styles.errorNoticeBox}>
+            <AlertCircle size={36} color="#ef4444" style={{ marginBottom: 12 }} />
+            <Text style={[styles.errorNoticeTitle, { color: colors.text }]}>امکان ورود به گفتگو وجود ندارد</Text>
+            <Text style={[styles.errorNoticeSub, { color: colors.textLight }]}>{initError}</Text>
+            <TouchableOpacity
+              style={[styles.errorRetryBtn, { backgroundColor: colors.primary }]}
+              onPress={() => {
+                if (bookingId) {
+                  loadBookingChat();
+                } else if (activeConvId) {
+                  fetchMessages(activeConvId);
+                } else {
+                  navigation.goBack();
+                }
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.errorRetryBtnText}>{bookingId || activeConvId ? 'تلاش مجدد' : 'بازگشت'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ fontFamily: FONT_FAMILY.regular, fontSize: 12, color: colors.textLight, marginTop: 12 }}>
+              در حال بارگذاری گفتگو...
+            </Text>
           </View>
         ) : (
           <NativeChatList
@@ -672,6 +730,35 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 10, fontFamily: FONT_FAMILY.regular, marginTop: 2 },
   keyboardContainer: { flex: 1 },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorNoticeBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 28,
+  },
+  errorNoticeTitle: {
+    fontSize: 16,
+    fontFamily: FONT_FAMILY.bold,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  errorNoticeSub: {
+    fontSize: 13,
+    fontFamily: FONT_FAMILY.regular,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  errorRetryBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  errorRetryBtnText: {
+    color: '#ffffff',
+    fontFamily: FONT_FAMILY.bold,
+    fontSize: 13,
+  },
   inputBar: {
     paddingHorizontal: 12,
     paddingTop: 8,
